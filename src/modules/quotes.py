@@ -1,9 +1,7 @@
-from info import *
+from info import bot
 import aiohttp
-import os
 from core.utils import log_error
 
-TOKEN = os.getenv("BOT_TOKEN")
 async def quote_handler(m):
     if not m.reply_to_message:
         await bot.reply_to(m, "Please reply to a message.")
