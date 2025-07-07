@@ -71,6 +71,10 @@ requirements.txt # Project dependencies.
 - **Async and modern:** Built on `pyTelegramBotAPI` async interface for high performance.
 - **Extensible:** Add or remove features by editing `botcommands.py` and dropping files in `modules/`.
 
+## Note:
+**Vercel** + **MongoDB** for serverless is just my own personal preference, you can use whatever you like with minimal changes.
+
+
 ## License
 This code is licensed under GPLv3 copyleft.
 
