@@ -1,7 +1,8 @@
 import traceback
+import os
 from datetime import datetime
 
-ERROR_LOG_CHAT_ID = -XXXXXXXXXXXXX  # Replace with your actual log channel/chat ID
+ERROR_LOG_CHAT_ID = -int(os.getenv("LOG_ID"))  # Replace with your actual log channel/chat ID
 
 async def log_error(bot, error, context_msg=None):
     """
