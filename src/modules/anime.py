@@ -1,7 +1,7 @@
 import aiohttp
 import urllib.parse
 import re
-from info import *
+from info import bot
 from core.utils import log_error
 
 

@@ -1,7 +1,6 @@
 import json
 import aiohttp
-from datetime import datetime
-from info import *
+from info import bot
 from modules.do import do
 from core.imysdb import IMYDB
 from core.utils import log_error

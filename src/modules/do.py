@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import aiohttp
-from info import *
+from info import bot
 from modules.wallpapers import wallpaper
 from modules.anime import anime
 from modules.img import image_gen

@@ -1,5 +1,5 @@
 import aiohttp
-from info import *
+from info import bot
 import asyncio
 from core.utils import log_error
 

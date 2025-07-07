@@ -1,6 +1,6 @@
 import random
 import aiohttp
-from info import *
+from info import bot
 
 async def wallpaper(m):
     page_number = random.randint(0, 100)

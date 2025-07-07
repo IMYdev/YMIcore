@@ -1,4 +1,4 @@
-from info import *
+from info import bot
 from time import perf_counter
 import asyncio
 from core.utils import log_error

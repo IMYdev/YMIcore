@@ -1,5 +1,5 @@
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from info import *
+from info import bot
 from core.imysdb import IMYDB
 
 # Initialize the database
