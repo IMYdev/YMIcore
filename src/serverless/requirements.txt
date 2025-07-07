@@ -1,5 +1,4 @@
 pytelegrambotapi
 aiohttp
 fastapi
-uvicorn
 pymongo[srv]
