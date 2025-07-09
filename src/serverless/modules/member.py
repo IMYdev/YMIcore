@@ -1,6 +1,5 @@
 from info import bot
 from telebot.util import user_link
-from telebot.types import ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton
 import asyncio
 from core.utils import log_error
 

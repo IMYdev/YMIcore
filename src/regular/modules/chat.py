@@ -5,7 +5,7 @@ from modules.do import do
 from core.imysdb import IMYDB
 from core.utils import log_error
 
-key = "bf55d4ef-3bc1-4110-9d48-da7fe8a4dfc4"
+key = "bf55d4ef-3bc1-4110-9d48-da7fe8a4dfc4" # Example API key, don't get too happy lol
 url = "https://api.awanllm.com/v1/chat/completions"
 
 

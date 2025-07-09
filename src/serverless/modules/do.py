@@ -5,7 +5,7 @@ from info import bot
 from modules.wallpapers import wallpaper
 from modules.anime import anime
 from modules.img import image_gen
-from core.imysdb import IMYDB
+from core.imysdbMongo import IMYDB
 from core.utils import log_error
 
 key = "bf55d4ef-3bc1-4110-9d48-da7fe8a4dfc4"

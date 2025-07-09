@@ -1,5 +1,5 @@
 from info import bot
-from core.imysdb import IMYDB
+from core.imysdbMongo import IMYDB
 from core.utils import log_error
 
 async def set_filter(m):

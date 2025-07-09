@@ -1,6 +1,6 @@
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from info import bot
-from core.imysdb import IMYDB
+from core.imysdbMongo import IMYDB
 
 # Initialize the database
 db = IMYDB('modules/module_controller.json')
