@@ -75,9 +75,13 @@ requirements.txt # Project dependencies.
 ## Note:
 **Vercel** + **MongoDB** for serverless is just my own personal preference, you can use whatever you like with minimal changes.
 
+## Demo instances:
+- **[YMI](https://t.me/youmnairisbot)**
+- **[SyndicateAIbot](https://t.me/ProjectZ_mind_control_delete_bot)**
+
 
 ## License
 This code is licensed under GPLv3 copyleft.
 
 ---
-Made with ❤️
+Made with ❤️ by IMYdev.
