@@ -1,12 +1,12 @@
 import traceback
-import os
-from datetime import datetime
 import html
-
-ERROR_LOG_CHAT_ID = -int(os.getenv("LOG_ID"))  # Replace with your actual log channel/chat ID
+from datetime import datetime
+from info import Logs, ERROR_LOG_CHAT_ID
 
 
 async def log_error(bot, error, context_msg=None):
+    if not Logs:
+        return
     try:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 

@@ -30,6 +30,7 @@ Create a `.env` file or set the following environment variables:
 ```
 BOT_TOKEN=your_telegram_bot_token
 LOG_ID=logs_channel_id_without_the_minus
+AWAN_LLM=token_for_AI_functions
 ```
 For serverless, add those as well:
 ```

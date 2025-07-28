@@ -1,16 +1,18 @@
 import json
 import aiohttp
 from info import bot
+from info import AI, AWAN_LLM_KEY
 from modules.do import do
 from core.imysdbMongo import IMYDB
 from core.utils import log_error
 
-key = "bf55d4ef-3bc1-4110-9d48-da7fe8a4dfc4" # Example API key, don't get too happy lol
+
 url = "https://api.awanllm.com/v1/chat/completions"
 
 
-# AwanLLM response fetcher
 async def fetch_response(prompt, history, username):
+    if not AI:
+        return
     payload = json.dumps({
         "model": "Awanllm-Llama-3-8B-Cumulus",
         "messages": history + [{"role": "user", "content": f"{username}: {prompt}"}],
@@ -22,7 +24,7 @@ async def fetch_response(prompt, history, username):
     })
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f"Bearer {key}"
+        'Authorization': f"Bearer {AWAN_LLM_KEY}"
     }
 
     async with aiohttp.ClientSession() as session:
@@ -36,8 +38,9 @@ async def fetch_response(prompt, history, username):
             return "Error: Unable to fetch response."
 
 
-# Main chat handler
 async def chat(m):
+    if not AI:
+        return
     try:
         prompt = m.text.split(maxsplit=1)[1]
         chat_id = str(m.chat.id).lstrip('-')  # Normalize chat ID
@@ -64,8 +67,9 @@ async def chat(m):
         await bot.reply_to(m, "An error occurred.")
 
 
-# Admin-only memory reset
 async def reset_memory(m):
+    if not AI:
+        return
     if m.chat.type != 'private':
         if not await is_user_admin(m.chat.id, m.from_user.id):
             await bot.reply_to(m, "Admins only.")
@@ -78,6 +82,8 @@ async def reset_memory(m):
 
 
 async def is_user_admin(chat_id, user_id):
+    if not AI:
+        return
     chat_admins = await bot.get_chat_administrators(chat_id)
     for admin in chat_admins:
         if admin.user.id == user_id:
