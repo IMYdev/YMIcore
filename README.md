@@ -21,6 +21,7 @@ cd "YMIcore"
 ```zsh
 python3 -m venv venv
 source venv/bin/activate
+cd src/regular
 pip install -r requirements.txt
 ```
 
