@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from info import bot
-from modules.downloader import download_instagram_reel, download_spotify_song
+from modules.downloader import download_instagram_reel
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
@@ -57,8 +57,6 @@ async def reply_message(m):
     await get_notes(m)
     if "instagram.com/reel" in m.text:
         await download_instagram_reel(m)
-    if "spotify.com" in m.text:
-        await download_spotify_song(m)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("help_"))
 async def help_category_switch(call):
