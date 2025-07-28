@@ -3,7 +3,7 @@ from info import bot
 from core.imysdb import IMYDB
 
 # Initialize the database
-db = IMYDB('modules/module_controller.json')
+db = IMYDB('runtime/modules/module_controller.json')
 
 # Define the main modules and categorize the commands
 modules = {

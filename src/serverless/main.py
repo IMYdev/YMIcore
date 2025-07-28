@@ -17,7 +17,7 @@ app = FastAPI()
 
 async def is_module_enabled_in_group(command, chat_id):
     from core.imysdbMongo import IMYDB  # make sure this doesn't do file writes
-    db = IMYDB('modules/module_controller.json')
+    db = IMYDB('runtime/modules/module_controller.json')
     module_name = None
     for key, values in modules.items():
         if command in values:

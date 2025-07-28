@@ -13,7 +13,7 @@ async def set_filter(m):
 
             keyword = parts[1]
             chat_id = str(m.chat.id).lstrip('-')
-            db = IMYDB(f'filters/{chat_id}_filters')
+            db = IMYDB(f'runtime/filters/{chat_id}_filters')
 
             if m.reply_to_message:
                 if m.reply_to_message.text:
@@ -46,7 +46,7 @@ async def set_filter(m):
 async def reply_to_filter(m):
     try:
         chat_id = str(m.chat.id).lstrip('-')
-        db = IMYDB(f'filters/{chat_id}_filters')
+        db = IMYDB(f'runtime/filters/{chat_id}_filters')
         filters = db.get('filters', {})
 
         for keyword, reply_with in filters.items():
@@ -75,7 +75,7 @@ async def reply_to_filter(m):
 async def get_filters(m):
     chat_id = str(m.chat.id).lstrip('-')
     try:
-        db = IMYDB(f'filters/{chat_id}_filters')
+        db = IMYDB(f'runtime/filters/{chat_id}_filters')
         filters = db.get('filters', {})
         if filters:
             output = '\n'.join([f"`{key}`" for key in filters])
@@ -96,7 +96,7 @@ async def remove_filter(m):
             return
 
         keyword = parts[1]
-        db = IMYDB(f'filters/{chat_id}_filters')
+        db = IMYDB(f'runtime/filters/{chat_id}_filters')
         filters = db.get('filters', {})
 
         if keyword in filters:

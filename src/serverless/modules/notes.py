@@ -10,7 +10,7 @@ async def set_note(m):
         if rank != "member":
             note_name = m.text.split()[1]
             chat_id = str(m.chat.id).lstrip('-')
-            db = IMYDB(f'notes/{chat_id}_notes.json')
+            db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
 
             reply_with = {}
             if m.reply_to_message:
@@ -52,7 +52,7 @@ async def get_notes(m):
                 note_id = parts[1].strip()
 
                 if note_id.isdigit():
-                    db = IMYDB(f'notes/{chat_id}_notes.json')
+                    db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
                     notes = db.get('notes', {})
 
                     if note_id in notes:
@@ -91,7 +91,7 @@ async def get_notes(m):
 async def notes_list(m):
     chat_id = str(m.chat.id).lstrip('-')
     try:
-        db = IMYDB(f'notes/{chat_id}_notes.json')
+        db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
         notes = db.get('notes', {})
 
         formatted_notes = '\n'.join([f"`{note_id}.` {note['name']}" for note_id, note in notes.items()])
@@ -118,7 +118,7 @@ async def remove_note(m):
         return
     
     try:
-        db = IMYDB(f'notes/{chat_id}_notes.json')
+        db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
         notes = db.get('notes', {})
         
         if note_key in notes:

@@ -45,7 +45,7 @@ async def chat(m):
         get_info = await bot.get_chat(m.from_user.id)
         username = get_info.username or f"User_{m.from_user.id}"
 
-        db = IMYDB(f"history/{chat_id}_history.json")
+        db = IMYDB(f"runtime/history/{chat_id}_history.json")
         history = db.get("chat_history", [])
 
         response_content = await fetch_response(prompt, history, username)
@@ -72,7 +72,7 @@ async def reset_memory(m):
             return
 
     chat_id = str(m.chat.id).lstrip('-')
-    db = IMYDB(f"history/{chat_id}_history.json")
+    db = IMYDB(f"runtime/history/{chat_id}_history.json")
     db.set("chat_history", [])
     await bot.reply_to(m, "Chat history cleared.")
 
