@@ -6,19 +6,26 @@ from modules.anime import anime, search
 from modules.purge import purge
 from modules.filters import set_filter, get_filters, remove_filter
 from modules.notes import set_note, notes_list, remove_note
-from modules.member import user_info, start, promote, demote, pin, ban, unban, help_command
+from modules.member import user_info, start, promote, demote, pin, ban, unban, help_command, group_id
 from module_manager import send_module_keyboard
 from modules.quotes import quote_handler
+from modules.greetings import set_greeting, set_goodbye
 
 async def my_comd(m):
     if m.text.lower().startswith("/info"):
         await user_info(m)
     if m.text.lower().startswith("/start"):
         await start(m)
+    if m.text.lower().startswith("/greeting"):
+        await set_greeting(m)
+    if m.text.lower().startswith("/goodbye"):
+        await set_goodbye(m)
     if m.text.lower().startswith("/wallpaper"):
         await wallpaper(m)
     if m.text.lower().startswith("/ask"):
         await chat(m)
+    if m.text.lower().startswith("/id"):
+        await group_id(m)
     if m.text.lower().startswith("/animewall"):
         await anime(m)
     if m.text.lower().startswith("/sauce"):

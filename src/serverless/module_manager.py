@@ -13,7 +13,7 @@ modules = {
     'filters': ['filter', 'filters', 'stop'],
     'greetings': ['greeting', 'goodbye'],
     'federation': ['create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed'],
-    'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'q']
+    'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'id']
 }
 
 # Function to check if the user is an admin

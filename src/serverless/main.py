@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, Request
 from telebot import types
+from core.imysdbMongo import IMYDB
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from info import bot
 from modules.downloader import download_instagram_reel
@@ -16,7 +17,6 @@ app = FastAPI()
 
 
 async def is_module_enabled_in_group(command, chat_id):
-    from core.imysdbMongo import IMYDB  # make sure this doesn't do file writes
     db = IMYDB('runtime/modules/module_controller.json')
     module_name = None
     for key, values in modules.items():
@@ -30,7 +30,7 @@ async def is_module_enabled_in_group(command, chat_id):
     command_enabled = db.get(f"groups.{group_id}.{command}_enabled", True)
     return module_enabled and command_enabled
 
-@bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote', 'demote', 'pin', 'file', 'face', 'image', 'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 'imagine', 'purge', 'filter', 'filters', 'stop', 'notes', 'remove', 'add', 'help', 'goodbye', 'greeting', 'kickme', 'reset', 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules', 'q'])
+@bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote', 'demote', 'pin', 'id', 'face', 'image', 'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 'imagine', 'purge', 'filter', 'filters', 'stop', 'notes', 'remove', 'add', 'help', 'goodbye', 'greeting', 'kickme', 'reset', 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules', 'q'])
 async def myc(m):
     restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 'filters', 'kickme', 'stop', 'remove', 'notes', 'add', 'goodbye', 'greeting', 'pin', 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules']
     if m.chat.type == 'private' and m.text.lstrip('/').split()[0].split('@')[0] in restricted_in_pm:
@@ -109,4 +109,4 @@ async def webhook(request: Request):
 @app.on_event("startup")
 async def startup():
     await bot.remove_webhook()
-    await bot.set_webhook(url=f"{WEBHOOK_URL}/webhook")
+    await bot.set_webhook(url=f"{WEBHOOK_URL}/webhook", allowed_updates=['message', 'chat_member', 'callback_query'])
