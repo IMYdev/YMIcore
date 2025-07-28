@@ -1,5 +1,6 @@
 from info import bot
 from telebot.util import user_link
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import asyncio
 from core.utils import log_error
 
@@ -41,7 +42,6 @@ promoting_params = {
     'can_delete_stories': False
 }
 
-# Categorized help text
 help_categories = {
     "General": """
     *General Commands:*
@@ -59,7 +59,6 @@ help_categories = {
     *Admin Commands:*
 
     - `/purge`: Deletes messages starting from the one you replied to up to the message containing the `/purge` command.
-    - `/nuke`: Deletes all messages in the chat.
     - `/filter [keyword]`: Set a filter keyword for automatic responses when triggered.
     - `/filters`: Lists all active filters in the chat.
     - `/stop [keyword]`: Removes a specific filter by keyword.
@@ -224,12 +223,15 @@ async def unban(m):
         await bot.reply_to(m, "An error occurred. Please try again later.")
 
 
-async def help_command(m):
-    args = m.text.split()
-    if len(args) > 1 and args[1] in help_categories:
-        await bot.reply_to(m, help_categories[args[1]], parse_mode="Markdown")
-    else:
-        general_help = "\n".join([f"- {cat}" for cat in help_categories.keys()])
-        await bot.reply_to(m, f"Available help modules:\n{general_help}\nUse /help [module] for details.")
+async def help_command(m, category="General"):
+    markup = InlineKeyboardMarkup()
+    buttons = [
+        InlineKeyboardButton("General", callback_data="help_General"),
+        InlineKeyboardButton("Admin", callback_data="help_Admin"),
+    ]
+    markup.add(*buttons)
+
+    await bot.reply_to(m, help_categories[category], parse_mode="Markdown", reply_markup=markup)
+
 async def start(m):
     await bot.reply_to(m, "Welcome. Use /help for assistance and further understanding of the bot's functions.")

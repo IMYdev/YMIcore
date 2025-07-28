@@ -66,7 +66,6 @@ async def help_category_switch(call):
     buttons = [
         InlineKeyboardButton("General", callback_data="help_General"),
         InlineKeyboardButton("Admin", callback_data="help_Admin"),
-        InlineKeyboardButton("Federation", callback_data="help_Federation"),
     ]
     markup.add(*buttons)
 
