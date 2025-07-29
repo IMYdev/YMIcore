@@ -77,8 +77,8 @@ requirements.txt # Project dependencies.
 **Vercel** + **MongoDB** for serverless is just my own personal preference, you can use whatever you like with minimal changes.
 
 ## Demo instances:
-- **[YMI](https://t.me/youmnairisbot)**
-- **[SyndicateAIbot](https://t.me/ProjectZ_mind_control_delete_bot)**
+- **[YMI](https://t.me/youmnairisbot)** for self-hosted.
+- **[SyndicateAIbot](https://t.me/ProjectZ_mind_control_delete_bot)** for serverless (Vercel + MongoDB.)
 
 
 ## License
