@@ -4,7 +4,7 @@ from telebot import types
 from core.imysdbMongo import IMYDB
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from info import bot
-from modules.downloader import download_instagram_reel
+from modules.downloader import extract_supported_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
@@ -56,7 +56,9 @@ async def reply_message(m):
     await reply_to_filter(m)
     await get_notes(m)
     if "instagram.com/reel" in m.text:
-        await download_instagram_reel(m)
+        await extract_supported_url(m)
+    elif "youtube.com" or "youtu.be" in m.text:
+        await extract_supported_url(m)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("help_"))
 async def help_category_switch(call):
