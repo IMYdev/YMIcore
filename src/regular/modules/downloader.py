@@ -15,15 +15,18 @@ async def extract_supported_url(m):
     if "youtube.com" in url or "youtu.be" in url:
         await download_yt_vid(m, url)
     elif "instagram.com" in url:
-        await download_instagram_reel(m, url)
+        await instagram_dl(m, url)
 
 
 
-async def download_instagram_reel(m, url):
+async def instagram_dl(m, url):
     try:
         modified_url = re.sub(r'(https?://)(www\.)?instagram', r'\1\2kkinstagram', url)
         link = mlink("Source", url, escape=False)
-        await bot.send_video(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
+        if "reel" in url:
+            await bot.send_video(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
+        else:
+            await bot.send_photo(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
     except Exception as e:
         await log_error(bot, e, m)
 
