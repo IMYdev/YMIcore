@@ -55,9 +55,7 @@ async def chat_m(m: types.ChatMemberUpdated):
 async def reply_message(m):
     await reply_to_filter(m)
     await get_notes(m)
-    if "instagram.com/reel" in m.text:
-        await extract_supported_url(m)
-    elif "youtube.com" or "youtu.be" in m.text:
+    if "instagram.com/reel" or "youtube.com" or "youtu.be" or "tiktok.com" in m.text:
         await extract_supported_url(m)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("help_"))

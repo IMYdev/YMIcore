@@ -16,6 +16,8 @@ async def extract_supported_url(m):
         await download_yt_vid(m, url)
     elif "instagram.com" in url:
         await instagram_dl(m, url)
+    elif "tiktok.com" in url:
+        await tiktok_dl(m, url)
 
 
 
@@ -27,6 +29,14 @@ async def instagram_dl(m, url):
             await bot.send_video(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
         else:
             await bot.send_photo(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
+    except Exception as e:
+        await log_error(bot, e, m)
+
+async def tiktok_dl(m, url):
+    try:
+        modified_url = re.sub(r'(https?://)([^/]*\.)?tiktok', r'\1\2kktiktok', url)
+        link = mlink("Source", url, escape=False)
+        await bot.send_video(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
     except Exception as e:
         await log_error(bot, e, m)
 
