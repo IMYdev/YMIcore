@@ -1,4 +1,5 @@
 pytelegrambotapi
 aiohttp
 fastapi
+yt_dlp
 pymongo[srv]
