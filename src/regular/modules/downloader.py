@@ -24,6 +24,8 @@ async def extract_supported_url(m):
 async def instagram_dl(m, url):
     try:
         modified_url = re.sub(r'(https?://)(www\.)?instagram', r'\1\2kkinstagram', url)
+        if "?" in modified_url:
+            modified_url = modified_url.split("?")[0]
         link = mlink("Source", url, escape=False)
         if "reel" in url:
             await bot.send_video(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
