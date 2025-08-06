@@ -2,7 +2,7 @@ from info import bot
 from modules.wallpapers import wallpaper
 from modules.img import image_gen
 from modules.chat import chat, reset_memory
-from modules.anime import anime, search
+from modules.anime import anime, search, spice
 from modules.purge import purge
 from modules.filters import set_filter, get_filters, remove_filter
 from modules.notes import set_note, notes_list, remove_note
@@ -88,7 +88,8 @@ async def my_comd(m):
     #     response = await delete_federation(m)
     #     await bot.reply_to(m, response, parse_mode='HTML')
     if m.text.lower().startswith("/modules"):
-        response = await send_module_keyboard(m)
-        bot.reply_to(m, response, parse_mode='HTML')
+        await send_module_keyboard(m)
     if m.text.lower().startswith("/q"):
         await quote_handler(m)
+    if m.text.lower().startswith("/horny"):
+        await spice(m)

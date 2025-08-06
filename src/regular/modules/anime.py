@@ -3,6 +3,7 @@ import urllib.parse
 from info import bot
 from core.utils import log_error
 from telebot.formatting import escape_markdown, mlink
+import random
 
 
 async def anime(m):
@@ -79,3 +80,26 @@ async def search(m):
     except Exception as error:
         await log_error(bot, error, context_msg=m)
         await bot.reply_to(m, "An error occurred.")
+
+# Disclaimer: NSFW below.
+types = ["hass", "hmidriff", "hentai", "hneko", "hkitsune", "hthigh", "hboobs", "yaoi"]
+
+async def spice(m):
+    if len(m.text.split()) < 2:
+        category = random.choices(types)[0]
+    else:
+        category = m.text.split()[1]
+    if "-list" in m.text:
+        await bot.reply_to(m, types)
+        return
+    if category not in types:
+        await bot.reply_to(m, "Invalid category.")
+        return
+    else:
+        url = f"https://nekobot.xyz/api/image?type={category}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                data = await response.json()
+                image_url = data.get("message")
+                caption = f"[HQ Download]({image_url})"
+                await bot.send_photo(chat_id=m.chat.id, photo=image_url, reply_to_message_id=m.message_id, caption=caption, parse_mode="Markdown")

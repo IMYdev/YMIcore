@@ -16,6 +16,11 @@ modules = {
     'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'id']
 }
 
+# Disable adult features by default.
+default_disabled = {
+    'horny': False
+}
+
 # Function to check if the user is an admin
 async def is_user_admin(chat_id, user_id):
     chat_admins = await bot.get_chat_administrators(chat_id)
@@ -48,11 +53,11 @@ def create_command_list_keyboard(module_name, group_id):
 
     # Add buttons for each command
     for command in modules[module_name]:
-        current_permission = db.get(f"groups.{group_id}.{command}_enabled", True)
+        default_state = default_disabled.get(command, True)
+        current_permission = db.get(f"groups.{group_id}.{command}_enabled", default_state)
         command_text = f"{command} (On)" if current_permission else f"{command} (Off)"
         command_button = InlineKeyboardButton(text=command_text, callback_data=f"toggle_command:{command}:{group_id}")
         keyboard.add(command_button)
-
     # Add a "Back" button to return to the module list
     back_button = InlineKeyboardButton(text="Back to Modules", callback_data=f"back_to_modules:{group_id}")
     keyboard.add(back_button)
@@ -74,7 +79,8 @@ async def toggle_module_or_command(call):
 
     if action == "toggle_command":
         # Toggle individual command
-        current_permission = db.get(f"groups.{group_id}.{item}_enabled", True)
+        default_state = default_disabled.get(item, True)
+        current_permission = db.get(f"groups.{group_id}.{item}_enabled", default_state)
         db.set(f"groups.{group_id}.{item}_enabled", not current_permission)
         new_permission = db.get(f"groups.{group_id}.{item}_enabled", True)
         await bot.answer_callback_query(call.id, f"{item} command {'enabled' if new_permission else 'disabled'}")
