@@ -76,6 +76,7 @@ help_categories = {
     - `/unmute [user]`: Unmutes a user in the chat.
     - `/kickme`: Kicks yourself from the chat.
     - `/reset`: Resets the bot's memory.
+    - `/modules`: Manages activation of different modules and their subcommands.
     """
 }
 

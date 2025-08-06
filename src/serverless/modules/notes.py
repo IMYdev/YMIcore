@@ -103,7 +103,7 @@ async def notes_list(m):
             await bot.send_message(m.chat.id, "Catalog empty. No notes registered.")
     except Exception as error:
         await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "Error, developer has been notified.")
+        await bot.reply_to(m, "An error occurred.")
 
 
 
@@ -133,4 +133,4 @@ async def remove_note(m):
             await bot.send_message(m.chat.id, f"No note matching ID {note_key} found.")
     except Exception as error:
         await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "Error, developer has been notified.")
+        await bot.reply_to(m, "An error occurred.")

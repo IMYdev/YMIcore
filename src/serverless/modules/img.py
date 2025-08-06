@@ -45,4 +45,4 @@ async def image_gen(m):
         await bot.reply_to(m, "Input missing. Clarify your request.")
     except Exception as error:
         await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "Error, developer has been notified.")
+        await bot.reply_to(m, "An error occurred.")
