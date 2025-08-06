@@ -77,6 +77,7 @@ help_categories = {
     - `/kickme`: Kicks yourself from the chat.
     - `/reset`: Resets the bot's memory.
     - `/modules`: Manages activation of different modules and their subcommands.
+    - `/horny`: Hentai content.
     """
 }
 
