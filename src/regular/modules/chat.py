@@ -2,7 +2,6 @@ import json
 import aiohttp
 from info import bot
 from info import AI, AWAN_LLM_KEY
-from modules.do import do
 from core.imysdb import IMYDB
 from core.utils import log_error
 
