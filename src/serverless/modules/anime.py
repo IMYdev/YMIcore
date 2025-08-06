@@ -12,7 +12,6 @@ async def anime(m):
     async with aiohttp.ClientSession() as session:
         async with session.post(url) as response:
             data = await response.json()
-
             tags = data.get('tags', [])
             tag_str = ' '.join([escape_markdown('#' + tag) for tag in tags])
             author = escape_markdown(data.get('author', 'Unknown'))
@@ -24,7 +23,6 @@ async def anime(m):
             caption = f"Tags: {tag_str}\nAuthor: {author}\nResolution: {width}x{height}"
             caption = escape_markdown(caption)
             caption = f"{caption}\n{dl_string}"
-            
             await bot.send_photo(chat_id=m.chat.id, photo=image_url, caption=caption, reply_to_message_id=m.message_id, parse_mode="Markdown")
 
 async def fetch_anime_name(anilist_id):
