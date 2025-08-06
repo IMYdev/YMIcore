@@ -1,14 +1,10 @@
 import aiohttp
 import urllib.parse
-import re
 from info import bot
 from core.utils import log_error
+from telebot.formatting import escape_markdown, mlink
+import random
 
-
-def escape_markdown(text):
-    # Escape characters that Telegram's Markdown expects special treatment for, except for '#'
-    escape_chars = r'_*[]()~`>#+-=|{}.!'
-    return re.sub(r'([%s])' % re.escape(escape_chars.replace('#', '')), r'\\\1', text)
 
 async def anime(m):
     url = "https://pic.re/image"
@@ -22,8 +18,12 @@ async def anime(m):
             author = escape_markdown(data.get('author', 'Unknown'))
             width = data.get('width')
             height = data.get('height')
-            image_url = f"https://{data.get('file_url')}"            
-            caption = f"Tags: {tag_str}\nAuthor: {author}\nResolution: {width}x{height}\n[HQ Download]({image_url})"
+            image_url = f"https://{data.get('file_url')}"
+            # Cursed but proper utilization of telebot's built-in formatting features.
+            dl_string = mlink("HQ Download",image_url, escape=False)
+            caption = f"Tags: {tag_str}\nAuthor: {author}\nResolution: {width}x{height}"
+            caption = escape_markdown(caption)
+            caption = f"{caption}\n{dl_string}"
             
             await bot.send_photo(chat_id=m.chat.id, photo=image_url, caption=caption, reply_to_message_id=m.message_id, parse_mode="Markdown")
 
@@ -80,3 +80,26 @@ async def search(m):
     except Exception as error:
         await log_error(bot, error, context_msg=m)
         await bot.reply_to(m, "An error occurred.")
+
+# Disclaimer: NSFW below.
+types = ["hass", "hmidriff", "hentai", "hneko", "hkitsune", "hthigh", "hboobs", "yaoi"]
+
+async def spice(m):
+    if len(m.text.split()) < 2:
+        category = random.choices(types)[0]
+    else:
+        category = m.text.split()[1]
+    if "-list" in m.text:
+        await bot.reply_to(m, types)
+        return
+    if category not in types:
+        await bot.reply_to(m, "Invalid category.")
+        return
+    else:
+        url = f"https://nekobot.xyz/api/image?type={category}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                data = await response.json()
+                image_url = data.get("message")
+                caption = f"[HQ Download]({image_url})"
+                await bot.send_photo(chat_id=m.chat.id, photo=image_url, reply_to_message_id=m.message_id, caption=caption, parse_mode="Markdown")

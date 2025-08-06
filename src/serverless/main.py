@@ -8,7 +8,7 @@ from modules.downloader import extract_supported_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
-from module_manager import create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command
+from module_manager import create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled
 from modules.greetings import hello, bye
 from botcommands import my_comd
 
@@ -27,8 +27,9 @@ async def is_module_enabled_in_group(command, chat_id):
         return False
     group_id = str(chat_id)
     module_enabled = db.get(f"groups.{group_id}.{module_name}_enabled", True)
-    command_enabled = db.get(f"groups.{group_id}.{command}_enabled", True)
-    return module_enabled and command_enabled
+    default_state = default_disabled.get(command, True)
+    current_permission = db.get(f"groups.{group_id}.{command}_enabled", default_state)
+    return module_enabled and current_permission
 
 @bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote', 'demote', 'pin', 'id', 'face', 'image', 'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 'imagine', 'purge', 'filter', 'filters', 'stop', 'notes', 'remove', 'add', 'help', 'goodbye', 'greeting', 'kickme', 'reset', 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules', 'q'])
 async def myc(m):
