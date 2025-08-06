@@ -2,4 +2,5 @@ pytelegrambotapi
 aiohttp
 fastapi
 yt_dlp
+python-dotenv
 pymongo[srv]

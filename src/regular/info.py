@@ -1,6 +1,12 @@
 from telebot.async_telebot import AsyncTeleBot
 import os
 
+# Load env variables from .env if found
+if os.path.exists(".env"):
+    # import is here for performance (what if someone hosted this code on a PS1? we need all the speed we could get)
+    from dotenv import load_dotenv
+    load_dotenv()
+
 TOKEN = os.getenv("BOT_TOKEN")
 ERROR_LOG_CHAT_ID = (os.getenv("LOG_ID"))
 AWAN_LLM_KEY = (os.getenv("AWAN_LLM"))
