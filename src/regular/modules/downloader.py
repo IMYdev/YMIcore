@@ -32,6 +32,9 @@ async def instagram_dl(m, url):
         else:
             await bot.send_photo(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
     except Exception as e:
+        # In case the embed service doesn't work
+        if "wrong type" in str(e):
+            await bot.send_message(m.chat.id, "Couldn't fetch post.")
         await log_error(bot, e, m)
 
 async def tiktok_dl(m, url):
