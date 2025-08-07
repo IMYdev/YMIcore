@@ -101,7 +101,6 @@ async def download_yt_audio(m, link, old):
             audio_url = next(item for item in info['formats'] if item['format_id'] == '18')['url']
         async with aiohttp.ClientSession() as session:
             async with session.get(audio_url) as resp:
-                await bot.delete_message(m.chat.id, old.id)
                 await bot.send_audio(
                     m.chat.id,
                     audio=resp.content,
@@ -109,5 +108,6 @@ async def download_yt_audio(m, link, old):
                     parse_mode="Markdown",
                     reply_to_message_id=m.id
                 )
+        await bot.delete_message(m.chat.id, old.id)
     except Exception as error:
         await log_error(bot, m, error)
