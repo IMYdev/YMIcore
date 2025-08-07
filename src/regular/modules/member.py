@@ -78,6 +78,7 @@ help_categories = {
     - `/reset`: Resets the bot's memory.
     - `/modules`: Manages activation of different modules and their subcommands.
     - `/horny`: Hentai content.
+    - `/music`: Music search and fetching.
     """
 }
 
