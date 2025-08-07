@@ -76,7 +76,7 @@ async def fetch_music(m):
         query = query[1]
         old = await bot.reply_to(m, "Looking for song...")
     else:
-        await bot.reply_to(m, "nope")
+        await bot.reply_to(m, "No song name provided.")
 
     data = client.search(query=query)
     sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']
@@ -113,4 +113,5 @@ async def download_yt_audio(m, link, old):
                 )
         await bot.delete_message(m.chat.id, old.id)
     except Exception as error:
+        await bot.reply_to(m, "An error occurred.")
         await log_error(bot, m, error)
