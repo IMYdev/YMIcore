@@ -48,7 +48,9 @@ async def tiktok_dl(m, url):
         await log_error(bot, e, m)
 
 opts = {
-    "quiet": "True"
+    "quiet": "True",
+    "no-warnings": "True",
+    "format": "bestaudio/best"
 }
 async def download_yt_vid(m, link):
     try:
@@ -57,6 +59,7 @@ async def download_yt_vid(m, link):
             title = info.get("title")
             link = mlink("Source", link, escape=False)
             vid_cap = f"{title}\n{link}"
+            # This actually doesn't rely on the format chosen above, so we good (:
             url = next(item for item in info['formats'] if item['format_id'] == '18')['url']
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
@@ -96,7 +99,7 @@ async def download_yt_audio(m, link, old):
             info = ydl.extract_info(link, download=False)
             title = info.get("title")
             audio_cap = f"{title}"
-            audio_url = next(item for item in info['formats'] if item['format_id'] == '18')['url']
+            audio_url = info['url']
         async with aiohttp.ClientSession() as session:
             async with session.get(audio_url) as resp:
                 await bot.send_audio(
@@ -104,7 +107,7 @@ async def download_yt_audio(m, link, old):
                     audio=resp.content,
                     caption=audio_cap,
                     parse_mode="Markdown",
-                    reply_to_message_id=m.id
+                    reply_to_message_id=m.id,
                 )
         await bot.delete_message(m.chat.id, old.id)
     except Exception as error:
