@@ -1,4 +1,3 @@
-from info import bot
 from modules.wallpapers import wallpaper
 from modules.img import image_gen
 from modules.chat import chat, reset_memory
@@ -10,6 +9,7 @@ from modules.member import user_info, start, promote, demote, pin, ban, unban, h
 from module_manager import send_module_keyboard
 from modules.quotes import quote_handler
 from modules.greetings import set_greeting, set_goodbye
+from modules.downloader import fetch_music
 
 async def my_comd(m):
     if m.text.lower().startswith("/info"):
@@ -93,3 +93,5 @@ async def my_comd(m):
         await quote_handler(m)
     if m.text.lower().startswith("/horny"):
         await spice(m)
+    if m.text.lower().startswith("/music"):
+        await fetch_music(m)

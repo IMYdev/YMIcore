@@ -31,7 +31,12 @@ async def is_module_enabled_in_group(command, chat_id):
     current_permission = db.get(f"groups.{group_id}.{command}_enabled", default_state)
     return module_enabled and current_permission
 
-@bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote', 'demote', 'pin', 'id', 'face', 'image', 'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 'imagine', 'purge', 'filter', 'filters', 'stop', 'notes', 'remove', 'add', 'help', 'goodbye', 'greeting', 'kickme', 'reset', 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules', 'q'])
+@bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote', 'demote', 'pin', 'id',
+                                'face', 'image', 'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 'imagine', 'purge',
+                                'filter', 'filters', 'stop',
+                                'notes', 'remove', 'add', 'help', 'goodbye', 'greeting', 'kickme', 'reset',
+                                'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed',
+                                'modules', 'q', 'music'])
 async def myc(m):
     command = m.text.lstrip('/').split()[0].split('@')[0]
     if m.chat.type == 'private':
