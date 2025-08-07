@@ -2,3 +2,4 @@ pytelegrambotapi
 aiohttp
 yt_dlp
 python-dotenv
+innertube
