@@ -33,11 +33,11 @@ async def instagram_dl(m, url):
             await bot.send_video(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
         else:
             await bot.send_photo(m.chat.id, modified_url, caption=link, parse_mode="Markdown")
-    except Exception as e:
+    except Exception as error:
         # In case the embed service doesn't work
-        if "wrong type" in str(e):
+        if "wrong type" or "HTTP URL" in str(error):
             await bot.send_message(m.chat.id, "Couldn't fetch post.")
-        await log_error(bot, e, m)
+        await log_error(bot, error, m)
 
 async def tiktok_dl(m, url):
     try:
@@ -97,14 +97,15 @@ async def download_yt_audio(m, link, old):
             title = info.get("title")
             audio_cap = f"{title}"
             audio_url = next(item for item in info['formats'] if item['format_id'] == '18')['url']
-            await bot.delete_message(m.chat.id, old.id)
         async with aiohttp.ClientSession() as session:
             async with session.get(audio_url) as resp:
+                await bot.delete_message(m.chat.id, old.id)
                 await bot.send_audio(
                     m.chat.id,
                     audio=resp.content,
                     caption=audio_cap,
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
+                    reply_to_message_id=m.id
                 )
     except Exception as error:
         await log_error(bot, m, error)
