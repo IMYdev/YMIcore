@@ -50,6 +50,7 @@ async def tiktok_dl(m, url):
 opts = {
     "quiet": "True"
 }
+# Broken on Vercel, YT marks request as automated.
 async def download_yt_vid(m, link):
     try:
         with YoutubeDL(params=opts) as ydl:
@@ -90,6 +91,7 @@ async def fetch_music(m):
             # Stop after the first result.
             break
 
+# Broken on Vercel, YT marks request as automated.
 async def download_yt_audio(m, link, old):
     try:
         with YoutubeDL(params=opts) as ydl:
