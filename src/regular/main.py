@@ -9,7 +9,7 @@ from modules.notes import get_notes
 from modules.member import help_categories
 from module_manager import create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled
 from modules.greetings import hello, bye
-from botcommands import my_comd
+from botcommands import handle_command
 
 async def is_module_enabled_in_group(command, chat_id):
     db = IMYDB('runtime/modules/module_controller.json')
@@ -18,8 +18,10 @@ async def is_module_enabled_in_group(command, chat_id):
         if command in values:
             module_name = key
             break
+
     if module_name is None:
         return False
+    
     group_id = str(chat_id)
     module_enabled = db.get(f"groups.{group_id}.{module_name}_enabled", True)
     default_state = default_disabled.get(command, True)
@@ -32,7 +34,8 @@ async def is_module_enabled_in_group(command, chat_id):
                                 'notes', 'remove', 'add', 'help', 'goodbye', 'greeting', 'kickme', 'reset',
                                 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed',
                                 'modules', 'q', 'music'])
-async def myc(m):
+
+async def cmd_handler(m):
     command = m.text.lstrip('/').split()[0].split('@')[0]
     if m.chat.type == 'private':
         restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 'filters', 'kickme', 'stop', 'remove', 'notes', 'add', 'goodbye', 'greeting', 'pin', 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules']
@@ -47,7 +50,7 @@ async def myc(m):
         bot_username = (await bot.get_me()).username
         if m.text.split('@')[1].split()[0] != bot_username:
             return
-    await my_comd(m)
+    await handle_command(m, m.text.lower())
 
 @bot.chat_member_handler()
 async def chat_m(m: types.ChatMemberUpdated):

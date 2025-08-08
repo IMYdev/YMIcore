@@ -5,12 +5,11 @@ from core.utils import log_error
 from telebot.formatting import escape_markdown, mlink
 import random
 
-
 async def anime(m):
-    url = "https://pic.re/image"
+    URL = "https://pic.re/image"
     
     async with aiohttp.ClientSession() as session:
-        async with session.post(url) as response:
+        async with session.post(URL) as response:
             data = await response.json()
             tags = data.get('tags', [])
             tag_str = ' '.join([escape_markdown('#' + tag) for tag in tags])
@@ -26,7 +25,7 @@ async def anime(m):
             await bot.send_photo(chat_id=m.chat.id, photo=image_url, caption=caption, reply_to_message_id=m.message_id, parse_mode="Markdown")
 
 async def fetch_anime_name(anilist_id):
-    query = '''
+    QUERY = '''
     query ($id: Int) {
         Media(id: $id) {
             title {
@@ -38,10 +37,10 @@ async def fetch_anime_name(anilist_id):
     }
     '''
     variables = {'id': anilist_id}
-    url = 'https://graphql.anilist.co'
+    URL = 'https://graphql.anilist.co'
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, json={'query': query, 'variables': variables}) as response:
+        async with session.post(URL, json={'query': QUERY, 'variables': variables}) as response:
             response_json = await response.json()
             return response_json['data']['Media']['title']
 
@@ -80,17 +79,17 @@ async def search(m):
         await bot.reply_to(m, "An error occurred.")
 
 # Disclaimer: NSFW below.
-types = ["hass", "hmidriff", "hentai", "hneko", "hkitsune", "hthigh", "hboobs", "yaoi"]
+TYPES = ["hass", "hmidriff", "hentai", "hneko", "hkitsune", "hthigh", "hboobs", "yaoi"]
 
 async def spice(m):
     if len(m.text.split()) < 2:
-        category = random.choices(types)[0]
+        category = random.choices(TYPES)[0]
     else:
         category = m.text.split()[1]
     if "-list" in m.text:
-        await bot.reply_to(m, types)
+        await bot.reply_to(m, TYPES)
         return
-    if category not in types:
+    if category not in TYPES:
         await bot.reply_to(m, "Invalid category.")
         return
     else:

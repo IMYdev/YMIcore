@@ -6,7 +6,6 @@ import aiohttp
 from yt_dlp import YoutubeDL
 from innertube import InnerTube
 
-
 async def extract_supported_url(m):
     match = re.search(r'https?://\S+', m.text)
     if not match:
@@ -20,8 +19,6 @@ async def extract_supported_url(m):
         await instagram_dl(m, url)
     elif "tiktok.com" in url:
         await tiktok_dl(m, url)
-
-
 
 async def instagram_dl(m, url):
     try:
