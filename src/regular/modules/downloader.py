@@ -73,6 +73,7 @@ async def fetch_music(m):
         old = await bot.reply_to(m, "Looking for song...")
     else:
         await bot.reply_to(m, "No song name provided.")
+        return
 
     data = client.search(query=query)
     sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']

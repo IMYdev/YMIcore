@@ -50,6 +50,6 @@ COMMANDS = {
 async def handle_command(message, text):
     """ Recive command and call associated module"""
     for cmd, func in COMMANDS.items():
-        if text.split(" ", 1)[0] == cmd:
+        if text.startswith(cmd):
             await func(message)
             break

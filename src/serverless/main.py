@@ -33,28 +33,37 @@ async def is_module_enabled_in_group(command, chat_id):
     current_permission = db.get(f"groups.{group_id}.{command}_enabled", default_state)
     return module_enabled and current_permission
 
-@bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote', 'demote', 'pin', 'id',
-                                'face', 'image', 'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 'imagine', 'purge',
-                                'filter', 'filters', 'stop',
-                                'notes', 'remove', 'add', 'help', 'goodbye', 'greeting', 'kickme', 'reset',
-                                'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed',
-                                'modules', 'q', 'music'])
+@bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote',
+                                'demote', 'pin', 'id', 'face', 'image',
+                                'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 
+                                'imagine', 'purge', 'filter', 'filters', 'stop',
+                                'notes', 'remove', 'add', 'help', 'goodbye',
+                                'greeting', 'kickme', 'reset', 'create_fed', 'join_fed',
+                                'leave_fed', 'fban', 'funban', 'feds', 'fpromote',
+                                'fdemote', 'delete_fed', 'modules', 'q', 'music'])
+
 async def cmd_handler(m):
     command = m.text.lstrip('/').split()[0].split('@')[0]
     if m.chat.type == 'private':
-        restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 'filters', 'kickme', 'stop', 'remove', 'notes', 'add', 'goodbye', 'greeting', 'pin', 'create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules']
-        if m.text.lstrip('/').split()[0].split('@')[0] in restricted_in_pm:
+        restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 'filters',
+                             'kickme', 'stop', 'remove', 'notes', 'add', 'goodbye',
+                               'greeting', 'pin', 'create_fed', 'join_fed', 'leave_fed', 'fban',
+                                 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules']
+        if command in restricted_in_pm:
             await bot.reply_to(m, "This command is not available in private chats.")
             return
+
+    elif '@' in m.text:
+        bot_username = (await bot.get_me()).username
+        if m.text.split('@')[1].split()[0] != bot_username:
+            return
+
     else:
         if not await is_module_enabled_in_group(command, m.chat.id):
             await bot.reply_to(m, f"The {command} command is disabled in this group.")
             return
-    if '@' in m.text:
-        bot_username = (await bot.get_me()).username
-        if m.text.split('@')[1].split()[0] != bot_username:
-            return
-    await handle_command(m)
+    
+    await handle_command(m, m.text.lower())
 
 @bot.chat_member_handler()
 async def chat_m(m: types.ChatMemberUpdated):
