@@ -14,7 +14,7 @@ async def extract_supported_url(m):
     url = match.group(0)
 
     if "youtube.com" in url or "youtu.be" in url:
-        await download_yt_audio(m, url)
+        await download_yt_vid(m, url)
     elif "instagram.com" in url:
         await instagram_dl(m, url)
     elif "tiktok.com" in url:
