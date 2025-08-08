@@ -1,7 +1,7 @@
 from info import bot
 from core.imysdb import IMYDB
 from core.utils import log_error
-
+from telebot.formatting import format_text, mbold, mitalic
 async def set_note(m):
     try:
         necessary_evil = await bot.get_chat_member(m.chat.id, m.from_user.id)
@@ -95,18 +95,18 @@ async def notes_list(m):
         notes = db.get('notes', {})
 
         formatted_notes = '\n'.join([f"`{note_id}.` {note['name']}" for note_id, note in notes.items()])
-        formatted_notes = formatted_notes.replace("_", "\\_").replace("*", "\\*")
-
+        formatted_reply = format_text(
+            mitalic("Catalog of notes:"),
+            formatted_notes,
+            mbold("Retrieve notes via #note_number", escape=False)
+        )
         if formatted_notes:
-            await bot.send_message(m.chat.id, f"_Catalog of notes:_\n{formatted_notes}\nRetrieve notes via '#note_number'.", parse_mode="Markdown")
+            await bot.send_message(m.chat.id, formatted_reply, parse_mode="Markdown")
         else:
             await bot.send_message(m.chat.id, "Catalog empty. No notes registered.")
     except Exception as error:
         await log_error(bot, error, context_msg=m)
         await bot.reply_to(m, "An error occurred.")
-
-
-
 
 
 async def remove_note(m):
