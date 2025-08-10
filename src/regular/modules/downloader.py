@@ -200,10 +200,10 @@ async def fetch_music(m, url, old, title):
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as response:
             data = await response.json()
-            yt_music = data['links'][1].get('url') or "N/A"
             spotify  = data['links'][3].get('url') or "N/A"
             deezer   = data['links'][5].get('url') or "N/A"
             tidal    = data['links'][8].get('url') or "N/A"
+
             if tidal != "N/A":
                 link = await download_music(m, headers, tidal, "tidal")
             elif deezer != "N/A":
@@ -211,11 +211,11 @@ async def fetch_music(m, url, old, title):
             elif spotify != "N/A":
                 link = await download_music(m, headers, spotify, "spotify")
             else:
-                link = await download_music(m, headers, yt_music, "ytmp3")
+                await bot.reply_to(m, "Song not found.")
 
             await bot.delete_message(m.chat.id, old.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, link, caption=title)
+            await bot.send_audio(m.chat.id, link, caption=title, reply_to_message_id=m.id)
 
 
 async def download_music(m, headers, song, choice):
@@ -230,7 +230,7 @@ async def download_music(m, headers, song, choice):
                     data = await response.json()
                     link = data['directUrl']
                     return link
-                    
+
 
         elif choice == "deezer":
             # Same as above situation, 320KBPS MP3 and not flac.
@@ -248,18 +248,6 @@ async def download_music(m, headers, song, choice):
                     data = await response.json()
                     link = data['directUrl']
                     return link
-
-        elif choice =="ytmp3":
-            url = f"{URL}/{choice}?url={song}&format=mp3"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
-                    data = await response.json()
-                    task_url = data['task_url']
-                    link = await check_yt_dl_status(task_url)
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(link) as response:
-                            audio = await response.content.read()
-                            return audio
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
