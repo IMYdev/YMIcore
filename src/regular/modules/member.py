@@ -72,9 +72,6 @@ help_categories = {
     - `/pin`: Pins the message you reply to.
     - `/ban [user]`: Bans a user from the chat.
     - `/unban [user]`: Unbans a user from the chat.
-    - `/mute [user]`: Mutes a user in the chat.
-    - `/unmute [user]`: Unmutes a user in the chat.
-    - `/kickme`: Kicks yourself from the chat.
     - `/reset`: Resets the bot's memory.
     - `/modules`: Manages activation of different modules and their subcommands.
     - `/horny`: Hentai content.
@@ -285,20 +282,3 @@ async def group_id(m):
             await bot.reply_to(m, f"Group ID: `{chat_id_str}`", parse_mode='Markdown')
     except Exception as error:
         await log_error(bot, error, m)
-
-async def kick(m):
-    try:
-        necessary_evil = await bot.get_chat_member(m.chat.id, m.from_user.id)
-        rank = necessary_evil.status
-        username = m.reply_to_message.from_user.username if m.reply_to_message.from_user.username else m.reply_to_message.from_user.first_name
-        if rank == "member":
-            kick = await bot.kick_chat_member(m.chat.id, m.from_user.id)
-            if kick:
-                await bot.reply_to(m, f"Farewell @{username}.")
-        elif rank == "creator":
-            await bot.reply_to(m, "Cannot kick the creator of the group.")
-        else:
-            await bot.reply_to(m, "Cannot kick admins.")
-    except Exception as error:
-        await bot.reply_to(m, "An error occurred.")
-        log_error(bot, error, m)

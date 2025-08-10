@@ -19,7 +19,7 @@ It's also a ready-to-use general group management bot.
 - Chat with AI. Ask questions and get quick, smart answers  
 - Save, list, and remove notes inside the chat.
 - Set up automatic keyword triggers that reply with custom messages.
-- Manage chat admins. Promote, demote, mute, unmute, ban, or unban users.
+- Manage chat admins. Promote, demote, ban, or unban users.
 - Pin important messages.
 - Clean up chats by deleting batches of messages at once.
 - Reset the bot’s AI memory for a fresh start whenever needed.

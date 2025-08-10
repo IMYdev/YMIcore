@@ -34,21 +34,18 @@ async def is_module_enabled_in_group(command, chat_id):
     return module_enabled and current_permission
 
 @bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote',
-                                'demote', 'pin', 'id', 'face', 'image',
-                                'wallpaper', 'ask', 'animewall', 'horny', 'sauce', 
-                                'imagine', 'purge', 'filter', 'filters', 'stop',
-                                'notes', 'remove', 'add', 'help', 'goodbye',
-                                'greeting', 'kickme', 'reset', 'create_fed', 'join_fed',
-                                'leave_fed', 'fban', 'funban', 'feds', 'fpromote',
-                                'fdemote', 'delete_fed', 'modules', 'q', 'music'])
+                                'demote', 'pin', 'id', 'image', 'wallpaper',
+                                'ask', 'animewall', 'horny', 'sauce', 'imagine',
+                                'purge', 'filter', 'filters', 'stop', 'notes',
+                                'remove', 'add', 'help', 'goodbye', 'greeting',
+                                'reset', 'modules', 'q', 'music'])
 
 async def cmd_handler(m):
     command = m.text.lstrip('/').split()[0].split('@')[0]
     if m.chat.type == 'private':
-        restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 'filters',
-                             'kickme', 'stop', 'remove', 'notes', 'add', 'goodbye',
-                               'greeting', 'pin', 'create_fed', 'join_fed', 'leave_fed', 'fban',
-                                 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed', 'modules']
+        restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 
+                            'filters', 'stop', 'remove', 'notes', 'add',
+                            'goodbye', 'greeting', 'pin', 'modules']
         if command in restricted_in_pm:
             await bot.reply_to(m, "This command is not available in private chats.")
             return

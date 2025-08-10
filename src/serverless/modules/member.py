@@ -72,9 +72,6 @@ help_categories = {
     - `/pin`: Pins the message you reply to.
     - `/ban [user]`: Bans a user from the chat.
     - `/unban [user]`: Unbans a user from the chat.
-    - `/mute [user]`: Mutes a user in the chat.
-    - `/unmute [user]`: Unmutes a user in the chat.
-    - `/kickme`: Kicks yourself from the chat.
     - `/reset`: Resets the bot's memory.
     - `/modules`: Manages activation of different modules and their subcommands.
     - `/horny`: Hentai content.

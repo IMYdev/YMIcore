@@ -8,11 +8,10 @@ db = IMYDB('runtime/modules/module_controller.json')
 # Define the main modules and categorize the commands
 modules = {
     'anime': ['animewall', 'horny', 'sauce'],
-    'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'kickme', 'purge', 'goodbye', 'greeting'],
+    'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge', 'goodbye', 'greeting'],
     'notes' : ['notes', 'add', 'remove'],
     'filters': ['filter', 'filters', 'stop'],
     'greetings': ['greeting', 'goodbye'],
-    'federation': ['create_fed', 'join_fed', 'leave_fed', 'fban', 'funban', 'feds', 'fpromote', 'fdemote', 'delete_fed'],
     'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'id', 'music']
 }
 
