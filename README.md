@@ -30,7 +30,8 @@ Create a `.env` file or set the following environment variables:
 ```
 BOT_TOKEN=your_telegram_bot_token
 LOG_ID=logs_channel_id_without_the_minus
-AWAN_LLM=token_for_AI_functions
+AWAN_LLM=token_for_LLM_functions
+PAX=token_for_PaxSenix_API
 ```
 For serverless, add those as well:
 ```
@@ -80,6 +81,9 @@ requirements.txt # Project dependencies.
 - **[YMI](https://t.me/youmnairisbot)** for self-hosted.
 - **[SyndicateAIbot](https://t.me/ProjectZ_mind_control_delete_bot)** for serverless (Vercel + MongoDB.)
 
+## Credits: 
+- **PaxSenix for their incredible [API](https://api.paxsenix.biz.id/) .**
+- **[Awan LLM](https://www.awanllm.com/) for YMIcore's LLM functions.**
 
 ## License
 This code is licensed under GPLv3 copyleft.
