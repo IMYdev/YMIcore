@@ -1,5 +1,5 @@
 from info import (bot, Downloader, PAXSENIX_TOKEN)
-from telebot.formatting import mlink
+from telebot.formatting import hlink
 import re
 from core.utils import log_error
 import aiohttp
@@ -7,6 +7,14 @@ from innertube import InnerTube
 import asyncio
 from telebot.types import InputMediaPhoto, InputMediaVideo
 
+async def wait_until_ok(url, headers=None, delay=1):
+    async with aiohttp.ClientSession() as session:
+        while True:
+            async with session.get(url, headers=headers) as response:
+                data = await response.json()
+                if data.get('ok') == True:
+                    return data
+                await asyncio.sleep(delay)
 
 async def extract_supported_url(m):
     if not Downloader:
@@ -33,12 +41,12 @@ async def instagram_dl(m, url):
         api=f"https://api.paxsenix.biz.id/dl/ig?url={url}"
         async with aiohttp.ClientSession() as session:
             async with session.get(api, headers=headers) as response:
-                data = await response.json()
+                data = await wait_until_ok(api, headers)
                 links = data['downloadUrls']
                 media_list = []
-                source = mlink("Source", url, escape=False)
+                source = hlink("Source", url, escape=False)
                 username = data['detail']['username']
-                author = mlink(username, f"www.instagram.com/{username}", escape=False)
+                author = hlink(username, f"www.instagram.com/{username}", escape=False)
                 author = author.replace("\\", "")
                 description = data['detail']['title']
                 caption = f"{description}\nPost by {author}\n{source}"
@@ -54,7 +62,7 @@ async def instagram_dl(m, url):
 
                         if file_ext == 'jpg':
                             if media_count == 0:
-                                media = InputMediaPhoto(link, caption=caption, parse_mode="Markdown")
+                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
 
                             else:
                                 media = InputMediaPhoto(link)
@@ -63,7 +71,7 @@ async def instagram_dl(m, url):
 
                         elif file_ext == 'mp4':
                             if media_count == 0:
-                                media = InputMediaVideo(link, caption=caption, parse_mode="Markdown")
+                                media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
 
                             else:
                                 media = InputMediaVideo(link)
@@ -78,10 +86,10 @@ async def instagram_dl(m, url):
                     link = links[0]['url']
 
                     if file_ext == 'jpg':
-                        await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="Markdown")
+                        await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
 
                     elif file_ext == 'mp4':
-                        await bot.send_video(m.chat.id, link, caption=caption, parse_mode="Markdown")
+                        await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -96,10 +104,10 @@ async def tiktok_dl(m, url):
         api=f"https://api.paxsenix.biz.id/dl/tiktok?url={url}"
         async with aiohttp.ClientSession() as session:
             async with session.get(api, headers=headers) as response:
-                data = await response.json()
+                data = await wait_until_ok(api, headers)
                 media_list = []
-                source = mlink("Source", url, escape=False)
-                author = mlink(data['detail']['author'], data['detail']['authorProfileLink'], escape=False)
+                source = hlink("Source", url, escape=False)
+                author = hlink(data['detail']['author'], data['detail']['authorProfileLink'], escape=False)
                 author = author.replace("\\", "")
                 description = data['detail']['description']
                 caption = f"{description}\nPost by {author}\n{source}"
@@ -117,7 +125,7 @@ async def tiktok_dl(m, url):
                     if len(images) > 1:
                         for link in range(len(images)):
                             if media_count == 0:
-                                media = InputMediaPhoto(link, caption=caption, parse_mode="Markdown")
+                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
                             else:
                                 media = InputMediaPhoto(link)
                             media_count += 1
@@ -126,12 +134,12 @@ async def tiktok_dl(m, url):
 
                     else:
                         photo = images[0]
-                        await bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="Markdown")
+                        await bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="HTML")
                         await bot.send_audio(m.chat.id, music)
 
                 elif post_type == 'video':
                     link = links['video']
-                    await bot.send_video(m.chat.id, link, caption=caption, parse_mode="Markdown")
+                    await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -143,10 +151,10 @@ async def download_yt_vid(m, link):
             'Content-Type': 'application/json',
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
-        url=f"https://api.paxsenix.biz.id/dl/ytmp4?url={link}&quality=360"
+        api=f"https://api.paxsenix.biz.id/dl/ytmp4?url={link}&quality=360"
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                data = await response.json()
+            async with session.get(api, headers=headers) as response:
+                data = await wait_until_ok(api, headers)
                 task_url = data['task_url']
                 link = await check_yt_dl_status(task_url)
                 async with aiohttp.ClientSession() as session:
@@ -159,10 +167,10 @@ async def download_yt_vid(m, link):
 
 async def download_yt_audio(m, link, headers):
     try:
-        url=f"https://api.paxsenix.biz.id/dl/ytmp3?url={link}&format=mp3"
+        api=f"https://api.paxsenix.biz.id/dl/ytmp3?url={link}&format=mp3"
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                data = await response.json()
+            async with session.get(api, headers=headers) as response:
+                data = await wait_until_ok(api, headers)
                 task_url = data['task_url']
                 link = await check_yt_dl_status(task_url)
                 async with aiohttp.ClientSession() as session:
@@ -214,10 +222,10 @@ async def fetch_music(m, link, old, title):
         'Content-Type': 'application/json',
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
     }
-    url = f"https://api.paxsenix.biz.id/tools/songlink?url={link}"
+    api = f"https://api.paxsenix.biz.id/tools/songlink?url={link}"
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
-            data = await response.json()
+        async with session.get(api, headers=headers) as response:
+            data = await wait_until_ok(api, headers)
             spotify  = data['links'][3].get('url') or "N/A"
             deezer   = data['links'][5].get('url') or "N/A"
             tidal    = data['links'][8].get('url') or "N/A"
@@ -242,10 +250,10 @@ async def download_music(m, headers, song, choice):
         if choice == "tidal":
             # Not lossless because lossless is flac and TG servers won't fetch that.
             # We won't fetch that locally either, too much bandwidth.
-            url = f"{URL}/{choice}?url={song}&quality=HIGH"
+            api = f"{URL}/{choice}?url={song}&quality=HIGH"
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers) as response:
-                    data = await response.json()
+                    data = await wait_until_ok(api, headers)
                     link = data['directUrl']
                     return link
 
@@ -255,7 +263,7 @@ async def download_music(m, headers, song, choice):
             url = f"{URL}/{choice}?url={song}&quality=320kbps"
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers) as response:
-                    data = await response.json()
+                    data = await wait_until_ok(api, headers)
                     link = data['directUrl']
                     return link
 
@@ -263,7 +271,7 @@ async def download_music(m, headers, song, choice):
             url = f"{URL}/{choice}?url={song}&serv=spotdl"
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers) as response:
-                    data = await response.json()
+                    data = await wait_until_ok(api, headers)
                     link = data['directUrl']
                     return link
 
