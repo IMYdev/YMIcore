@@ -155,14 +155,17 @@ async def download_yt_vid(m, link):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/dl/ytmp4?url={link}&quality=360"
+        source = hlink("Source", link, escape=False)
         async with aiohttp.ClientSession() as session:
             async with session.get(api, headers=headers) as response:
                 data = await wait_until_ok(api, headers)
                 task_url = data['task_url']
-                link = await check_yt_dl_status(task_url)
+                link, thumb, title = await check_yt_dl_status(task_url)
+                title = hcite(title)
+                caption = f"{title}\n{source}"
                 async with aiohttp.ClientSession() as session:
                     async with session.get(link) as response:
-                        await bot.send_video(m.chat.id, response.content)
+                        await bot.send_video(m.chat.id, video=response.content, cover=thumb, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         if "Too Large" in str(error):
@@ -292,6 +295,8 @@ async def check_yt_dl_status(task_url):
                 
                 if data.get('status') == "done":
                     link = data.get('url')
-                    return link
+                    thumb = data['info'].get('image')
+                    title = data['info'].get('title')
+                    return link, thumb, title
 
             await asyncio.sleep(0.2)
