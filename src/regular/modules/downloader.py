@@ -27,7 +27,7 @@ async def extract_supported_url(m):
     url = match.group(0)
 
     if "youtube.com" in url or "youtu.be" in url:
-        await download_yt_vid(m, url)
+        await download_yt_video(m, url)
     elif "instagram.com" in url:
         url = url.split("?", 1)[0]
         await instagram_dl(m, url)
@@ -150,24 +150,19 @@ async def tiktok_dl(m, url):
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
-async def download_yt_vid(m, link):
+async def download_yt_video(m, link):
     try:
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
-        api=f"https://api.paxsenix.biz.id/dl/ytmp4?url={link}&quality=360"
+        api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=360"
         source = hlink("Source", link, escape=False)
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api, headers=headers) as response:
-                data = await wait_until_ok(api, headers)
-                task_url = data['task_url']
-                link, thumb, title = await check_yt_dl_status(task_url)
-                title = hcite(title)
-                caption = f"{title}\n{source}"
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(link) as response:
-                        await bot.send_video(m.chat.id, video=response.content, cover=thumb, caption=caption, parse_mode="HTML")
+        data = await wait_until_ok(api, headers)
+        task_url = data['task_url']
+        link, thumb, title = await check_yt_dl_status(task_url)
+        caption = f"{title}\n{source}"
+        await bot.send_video(m.chat.id, video=link, cover=thumb, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         if "Too Large" in str(error):
@@ -177,16 +172,11 @@ async def download_yt_vid(m, link):
 
 async def download_yt_audio(m, link, headers):
     try:
-        api=f"https://api.paxsenix.biz.id/dl/ytmp3?url={link}&format=mp3"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api, headers=headers) as response:
-                data = await wait_until_ok(api, headers)
-                task_url = data['task_url']
-                link = await check_yt_dl_status(task_url)
-                link = link[0]
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(link) as response:
-                        return await response.content.read()
+        api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=mp3"
+        data = await wait_until_ok(api, headers)
+        task_url = data['task_url']
+        link = await check_yt_dl_status(task_url)
+        return link[0]
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -297,9 +287,9 @@ async def check_yt_dl_status(task_url):
                 data = await response.json()
                 
                 if data.get('status') == "done":
-                    link = data.get('url')
-                    thumb = data['info'].get('image')
-                    title = data['info'].get('title')
+                    link = data.get('download')
+                    thumb = data.get('thumbnail')
+                    title = data.get('title')
                     return link, thumb, title
 
             await asyncio.sleep(0.2)
