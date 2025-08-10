@@ -157,6 +157,22 @@ async def download_yt_vid(m, link):
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
+async def download_yt_audio(m, link, headers):
+    try:
+        url=f"https://api.paxsenix.biz.id/dl/ytmp3?url={link}&format=mp3"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as response:
+                data = await response.json()
+                task_url = data['task_url']
+                link = await check_yt_dl_status(task_url)
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(link) as response:
+                        return await response.content.read()
+
+    except Exception as error:
+        await bot.send_message(m.chat.id, "An error occurred.")
+        await log_error(bot, error, m)
+
 async def music_search(m):
     if not Downloader:
         return
@@ -185,18 +201,20 @@ async def music_search(m):
                 title = title.split("[", 1)[0]
             elif "(" in title:
                 title = title.split("(", 1)[0]
+            elif "【" in title:
+                title = title.split("【", 1)[0]    
             url = f"https://www.youtube.com/watch?v={video_id}"
             await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
             await fetch_music(m, url, old, title)
             # Stop after the first result.
             break
 
-async def fetch_music(m, url, old, title):
+async def fetch_music(m, link, old, title):
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
     }
-    url = f"https://api.paxsenix.biz.id/tools/songlink?url={url}"
+    url = f"https://api.paxsenix.biz.id/tools/songlink?url={link}"
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as response:
             data = await response.json()
@@ -211,8 +229,7 @@ async def fetch_music(m, url, old, title):
             elif spotify != "N/A":
                 link = await download_music(m, headers, spotify, "spotify")
             else:
-                await bot.reply_to(m, "Song not found.")
-                return
+                link = await download_yt_audio(m, link, headers)
 
             await bot.delete_message(m.chat.id, old.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
