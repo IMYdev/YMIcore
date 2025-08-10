@@ -3,11 +3,33 @@
 A modular, extensible core for building Telegram bots in Python.
 It's also a ready-to-use general group management bot.
 
-## Features
-- Modular architecture: add or remove features as modules
-- Async support (uses `pyTelegramBotAPI` async interface)
+---
+## Features (developers)
+- Modular architecture: add or remove features as modules.
+- Async support (uses `pyTelegramBotAPI` async interface.)
 - Uses [IMY'sDB](https://github.com/IMYdev/IMY-sDB/) for file-based JSON storage (or MongoDB,) check the project repo for more details.
-- Easy to extend and maintain
+- Easy to extend and maintain/
+
+## Features (end users)
+- Show info about users or yourself anytime.
+- Custom greetings and farewell messages when a member joins or leaves (can attach pics or videos.)
+- Grab and send wallpapers from various sources, including anime-themed ones.
+- Generate cool AI images from a text prompt.
+- Reverse search anime pictures to identify the anime.
+- Chat with AI. Ask questions and get quick, smart answers  
+- Save, list, and remove notes inside the chat.
+- Set up automatic keyword triggers that reply with custom messages.
+- Manage chat admins. Promote, demote, mute, unmute, ban, or unban users.
+- Pin important messages.
+- Clean up chats by deleting batches of messages at once.
+- Reset the bot’s AI memory for a fresh start whenever needed.
+- Toggle and control various bot modules for extra features or disabling unwanted ones.
+- Search for and fetch music tracks from platforms like TIDAL, Deezer, Spotify, and YouTube Music.
+- Grab media content from Instagram, TikTok, and YouTube links.
+- Provide NSFW content for users who want it.
+
+---
+
 
 ## Quick Start
 
@@ -48,6 +70,7 @@ python main.py
 ```
 Else, just initiate a deployment on vercel.
 
+---
 ## Project Structure
 ```
 core/           # Core framework logic (database, utils.)
@@ -56,6 +79,7 @@ botcommands.py  # Command router.
 main.py         # Entry point.
 requirements.txt # Project dependencies.
 ```
+---
 
 ## Creating Your Own Bot
 1. **Add needed environment variables to `.env` or your environment.**
@@ -65,6 +89,7 @@ requirements.txt # Project dependencies.
    - To remove a feature, remove or comment out the relevant handler in `botcommands.py` or the module file.
 3. **Write your own modules:**
    - See `modules/filters.py` or `modules/notes.py` for examples.
+---
 
 ## Why YMI Bot Core?
 - **Fast startup:** No database migrations (optional), no slow boot.
@@ -73,18 +98,20 @@ requirements.txt # Project dependencies.
 - **Robust command router:** Handles all commands in one place for easy auditing and debugging.
 - **Async and modern:** Built on `pyTelegramBotAPI` async interface for high performance.
 - **Extensible:** Add or remove features by editing `botcommands.py` and dropping files in `modules/`.
+---
 
 ## Note:
 **Vercel** + **MongoDB** for serverless is just my own personal preference, you can use whatever you like with minimal changes.
 
+---
 ## Demo instances:
 - **[YMI](https://t.me/youmnairisbot)** for self-hosted.
 - **[SyndicateAIbot](https://t.me/ProjectZ_mind_control_delete_bot)** for serverless (Vercel + MongoDB.)
-
+---
 ## Credits: 
 - **PaxSenix for their incredible [API](https://api.paxsenix.biz.id/) .**
 - **[Awan LLM](https://www.awanllm.com/) for YMIcore's LLM functions.**
-
+---
 ## License
 This code is licensed under GPLv3 copyleft.
 
