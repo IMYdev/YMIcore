@@ -165,6 +165,8 @@ async def download_yt_vid(m, link):
                         await bot.send_video(m.chat.id, response.content)
 
     except Exception as error:
+        if "Too Large" in str(error):
+            return
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
