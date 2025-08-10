@@ -28,6 +28,7 @@ async def extract_supported_url(m):
     if "youtube.com" in url or "youtu.be" in url:
         await download_yt_vid(m, url)
     elif "instagram.com" in url:
+        url = url.split("?", 1)[0]
         await instagram_dl(m, url)
     elif "tiktok.com" in url:
         await tiktok_dl(m, url)
