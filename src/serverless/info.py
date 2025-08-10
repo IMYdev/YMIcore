@@ -14,7 +14,7 @@ PAXSENIX_TOKEN= os.getenv("PAX")
 
 Logs = True
 AI = True
-Music = True
+Downloader = True
 
 if TOKEN is None:
     print("Critical error: BOT_TOKEN environment variable is missing.")
@@ -39,7 +39,7 @@ if AWAN_LLM_KEY is None:
 
 if PAXSENIX_TOKEN is None:
     print("Warning: Continuing without features reliant of PaxSenix API.")
-    Music = False
+    Downloader = False
 
 
 bot = AsyncTeleBot(TOKEN)

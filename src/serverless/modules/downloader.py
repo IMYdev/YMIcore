@@ -1,4 +1,4 @@
-from info import (bot, Music, PAXSENIX_TOKEN)
+from info import (bot, Downloader, PAXSENIX_TOKEN)
 from telebot.formatting import mlink
 import re
 from core.utils import log_error
@@ -7,7 +7,10 @@ from innertube import InnerTube
 import asyncio
 from telebot.types import InputMediaPhoto, InputMediaVideo
 
+
 async def extract_supported_url(m):
+    if not Downloader:
+        return
     match = re.search(r'https?://\S+', m.text)
     if not match:
         return
@@ -155,6 +158,8 @@ async def download_yt_vid(m, link):
         await log_error(bot, error, m)
 
 async def music_search(m):
+    if not Downloader:
+        return
     client = InnerTube("WEB")
 
     query = m.text.split(" ", 1)
@@ -187,8 +192,6 @@ async def music_search(m):
             break
 
 async def fetch_music(m, url, old, title):
-    if not Music:
-        return
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
