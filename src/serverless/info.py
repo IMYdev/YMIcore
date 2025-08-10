@@ -8,11 +8,13 @@ if os.path.exists(".env"):
     load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
-ERROR_LOG_CHAT_ID = (os.getenv("LOG_ID"))
-AWAN_LLM_KEY = (os.getenv("AWAN_LLM"))
+ERROR_LOG_CHAT_ID = os.getenv("LOG_ID")
+AWAN_LLM_KEY = os.getenv("AWAN_LLM")
+PAXSENIX_TOKEN= os.getenv("PAX")
 
 Logs = True
 AI = True
+Music = True
 
 if TOKEN is None:
     print("Critical error: BOT_TOKEN environment variable is missing.")
@@ -34,6 +36,10 @@ if AWAN_LLM_KEY is None:
     print("Warning: AWAN_LLM environment variable is missing.")
     print("Continuing without AI functions.")
     AI = False
+
+if PAXSENIX_TOKEN is None:
+    print("Warning: Continuing without features reliant of PaxSenix API.")
+    Music = False
 
 
 bot = AsyncTeleBot(TOKEN)

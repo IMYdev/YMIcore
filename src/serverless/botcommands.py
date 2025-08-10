@@ -12,7 +12,7 @@ from modules.member import (
 from module_manager import send_module_keyboard
 from modules.quotes import quote_handler
 from modules.greetings import set_greeting, set_goodbye
-from modules.downloader import fetch_music
+from modules.downloader import music_search
 
 COMMANDS = {
     "/info": user_info,
@@ -43,7 +43,7 @@ COMMANDS = {
     "/modules": send_module_keyboard,
     "/q": quote_handler,
     "/horny": spice,
-    "/music": fetch_music,
+    "/music": music_search,
 }
 
 
