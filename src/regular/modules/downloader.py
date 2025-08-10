@@ -185,40 +185,33 @@ async def download_yt_audio(m, link, headers):
 async def music_search(m):
     if not Downloader:
         return
-    client = InnerTube("WEB")
+    try:
+        query = m.text.split(" ", 1)
+        if len(query) > 1:
+            query = query[1]
+            old = await bot.reply_to(m, "Looking for song...")
+        else:
+            await bot.reply_to(m, "No song name provided.")
+            return
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f"Bearer {PAXSENIX_TOKEN}"
+        }
+        api=f"https://api.paxsenix.biz.id/yt-music/search?q={query}"
+        data = await wait_until_ok(api, headers)
+        link = f"www.youtube.com/watch?v={data['result'][0]['videoId']}"
+        title = data['result'][0]['title']
+        author = data['result'][0]['author']
+        thumb = data['result'][0]['thumbnail']
+        duration = data['result'][0]['duration']
+        caption = f"{author} - {title}"
+        await fetch_music(m, link, old, caption)
 
-    query = m.text.split(" ", 1)
-    if len(query) > 1:
-        query = query[1]
-        old = await bot.reply_to(m, "Looking for song...")
-    else:
-        await bot.reply_to(m, "No song name provided.")
-        return
+    except Exception as error:
+        await bot.send_message(m.chat.id, "An error occurred.")
+        await log_error(bot, error, m)
 
-    data = client.search(query=query)
-    sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']
-
-    for section in sections:
-        items = section.get('itemSectionRenderer', {}).get('contents', [])
-        for item in items:
-            video = item.get('videoRenderer')
-            if not video:
-                continue
-            video_id = video['videoId']
-            title = video['title']['runs'][0]['text']
-            if "[" in title:
-                title = title.split("[", 1)[0]
-            elif "(" in title:
-                title = title.split("(", 1)[0]
-            elif "【" in title:
-                title = title.split("【", 1)[0]    
-            url = f"https://www.youtube.com/watch?v={video_id}"
-            await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
-            await fetch_music(m, url, old, title)
-            # Stop after the first result.
-            break
-
-async def fetch_music(m, link, old, title):
+async def fetch_music(m, link, old, caption):
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
@@ -230,7 +223,7 @@ async def fetch_music(m, link, old, title):
             spotify  = data['links'][3].get('url') or "N/A"
             deezer   = data['links'][5].get('url') or "N/A"
             tidal    = data['links'][8].get('url') or "N/A"
-
+            await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
             if tidal != "N/A":
                 link = await download_music(m, headers, tidal, "tidal")
             elif deezer != "N/A":
@@ -242,8 +235,7 @@ async def fetch_music(m, link, old, title):
 
             await bot.delete_message(m.chat.id, old.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, link, caption=title, reply_to_message_id=m.id)
-
+            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
 
 async def download_music(m, headers, song, choice):
     try:
