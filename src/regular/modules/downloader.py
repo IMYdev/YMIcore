@@ -14,7 +14,9 @@ async def wait_until_ok(url, headers=None, delay=1):
                 data = await response.json()
                 if data.get('ok') == True:
                     return data
+                print("sup")
                 await asyncio.sleep(delay)
+                
 
 async def extract_supported_url(m):
     if not Downloader:
@@ -87,11 +89,11 @@ async def instagram_dl(m, url):
                     file_ext = links[0]['ext']
                     link = links[0]['url']
 
-                    if file_ext == 'jpg':
+                    if file_ext == 'mp4':
+                        await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
+                    else:
                         await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
 
-                    elif file_ext == 'mp4':
-                        await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
