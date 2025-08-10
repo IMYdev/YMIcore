@@ -1,5 +1,5 @@
 from info import (bot, Downloader, PAXSENIX_TOKEN)
-from telebot.formatting import hlink
+from telebot.formatting import (hlink, hcite)
 import re
 from core.utils import log_error
 import aiohttp
@@ -50,6 +50,7 @@ async def instagram_dl(m, url):
                 author = hlink(username, f"www.instagram.com/{username}", escape=False)
                 author = author.replace("\\", "")
                 description = data['detail']['title']
+                description = hcite(description)
                 caption = f"{description}\nPost by {author}\n{source}"
                 media_count = 0
 
@@ -111,6 +112,7 @@ async def tiktok_dl(m, url):
                 author = hlink(data['detail']['author'], data['detail']['authorProfileLink'], escape=False)
                 author = author.replace("\\", "")
                 description = data['detail']['description']
+                description = hcite(description)
                 caption = f"{description}\nPost by {author}\n{source}"
                 media_count = 0
                 links = data['downloadUrls']
