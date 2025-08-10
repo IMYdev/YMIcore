@@ -47,15 +47,15 @@ async def instagram_dl(m, url):
                 media_list = []
                 source = hlink("Source", url, escape=False)
                 username = data['detail']['username']
-                author = hlink(username, f"www.instagram.com/{username}", escape=False)
+                author = hlink(f"@{username}", f"www.instagram.com/{username}", escape=False)
                 author = author.replace("\\", "")
                 description = data['detail']['title']
                 description = hcite(description, expandable=True)
-                caption = f"{description}\nPost by {author}\n{source}"
+                caption = f"{description}\n{author}\n{source}"
                 media_count = 0
 
                 if len(caption) > 1024:
-                    caption = source
+                    caption = f"{author}\n{source}"
 
                 if len(links) > 1:
                     for i in range(len(links)):
@@ -109,17 +109,18 @@ async def tiktok_dl(m, url):
                 data = await wait_until_ok(api, headers)
                 media_list = []
                 source = hlink("Source", url, escape=False)
-                author = hlink(data['detail']['author'], data['detail']['authorProfileLink'], escape=False)
+                username = data['detail']['author']
+                author = hlink(f"@{username}", data['detail']['authorProfileLink'], escape=False)
                 author = author.replace("\\", "")
                 description = data['detail']['description']
                 description = hcite(description, expandable=True)
-                caption = f"{description}\nPost by {author}\n{source}"
+                caption = f"{description}\n{author}\n{source}"
                 media_count = 0
                 links = data['downloadUrls']
                 post_type = data['detail']['type']
 
                 if len(caption) > 1024:
-                    caption = source
+                    caption = f"{author}\n{source}"
 
                 if post_type == 'image':
                     images = links['images']
