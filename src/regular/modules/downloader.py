@@ -14,7 +14,6 @@ async def wait_until_ok(url, headers=None, delay=1):
                 data = await response.json()
                 if data.get('ok') == True:
                     return data
-                print("sup")
                 await asyncio.sleep(delay)
                 
 
@@ -184,6 +183,7 @@ async def download_yt_audio(m, link, headers):
                 data = await wait_until_ok(api, headers)
                 task_url = data['task_url']
                 link = await check_yt_dl_status(task_url)
+                link = link[0]
                 async with aiohttp.ClientSession() as session:
                     async with session.get(link) as response:
                         return await response.content.read()
@@ -263,7 +263,7 @@ async def download_music(m, headers, song, choice):
             # We won't fetch that locally either, too much bandwidth.
             api = f"{URL}/{choice}?url={song}&quality=HIGH"
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
+                async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
                     link = data['directUrl']
                     return link
@@ -271,17 +271,17 @@ async def download_music(m, headers, song, choice):
 
         elif choice == "deezer":
             # Same as above situation, 320KBPS MP3 and not flac.
-            url = f"{URL}/{choice}?url={song}&quality=320kbps"
+            api = f"{URL}/{choice}?url={song}&quality=320kbps"
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
+                async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
                     link = data['directUrl']
                     return link
 
         elif choice == "spotify":
-            url = f"{URL}/{choice}?url={song}&serv=spotdl"
+            api = f"{URL}/{choice}?url={song}&serv=spotdl"
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
+                async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
                     link = data['directUrl']
                     return link
