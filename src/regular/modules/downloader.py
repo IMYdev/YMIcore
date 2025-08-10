@@ -212,6 +212,7 @@ async def fetch_music(m, url, old, title):
                 link = await download_music(m, headers, spotify, "spotify")
             else:
                 await bot.reply_to(m, "Song not found.")
+                return
 
             await bot.delete_message(m.chat.id, old.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
