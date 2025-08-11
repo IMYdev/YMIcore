@@ -63,21 +63,21 @@ async def instagram_dl(m, url):
                         link = links[i]['url']
                         file_ext = links[i]['ext']
 
-                        if file_ext == 'jpg':
-                            if media_count == 0:
-                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
-
-                            else:
-                                media = InputMediaPhoto(link)
-
-                            media_count += 1
-
-                        elif file_ext == 'mp4':
+                        if file_ext == 'mp4':
                             if media_count == 0:
                                 media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
 
                             else:
                                 media = InputMediaVideo(link)
+
+                            media_count += 1
+
+                        else:
+                            if media_count == 0:
+                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
+
+                            else:
+                                media = InputMediaPhoto(link)
 
                             media_count += 1
 
