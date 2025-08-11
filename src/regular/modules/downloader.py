@@ -3,7 +3,6 @@ from telebot.formatting import (hlink, hcite)
 import re
 from core.utils import log_error
 import aiohttp
-from innertube import InnerTube
 import asyncio
 from telebot.types import InputMediaPhoto, InputMediaVideo
 
@@ -12,10 +11,11 @@ async def wait_until_ok(url, headers=None, delay=1):
         while True:
             async with session.get(url, headers=headers) as response:
                 data = await response.json()
+                if data.get('message') == "Failed to retrieve this content":
+                    return data
                 if data.get('ok') == True:
                     return data
                 await asyncio.sleep(delay)
-                
 
 async def extract_supported_url(m):
     if not Downloader:
@@ -178,6 +178,7 @@ async def download_yt_audio(m, link, headers):
         link = await check_yt_dl_status(task_url)
         return link[0]
 
+
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
@@ -202,8 +203,6 @@ async def music_search(m):
         link = f"www.youtube.com/watch?v={data['result'][0]['videoId']}"
         title = data['result'][0]['title']
         author = data['result'][0]['author']
-        thumb = data['result'][0]['thumbnail']
-        duration = data['result'][0]['duration']
         caption = f"{author} - {title}"
         await fetch_music(m, link, old, caption)
 
@@ -234,8 +233,9 @@ async def fetch_music(m, link, old, caption):
                 link = await download_yt_audio(m, link, headers)
 
             await bot.delete_message(m.chat.id, old.id)
-            await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+            if link:
+                await bot.send_chat_action(m.chat.id, "upload_voice")
+                await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
 
 async def download_music(m, headers, song, choice):
     try:
@@ -247,6 +247,8 @@ async def download_music(m, headers, song, choice):
             async with aiohttp.ClientSession() as session:
                 async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
+                    if data['message'] == "Failed to retrieve this content":
+                        raise FileNotFoundError
                     link = data['directUrl']
                     return link
 
@@ -257,6 +259,8 @@ async def download_music(m, headers, song, choice):
             async with aiohttp.ClientSession() as session:
                 async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
+                    if data['message'] == "Failed to retrieve this content":
+                        raise FileNotFoundError
                     link = data['directUrl']
                     return link
 
@@ -265,10 +269,17 @@ async def download_music(m, headers, song, choice):
             async with aiohttp.ClientSession() as session:
                 async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
+                    if data['message'] == "Failed to retrieve this content":
+                        raise FileNotFoundError
                     link = data['directUrl']
                     return link
 
     except Exception as error:
+
+        if FileNotFoundError:
+            await bot.reply_to(m, "Couldn't fetch song.")
+            return
+
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
