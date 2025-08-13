@@ -50,16 +50,15 @@ async def cmd_handler(m):
             await bot.reply_to(m, "This command is not available in private chats.")
             return
 
-    elif '@' in m.text:
-        bot_username = (await bot.get_me()).username
-        if m.text.split('@')[1].split()[0] != bot_username:
-            return
-
     else:
+        if '@' in m.text:
+            bot_username = (await bot.get_me()).username
+            if m.text.split('@')[1].split()[0] != bot_username:
+                return
         if not await is_module_enabled_in_group(command, m.chat.id):
             await bot.reply_to(m, f"The {command} command is disabled in this group.")
             return
-    
+
     await handle_command(m, m.text.lower())
 
 @bot.chat_member_handler()
