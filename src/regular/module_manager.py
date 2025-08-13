@@ -22,8 +22,10 @@ default_disabled = {
 
 # Function to check if the user is an admin
 async def is_user_admin(chat_id, user_id):
-    chat_admins = await bot.get_chat_administrators(chat_id)
-    return any(admin.user.id == user_id for admin in chat_admins)
+    rank = await bot.get_chat_member(chat_id, user_id)
+    if rank != "member":
+        return True
+    return False
 
 # Create a keyboard to show modules first
 def create_module_list_keyboard(group_id):
@@ -65,6 +67,9 @@ def create_command_list_keyboard(module_name, group_id):
 
 # Function to send the initial module list keyboard
 async def send_module_keyboard(m):
+    if not await is_user_admin(m.chat.id, m.from_user.id):
+        await bot.reply_to(m, "Admin only.")
+        return
     group_id = str(m.chat.id)
     keyboard = create_module_list_keyboard(group_id)
     await bot.send_message(m.chat.id, "Select a module to manage:", reply_markup=keyboard)
