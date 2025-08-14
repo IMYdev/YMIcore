@@ -156,6 +156,12 @@ async def download_yt_video(m, link):
             'Content-Type': 'application/json',
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
+
+        if len(m.text.split(" ", 1)) > 1 and m.text.split(" ", 1)[1] == "-audio":
+            link = await download_yt_audio(m, link, headers)
+            await bot.send_audio(m.chat.id, audio=link, reply_to_message_id=m.id)
+            return
+
         api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=360"
         source = hlink("Source", link, escape=False)
         data = await wait_until_ok(api, headers)
