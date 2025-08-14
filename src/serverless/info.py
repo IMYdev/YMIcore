@@ -11,6 +11,7 @@ TOKEN = os.getenv("BOT_TOKEN")
 ERROR_LOG_CHAT_ID = os.getenv("LOG_ID")
 AWAN_LLM_KEY = os.getenv("AWAN_LLM")
 PAXSENIX_TOKEN= os.getenv("PAX")
+BOT_OWNER= os.getenv("OWNER")
 
 Logs = True
 AI = True

@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from telebot import types
 from core.imysdbMongo import IMYDB
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from info import bot
+from info import (bot, BOT_OWNER)
 from modules.downloader import extract_supported_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
@@ -38,10 +38,17 @@ async def is_module_enabled_in_group(command, chat_id):
                                 'ask', 'animewall', 'horny', 'sauce', 'imagine',
                                 'purge', 'filter', 'filist', 'stop', 'notes',
                                 'remove', 'add', 'help', 'goodbye', 'greeting',
-                                'reset', 'modules', 'q', 'music'])
+                                'reset', 'modules', 'q', 'music', 'leave'])
 
 async def cmd_handler(m):
     command = m.text.lstrip('/').split()[0].split('@')[0]
+
+    if command == "leave" and m.from_user.id == int(BOT_OWNER):
+        chat_id = m.chat.id
+        if len(m.text.split(" ", 1)) > 1:
+            chat_id = m.text.split(" ", 1)[1]
+        await bot.leave_chat(chat_id)
+
     if m.chat.type == 'private':
         restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 
                             'filist', 'stop', 'remove', 'notes', 'add',
