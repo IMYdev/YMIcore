@@ -28,7 +28,7 @@ COMMANDS = {
     "/purge": purge,
     "/nuke": purge,
     "/filter": set_filter,
-    "/filters": get_filters,
+    "/filist": get_filters,
     "/stop": remove_filter,
     "/add": set_note,
     "/notes": notes_list,

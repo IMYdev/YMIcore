@@ -2,39 +2,44 @@ from info import bot
 from core.imysdbMongo import IMYDB
 from core.utils import log_error
 from telebot.formatting import format_text, mbold, mitalic
+
+async def is_user_admin(chat_id, user_id):
+    chat_admins = await bot.get_chat_administrators(chat_id)
+    for admin in chat_admins:
+        if admin.user.id == user_id:
+            return True
+    return False
+
 async def set_note(m):
     try:
-        necessary_evil = await bot.get_chat_member(m.chat.id, m.from_user.id)
-        rank = necessary_evil.status
-        
-        if rank != "member":
-            note_name = m.text.split()[1]
-            chat_id = str(m.chat.id).lstrip('-')
-            db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
+        if not await is_user_admin(m.chat.id, m.from_user.id):
+            await bot.reply_to(m, "Admin only")
+            return
+        note_name = m.text.split()[1]
+        chat_id = str(m.chat.id).lstrip('-')
+        db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
 
-            reply_with = {}
-            if m.reply_to_message:
-                if m.reply_to_message.text:
-                    reply_with = {"type": "text", "data": str(m.reply_to_message.text)}
-                elif m.reply_to_message.sticker:
-                    reply_with = {"type": "sticker", "data": m.reply_to_message.sticker.file_id}
-                elif m.reply_to_message.photo:
-                    reply_with = {"type": "photo", "data": m.reply_to_message.photo[-1].file_id}
-                elif m.reply_to_message.document:
-                    reply_with = {"type": "document", "data": m.reply_to_message.document.file_id}
-                elif m.reply_to_message.video:
-                    reply_with = {"type": "video", "data": m.reply_to_message.video.file_id}
-                else:
-                    reply_with = {"type": "unknown", "data": None}
+        reply_with = {}
+        if m.reply_to_message:
+            if m.reply_to_message.text:
+                reply_with = {"type": "text", "data": str(m.reply_to_message.text)}
+            elif m.reply_to_message.sticker:
+                reply_with = {"type": "sticker", "data": m.reply_to_message.sticker.file_id}
+            elif m.reply_to_message.photo:
+                reply_with = {"type": "photo", "data": m.reply_to_message.photo[-1].file_id}
+            elif m.reply_to_message.document:
+                reply_with = {"type": "document", "data": m.reply_to_message.document.file_id}
+            elif m.reply_to_message.video:
+                reply_with = {"type": "video", "data": m.reply_to_message.video.file_id}
+            else:
+                reply_with = {"type": "unknown", "data": None}
 
-            notes = db.get('notes', {})
-            next_id = max(map(int, notes.keys()), default=0) + 1
-            notes[str(next_id)] = {"name": str(note_name), "reply": reply_with}
-            db.set('notes', notes)
+        notes = db.get('notes', {})
+        next_id = max(map(int, notes.keys()), default=0) + 1
+        notes[str(next_id)] = {"name": str(note_name), "reply": reply_with}
+        db.set('notes', notes)
 
-            await bot.reply_to(m, f"Note saved. ID: {next_id}.")
-        else:
-            await bot.reply_to(m, "Access denied.")
+        await bot.reply_to(m, f"Note saved. ID: {next_id}.")
     except IndexError:
         await bot.reply_to(m, "Please provide a note name.")
     except Exception as error:
@@ -74,8 +79,6 @@ async def get_notes(m):
                             await bot.send_message(m.chat.id, "Note is unreadable.")
                     else:
                         await bot.send_message(m.chat.id, f"No note with ID {note_id}.")
-                else:
-                    pass
             else:
                 await bot.send_message(m.chat.id, "No note ID after '#'.")
         except (IndexError, ValueError):
@@ -110,6 +113,10 @@ async def notes_list(m):
 
 
 async def remove_note(m):
+    if not await is_user_admin(m.chat.id, m.from_user.id):
+        await bot.reply_to(m, "Admin only")
+        return
+
     chat_id = str(m.chat.id).lstrip('-')
     try:
         note_key = m.text.split()[1]
@@ -128,7 +135,7 @@ async def remove_note(m):
             notes = {str(i+1): v for i, (k, v) in enumerate(notes.items())}
             db.set('notes', notes)
 
-            await bot.send_message(m.chat.id, f"Note ID {note_key} eradicated. Operation successful.")
+            await bot.send_message(m.chat.id, f"Note ID {note_key} removed.")
         else:
             await bot.send_message(m.chat.id, f"No note matching ID {note_key} found.")
     except Exception as error:

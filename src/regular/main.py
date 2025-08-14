@@ -31,7 +31,7 @@ async def is_module_enabled_in_group(command, chat_id):
 @bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote',
                                 'demote', 'pin', 'id', 'image', 'wallpaper',
                                 'ask', 'animewall', 'horny', 'sauce', 'imagine',
-                                'purge', 'filter', 'filters', 'stop', 'notes',
+                                'purge', 'filter', 'filist', 'stop', 'notes',
                                 'remove', 'add', 'help', 'goodbye', 'greeting',
                                 'reset', 'modules', 'q', 'music'])
 
@@ -39,7 +39,7 @@ async def cmd_handler(m):
     command = m.text.lstrip('/').split()[0].split('@')[0]
     if m.chat.type == 'private':
         restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 
-                            'filters', 'stop', 'remove', 'notes', 'add',
+                            'filist', 'stop', 'remove', 'notes', 'add',
                             'goodbye', 'greeting', 'pin', 'modules']
         if command in restricted_in_pm:
             await bot.reply_to(m, "This command is not available in private chats.")

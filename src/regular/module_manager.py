@@ -10,7 +10,7 @@ modules = {
     'anime': ['animewall', 'horny', 'sauce'],
     'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge', 'goodbye', 'greeting'],
     'notes' : ['notes', 'add', 'remove'],
-    'filters': ['filter', 'filters', 'stop'],
+    'filters': ['filter', 'filist', 'stop'],
     'greetings': ['greeting', 'goodbye'],
     'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'id', 'music']
 }
