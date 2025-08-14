@@ -23,7 +23,6 @@ default_disabled = {
 # Function to check if the user is an admin
 async def is_user_admin(chat_id, user_id):
     user = await bot.get_chat_member(chat_id, user_id)
-    print(user.status)
     if user.status == "member" or user.status == "restricted":
         return False
     return True
