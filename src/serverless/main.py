@@ -41,13 +41,30 @@ async def is_module_enabled_in_group(command, chat_id):
                                 'reset', 'modules', 'q', 'music', 'leave'])
 
 async def cmd_handler(m):
+    db = IMYDB('runtime/banned/groups.json')
+    banned = db.get("groups", {})
+
+    if len(banned) >= 1:
+
+        if str(m.chat.id) in str(banned['group_ids']):
+            await bot.leave_chat(m.chat.id)
+
     command = m.text.lstrip('/').split()[0].split('@')[0]
 
     if command == "leave" and m.from_user.id == int(BOT_OWNER):
         chat_id = m.chat.id
+
         if len(m.text.split(" ", 1)) > 1:
             chat_id = m.text.split(" ", 1)[1]
-        await bot.leave_chat(chat_id)
+
+        banned = db.get('groups', {})
+
+        banned.setdefault('group_ids', [])
+
+        if chat_id not in banned['group_ids']:
+            banned['group_ids'].append(chat_id)
+
+        db.set('groups', banned)
 
     if m.chat.type == 'private':
         restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 
