@@ -303,9 +303,7 @@ async def download_music(m, headers, song, choice):
     try:
         URL="https://api.paxsenix.biz.id/dl"
         if choice == "tidal":
-            # Not lossless because lossless is flac and TG servers won't fetch that.
-            # We won't fetch that locally either, too much bandwidth.
-            api = f"{URL}/{choice}?url={song}&quality=HIGH"
+            api = f"{URL}/{choice}?url={song}&quality=LOSSLESS"
             data = await wait_until_ok(m, api, headers)
 
             if data == 429 or data == 504:
@@ -316,11 +314,13 @@ async def download_music(m, headers, song, choice):
                 return "failed"
 
             link = data['directUrl']
-            return link
+            async with aiohttp.ClientSession() as session:
+                async with session.get(link, headers=headers) as response:
+                    song = await response.content.read()
+                    return song
 
         elif choice == "deezer":
-            # Same as above situation, 320KBPS MP3 and not flac.
-            api = f"{URL}/{choice}?url={song}&quality=320kbps"
+            api = f"{URL}/{choice}?url={song}&quality=flac"
             data = await wait_until_ok(m, api, headers)
 
             if data == 429 or data == 504:
@@ -331,7 +331,10 @@ async def download_music(m, headers, song, choice):
                 return "failed"
             
             link = data['directUrl']
-            return link
+            async with aiohttp.ClientSession() as session:
+                async with session.get(link, headers=headers) as response:
+                    song = await response.content.read()
+                    return song
 
         elif choice == "spotify":
             api = f"{URL}/{choice}?url={song}&serv=spotdl"
