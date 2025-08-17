@@ -6,10 +6,13 @@ import aiohttp
 import asyncio
 from telebot.types import InputMediaPhoto, InputMediaVideo
 
-async def wait_until_ok(url, headers=None, delay=1):
+async def wait_until_ok(m, url, headers=None, delay=1):
     async with aiohttp.ClientSession() as session:
         while True:
             async with session.get(url, headers=headers) as response:
+                if response.status == 429 or response.status == 504:
+                    await bot.send_message(m.chat.id, f"API Busy: {response.status}")
+                    return
                 data = await response.json()
                 if data.get('message') == "Failed to retrieve this content":
                     return data
@@ -41,58 +44,55 @@ async def instagram_dl(m, url):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/dl/ig?url={url}"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api, headers=headers) as response:
-                data = await wait_until_ok(api, headers)
-                links = data['downloadUrls']
-                media_list = []
-                source = hlink("Source", url, escape=False)
-                username = data['detail']['username']
-                author = hlink(f"@{username}", f"www.instagram.com/{username}", escape=False)
-                author = author.replace("\\", "")
-                description = data['detail']['title']
-                description = hcite(description, expandable=True)
-                caption = f"{description}\n{author}\n{source}"
-                media_count = 0
+        data = await wait_until_ok(m, api, headers)
+        links = data['downloadUrls']
+        media_list = []
+        source = hlink("Source", url, escape=False)
+        username = data['detail']['username']
+        author = hlink(f"@{username}", f"www.instagram.com/{username}", escape=False)
+        author = author.replace("\\", "")
+        description = data['detail']['title']
+        description = hcite(description, expandable=True)
+        caption = f"{description}\n{author}\n{source}"
+        media_count = 0
 
-                if len(caption) > 1024:
-                    caption = f"{author}\n{source}"
+        if len(caption) > 1024:
+            caption = f"{author}\n{source}"
 
-                if len(links) > 1:
-                    for i in range(len(links)):
-                        link = links[i]['url']
-                        file_ext = links[i]['ext']
+        if len(links) > 1:
+            for i in range(len(links)):
+                link = links[i]['url']
+                file_ext = links[i]['ext']
 
-                        if file_ext == 'mp4':
-                            if media_count == 0:
-                                media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
+                if file_ext == 'mp4':
+                    if media_count == 0:
+                        media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
 
-                            else:
-                                media = InputMediaVideo(link)
+                    else:
+                        media = InputMediaVideo(link)
 
-                            media_count += 1
-
-                        else:
-                            if media_count == 0:
-                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
-
-                            else:
-                                media = InputMediaPhoto(link)
-
-                            media_count += 1
-
-                        media_list.append(media)
-                    await bot.send_media_group(m.chat.id, media_list)
+                    media_count += 1
 
                 else:
-                    file_ext = links[0]['ext']
-                    link = links[0]['url']
+                    if media_count == 0:
+                        media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
 
-                    if file_ext == 'mp4':
-                        await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
                     else:
-                        await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
+                        media = InputMediaPhoto(link)
 
+                    media_count += 1
+
+                media_list.append(media)
+            await bot.send_media_group(m.chat.id, media_list)
+
+        else:
+            file_ext = links[0]['ext']
+            link = links[0]['url']
+
+            if file_ext == 'mp4':
+                await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
+            else:
+                await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -105,46 +105,44 @@ async def tiktok_dl(m, url):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/dl/tiktok?url={url}"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api, headers=headers) as response:
-                data = await wait_until_ok(api, headers)
-                media_list = []
-                source = hlink("Source", url, escape=False)
-                username = data['detail']['author']
-                author = hlink(f"@{username}", data['detail']['authorProfileLink'], escape=False)
-                author = author.replace("\\", "")
-                description = data['detail']['description']
-                description = hcite(description, expandable=True)
-                caption = f"{description}\n{author}\n{source}"
-                media_count = 0
-                links = data['downloadUrls']
-                post_type = data['detail']['type']
+        data = await wait_until_ok(m, api, headers)
+        media_list = []
+        source = hlink("Source", url, escape=False)
+        username = data['detail']['author']
+        author = hlink(f"@{username}", data['detail']['authorProfileLink'], escape=False)
+        author = author.replace("\\", "")
+        description = data['detail']['description']
+        description = hcite(description, expandable=True)
+        caption = f"{description}\n{author}\n{source}"
+        media_count = 0
+        links = data['downloadUrls']
+        post_type = data['detail']['type']
 
-                if len(caption) > 1024:
-                    caption = f"{author}\n{source}"
+        if len(caption) > 1024:
+            caption = f"{author}\n{source}"
 
-                if post_type == 'image':
-                    images = links['images']
-                    music = links['music']
+        if post_type == 'image':
+            images = links['images']
+            music = links['music']
 
-                    if len(images) > 1:
-                        for link in range(len(images)):
-                            if media_count == 0:
-                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
-                            else:
-                                media = InputMediaPhoto(link)
-                            media_count += 1
-                            media_list.append(media)
-                        await bot.send_media_group(m.chat.id, media_list)
-
+            if len(images) > 1:
+                for link in range(len(images)):
+                    if media_count == 0:
+                        media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
                     else:
-                        photo = images[0]
-                        await bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="HTML")
-                        await bot.send_audio(m.chat.id, music)
+                        media = InputMediaPhoto(link)
+                    media_count += 1
+                    media_list.append(media)
+                await bot.send_media_group(m.chat.id, media_list)
 
-                elif post_type == 'video':
-                    link = links['video']
-                    await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
+            else:
+                photo = images[0]
+                await bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="HTML")
+                await bot.send_audio(m.chat.id, music)
+
+        elif post_type == 'video':
+            link = links['video']
+            await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -164,7 +162,7 @@ async def download_yt_video(m, link):
 
         api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=360"
         source = hlink("Source", link, escape=False)
-        data = await wait_until_ok(api, headers)
+        data = await wait_until_ok(m, api, headers)
         task_url = data['task_url']
         link, thumb, title = await check_yt_dl_status(task_url)
         caption = f"{title}\n{source}"
@@ -179,7 +177,7 @@ async def download_yt_video(m, link):
 async def download_yt_audio(m, link, headers):
     try:
         api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=mp3"
-        data = await wait_until_ok(api, headers)
+        data = await wait_until_ok(m, api, headers)
         task_url = data['task_url']
         link = await check_yt_dl_status(task_url)
         return link[0]
@@ -205,7 +203,7 @@ async def music_search(m):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/yt-music/search?q={query}"
-        data = await wait_until_ok(api, headers)
+        data = await wait_until_ok(m, api, headers)
         link = f"www.youtube.com/watch?v={data['result'][0]['videoId']}"
         title = data['result'][0]['title']
         author = data['result'][0]['author']
@@ -224,7 +222,7 @@ async def fetch_music(m, link, old, caption):
     api = f"https://api.paxsenix.biz.id/tools/songlink?url={link}"
     async with aiohttp.ClientSession() as session:
         async with session.get(api, headers=headers) as response:
-            data = await wait_until_ok(api, headers)
+            data = await wait_until_ok(m, api, headers)
             spotify  = data['links'][3].get('url') or "N/A"
             deezer   = data['links'][5].get('url') or "N/A"
             tidal    = data['links'][8].get('url') or "N/A"
@@ -252,7 +250,7 @@ async def download_music(m, headers, song, choice):
             api = f"{URL}/{choice}?url={song}&quality=HIGH"
             async with aiohttp.ClientSession() as session:
                 async with session.get(api, headers=headers) as response:
-                    data = await wait_until_ok(api, headers)
+                    data = await wait_until_ok(m, api, headers)
                     if data['message'] == "Failed to retrieve this content":
                         raise FileNotFoundError
                     link = data['directUrl']
@@ -264,7 +262,7 @@ async def download_music(m, headers, song, choice):
             api = f"{URL}/{choice}?url={song}&quality=320kbps"
             async with aiohttp.ClientSession() as session:
                 async with session.get(api, headers=headers) as response:
-                    data = await wait_until_ok(api, headers)
+                    data = await wait_until_ok(m, api, headers)
                     if data['message'] == "Failed to retrieve this content":
                         raise FileNotFoundError
                     link = data['directUrl']
@@ -274,7 +272,7 @@ async def download_music(m, headers, song, choice):
             api = f"{URL}/{choice}?url={song}&serv=spotdl"
             async with aiohttp.ClientSession() as session:
                 async with session.get(api, headers=headers) as response:
-                    data = await wait_until_ok(api, headers)
+                    data = await wait_until_ok(m, api, headers)
                     if data['message'] == "Failed to retrieve this content":
                         raise FileNotFoundError
                     link = data['directUrl']
