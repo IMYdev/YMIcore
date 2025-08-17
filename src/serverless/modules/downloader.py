@@ -224,18 +224,6 @@ async def music_search(m):
             url = f"https://www.youtube.com/watch?v={video_id}"
 
             title = video.get("title", {}).get("runs", [{}])[0].get("text")
-
-            if "[" in title:
-                title = title.split("[", 1)[0]
-            elif "(" in title:
-                title = title.split("(", 1)[0]
-            elif "【" in title:
-                title = title.split("【", 1)[0]   
-            elif "clip" in title:
-                title = title.split("clip", 1)[0]  
-            elif "video" in title:
-                title = title.split("video", 1)[0]
- 
             author = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
             caption = f"{author} - {title}"
 
