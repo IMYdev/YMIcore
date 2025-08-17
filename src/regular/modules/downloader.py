@@ -194,7 +194,6 @@ audio_opts = {
 
 async def download_yt_audio(m, link):
     try:
-
         with YoutubeDL(params=audio_opts) as ydl:
             info = ydl.extract_info(link, download=False)
             audio_url = info['url']
@@ -265,20 +264,28 @@ async def fetch_music(m, yt_url, old, caption):
     data = await wait_until_ok(m, api, headers)
 
     if data == 429 or data == 504:
-        await bot.send_message(m.chat.id, f"API busy: {data}")
+        link = await download_yt_audio(m, yt_url)
+        await bot.send_chat_action(m.chat.id, "upload_voice")
+        await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
         return
 
-    spotify  = data['links'][3].get('url') or "N/A"
-    deezer   = data['links'][5].get('url') or "N/A"
-    tidal    = data['links'][8].get('url') or "N/A"
-    await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
+    links = data.get('links')
 
-    if tidal != "N/A":
-        link = await download_music(m, headers, tidal, "tidal")
-    elif deezer != "N/A":
-        link = await download_music(m, headers, deezer, "deezer")
-    elif spotify != "N/A":
-        link = await download_music(m, headers, spotify, "spotify")
+    await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
+    
+    if links:
+        spotify  = links[3].get('url') or "N/A"
+        deezer   = links[5].get('url') or "N/A"
+        tidal    = links[8].get('url') or "N/A"
+
+        if tidal != "N/A":
+            link = await download_music(m, headers, tidal, "tidal")
+
+        elif deezer != "N/A":
+            link = await download_music(m, headers, deezer, "deezer")
+
+        elif spotify != "N/A":
+            link = await download_music(m, headers, spotify, "spotify")
     else:
         link = await download_yt_audio(m, yt_url)
 
