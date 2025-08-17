@@ -2,4 +2,5 @@ pytelegrambotapi
 aiohttp
 fastapi
 python-dotenv
+innertube
 pymongo[srv]

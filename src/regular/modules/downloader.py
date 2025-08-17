@@ -13,8 +13,7 @@ async def wait_until_ok(m, url, headers=None, delay=1):
         while True:
             async with session.get(url, headers=headers) as response:
                 if response.status == 429 or response.status == 504:
-                    await bot.send_message(m.chat.id, f"API Busy: {response.status}")
-                    return
+                    return response.status
                 data = await response.json()
                 if data.get('message') == "Failed to retrieve this content":
                     return data
@@ -47,6 +46,9 @@ async def instagram_dl(m, url):
         }
         api=f"https://api.paxsenix.biz.id/dl/ig?url={url}"
         data = await wait_until_ok(m, api, headers)
+        if data == 429 or data == 504:
+            await bot.send_message(m.chat.id, f"API busy: {data}")
+            return
         links = data['downloadUrls']
         media_list = []
         source = hlink("Source", url, escape=False)
@@ -108,6 +110,9 @@ async def tiktok_dl(m, url):
         }
         api=f"https://api.paxsenix.biz.id/dl/tiktok?url={url}"
         data = await wait_until_ok(m, api, headers)
+        if data == 429 or data == 504:
+            await bot.send_message(m.chat.id, f"API busy: {data}")
+            return
         media_list = []
         source = hlink("Source", url, escape=False)
         username = data['detail']['author']
@@ -257,32 +262,35 @@ async def fetch_music(m, yt_url, old, caption):
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
     }
     api = f"https://api.paxsenix.biz.id/tools/songlink?url={yt_url}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(api, headers=headers) as response:
-            data = await wait_until_ok(m, api, headers)
-            spotify  = data['links'][3].get('url') or "N/A"
-            deezer   = data['links'][5].get('url') or "N/A"
-            tidal    = data['links'][8].get('url') or "N/A"
-            await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
+    data = await wait_until_ok(m, api, headers)
 
-            if tidal != "N/A":
-                link = await download_music(m, headers, tidal, "tidal")
-            elif deezer != "N/A":
-                link = await download_music(m, headers, deezer, "deezer")
-            elif spotify != "N/A":
-                link = await download_music(m, headers, spotify, "spotify")
-            else:
-                link = await download_yt_audio(m, yt_url)
+    if data == 429 or data == 504:
+        await bot.send_message(m.chat.id, f"API busy: {data}")
+        return
 
-            await bot.delete_message(m.chat.id, old.id)
+    spotify  = data['links'][3].get('url') or "N/A"
+    deezer   = data['links'][5].get('url') or "N/A"
+    tidal    = data['links'][8].get('url') or "N/A"
+    await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
 
-            if link != "failed":
-                await bot.send_chat_action(m.chat.id, "upload_voice")
-                await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
-            else:
-                link = await download_yt_audio(m, yt_url)
-                await bot.send_chat_action(m.chat.id, "upload_voice")
-                await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+    if tidal != "N/A":
+        link = await download_music(m, headers, tidal, "tidal")
+    elif deezer != "N/A":
+        link = await download_music(m, headers, deezer, "deezer")
+    elif spotify != "N/A":
+        link = await download_music(m, headers, spotify, "spotify")
+    else:
+        link = await download_yt_audio(m, yt_url)
+
+    await bot.delete_message(m.chat.id, old.id)
+
+    if link != "failed":
+        await bot.send_chat_action(m.chat.id, "upload_voice")
+        await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+    else:
+        link = await download_yt_audio(m, yt_url)
+        await bot.send_chat_action(m.chat.id, "upload_voice")
+        await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
 
 async def download_music(m, headers, song, choice):
     try:
@@ -292,8 +300,14 @@ async def download_music(m, headers, song, choice):
             # We won't fetch that locally either, too much bandwidth.
             api = f"{URL}/{choice}?url={song}&quality=HIGH"
             data = await wait_until_ok(m, api, headers)
+
+            if data == 429 or data == 504:
+                await bot.send_message(m.chat.id, f"API busy: {data}")
+                return "failed"
+
             if data['message'] == "Failed to retrieve this content":
                 return "failed"
+
             link = data['directUrl']
             return link
 
@@ -301,16 +315,28 @@ async def download_music(m, headers, song, choice):
             # Same as above situation, 320KBPS MP3 and not flac.
             api = f"{URL}/{choice}?url={song}&quality=320kbps"
             data = await wait_until_ok(m, api, headers)
+
+            if data == 429 or data == 504:
+                await bot.send_message(m.chat.id, f"API busy: {data}")
+                return "failed"
+
             if data['message'] == "Failed to retrieve this content":
                 return "failed"
+            
             link = data['directUrl']
             return link
 
         elif choice == "spotify":
             api = f"{URL}/{choice}?url={song}&serv=spotdl"
             data = await wait_until_ok(m, api, headers)
+
+            if data == 429 or data == 504:
+                await bot.send_message(m.chat.id, f"API busy: {data}")
+                return "failed"
+    
             if data['message'] == "Failed to retrieve this content":
                 return "failed"
+            
             link = data['directUrl']
             return link
 
