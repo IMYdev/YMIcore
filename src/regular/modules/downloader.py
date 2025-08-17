@@ -235,6 +235,18 @@ async def music_search(m):
             url = f"https://www.youtube.com/watch?v={video_id}"
 
             title = video.get("title", {}).get("runs", [{}])[0].get("text")
+
+            if "[" in title:
+                title = title.split("[", 1)[0]
+            elif "(" in title:
+                title = title.split("(", 1)[0]
+            elif "【" in title:
+                title = title.split("【", 1)[0]   
+            elif "clip" in title:
+                title = title.split("clip", 1)[0]  
+            elif "video" in title:
+                title = title.split("video", 1)[0]
+ 
             author = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
             caption = f"{author} - {title}"
 
@@ -262,9 +274,10 @@ async def fetch_music(m, yt_url, old, caption):
             elif spotify != "N/A":
                 link = await download_music(m, headers, spotify, "spotify")
             else:
-                link = await download_yt_audio(m, link)
+                link = await download_yt_audio(m, yt_url)
 
             await bot.delete_message(m.chat.id, old.id)
+
             if link != "failed":
                 await bot.send_chat_action(m.chat.id, "upload_voice")
                 await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
@@ -280,35 +293,28 @@ async def download_music(m, headers, song, choice):
             # Not lossless because lossless is flac and TG servers won't fetch that.
             # We won't fetch that locally either, too much bandwidth.
             api = f"{URL}/{choice}?url={song}&quality=HIGH"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api, headers=headers) as response:
-                    data = await wait_until_ok(api, headers)
-                    if data['message'] == "Failed to retrieve this content":
-                        return "failed"
-                    link = data['directUrl']
-                    return link
-
+            data = await wait_until_ok(api, headers)
+            if data['message'] == "Failed to retrieve this content":
+                return "failed"
+            link = data['directUrl']
+            return link
 
         elif choice == "deezer":
             # Same as above situation, 320KBPS MP3 and not flac.
             api = f"{URL}/{choice}?url={song}&quality=320kbps"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api, headers=headers) as response:
-                    data = await wait_until_ok(api, headers)
-                    if data['message'] == "Failed to retrieve this content":
-                        return "failed"
-                    link = data['directUrl']
-                    return link
+            data = await wait_until_ok(api, headers)
+            if data['message'] == "Failed to retrieve this content":
+                return "failed"
+            link = data['directUrl']
+            return link
 
         elif choice == "spotify":
             api = f"{URL}/{choice}?url={song}&serv=spotdl"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api, headers=headers) as response:
-                    data = await wait_until_ok(api, headers)
-                    if data['message'] == "Failed to retrieve this content":
-                        return "failed"
-                    link = data['directUrl']
-                    return link
+            data = await wait_until_ok(api, headers)
+            if data['message'] == "Failed to retrieve this content":
+                return "failed"
+            link = data['directUrl']
+            return link
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
