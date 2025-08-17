@@ -4,6 +4,8 @@ import re
 from core.utils import log_error
 import aiohttp
 import asyncio
+from yt_dlp import YoutubeDL
+from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
 
 async def wait_until_ok(url, headers=None, delay=1):
@@ -150,40 +152,53 @@ async def tiktok_dl(m, url):
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
+vid_opts = {
+    "quiet": True,
+    "no_warnings": True,
+    "format": "18",
+}
+
 async def download_yt_video(m, link):
     try:
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f"Bearer {PAXSENIX_TOKEN}"
-        }
 
         if len(m.text.split(" ", 1)) > 1 and m.text.split(" ", 1)[1] == "-audio":
-            link = await download_yt_audio(m, link, headers)
+            link = await download_yt_audio(m, link)
             await bot.send_audio(m.chat.id, audio=link, reply_to_message_id=m.id)
             return
 
-        api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=360"
-        source = hlink("Source", link, escape=False)
-        data = await wait_until_ok(api, headers)
-        task_url = data['task_url']
-        link, thumb, title = await check_yt_dl_status(task_url)
-        caption = f"{title}\n{source}"
-        await bot.send_video(m.chat.id, video=link, cover=thumb, caption=caption, parse_mode="HTML")
+        with YoutubeDL(params=vid_opts) as ydl:
+            info = ydl.extract_info(link, download=False)
+            file_size = info.get("filesize") or info.get("filesize_approx")
+            if file_size > 52428800:
+                return
+            title = info.get("title")
+            link = hlink("Source", link, escape=False)
+            vid_cap = f"{title}\n{link}"
+            url = info.get("url")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                await bot.send_video(m.chat.id, video=resp.content, caption=vid_cap, parse_mode="HTML")
 
     except Exception as error:
-        if "Too Large" in str(error):
-            return
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
-async def download_yt_audio(m, link, headers):
-    try:
-        api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=mp3"
-        data = await wait_until_ok(api, headers)
-        task_url = data['task_url']
-        link = await check_yt_dl_status(task_url)
-        return link[0]
+audio_opts = {
+    "quiet": True,
+    "no_warnings": True,
+    "format": "bestaudio/best",
+}
 
+async def download_yt_audio(m, link):
+    try:
+
+        with YoutubeDL(params=audio_opts) as ydl:
+            info = ydl.extract_info(link, download=False)
+            audio_url = info['url']
+        async with aiohttp.ClientSession() as session:
+            async with session.get(audio_url) as response:
+                link = await response.content.read()
+                return link
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -192,36 +207,46 @@ async def download_yt_audio(m, link, headers):
 async def music_search(m):
     if not Downloader:
         return
-    try:
-        query = m.text.split(" ", 1)
-        if len(query) > 1:
-            query = query[1]
-            old = await bot.reply_to(m, "Looking for song...")
-        else:
-            await bot.reply_to(m, "No song name provided.")
-            return
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f"Bearer {PAXSENIX_TOKEN}"
-        }
-        api=f"https://api.paxsenix.biz.id/yt-music/search?q={query}"
-        data = await wait_until_ok(api, headers)
-        link = f"www.youtube.com/watch?v={data['result'][0]['videoId']}"
-        title = data['result'][0]['title']
-        author = data['result'][0]['author']
-        caption = f"{author} - {title}"
-        await fetch_music(m, link, old, caption)
+    client = InnerTube("WEB")
 
-    except Exception as error:
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
+    query = m.text.split(" ", 1)
 
-async def fetch_music(m, link, old, caption):
+    if len(query) > 1:
+        query = query[1]
+        old = await bot.reply_to(m, "Looking for song...")
+
+    else:
+        await bot.reply_to(m, "No song name provided.")
+        return
+
+    data = client.search(query=query, params="EgWKAQwI") # *params* are the music filter here
+    sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']
+
+    for section in sections:
+        items = section.get('itemSectionRenderer', {}).get('contents', [])
+
+        for item in items:
+            video = item.get('videoRenderer')
+
+            if not video:
+                continue
+
+            video_id = video['videoId']
+            url = f"https://www.youtube.com/watch?v={video_id}"
+
+            title = video.get("title", {}).get("runs", [{}])[0].get("text")
+            author = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
+            caption = f"{author} - {title}"
+
+            await fetch_music(m, url, old, caption)
+            break  # stop after first result
+
+async def fetch_music(m, yt_url, old, caption):
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
     }
-    api = f"https://api.paxsenix.biz.id/tools/songlink?url={link}"
+    api = f"https://api.paxsenix.biz.id/tools/songlink?url={yt_url}"
     async with aiohttp.ClientSession() as session:
         async with session.get(api, headers=headers) as response:
             data = await wait_until_ok(api, headers)
@@ -229,6 +254,7 @@ async def fetch_music(m, link, old, caption):
             deezer   = data['links'][5].get('url') or "N/A"
             tidal    = data['links'][8].get('url') or "N/A"
             await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
+
             if tidal != "N/A":
                 link = await download_music(m, headers, tidal, "tidal")
             elif deezer != "N/A":
@@ -236,10 +262,14 @@ async def fetch_music(m, link, old, caption):
             elif spotify != "N/A":
                 link = await download_music(m, headers, spotify, "spotify")
             else:
-                link = await download_yt_audio(m, link, headers)
+                link = await download_yt_audio(m, link)
 
             await bot.delete_message(m.chat.id, old.id)
-            if link:
+            if link != "failed":
+                await bot.send_chat_action(m.chat.id, "upload_voice")
+                await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+            else:
+                link = await download_yt_audio(m, yt_url)
                 await bot.send_chat_action(m.chat.id, "upload_voice")
                 await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
 
@@ -254,7 +284,7 @@ async def download_music(m, headers, song, choice):
                 async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
                     if data['message'] == "Failed to retrieve this content":
-                        raise FileNotFoundError
+                        return "failed"
                     link = data['directUrl']
                     return link
 
@@ -266,7 +296,7 @@ async def download_music(m, headers, song, choice):
                 async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
                     if data['message'] == "Failed to retrieve this content":
-                        raise FileNotFoundError
+                        return "failed"
                     link = data['directUrl']
                     return link
 
@@ -276,29 +306,10 @@ async def download_music(m, headers, song, choice):
                 async with session.get(api, headers=headers) as response:
                     data = await wait_until_ok(api, headers)
                     if data['message'] == "Failed to retrieve this content":
-                        raise FileNotFoundError
+                        return "failed"
                     link = data['directUrl']
                     return link
 
     except Exception as error:
-
-        if FileNotFoundError:
-            await bot.reply_to(m, "Couldn't fetch song.")
-            return
-
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
-
-async def check_yt_dl_status(task_url):
-    async with aiohttp.ClientSession() as session:
-        while True:
-            async with session.get(task_url) as response:
-                data = await response.json()
-                
-                if data.get('status') == "done":
-                    link = data.get('download')
-                    thumb = data.get('thumbnail')
-                    title = data.get('title')
-                    return link, thumb, title
-
-            await asyncio.sleep(0.2)
