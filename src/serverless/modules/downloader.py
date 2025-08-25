@@ -1,4 +1,4 @@
-from info import (bot, Downloader, PAXSENIX_TOKEN)
+from info import (bot, Downloader, PAXSENIX_TOKENS)
 from telebot.formatting import (hlink, hcite)
 import re
 from core.utils import log_error
@@ -6,6 +6,7 @@ import aiohttp
 import asyncio
 from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
+import random
 
 async def wait_until_ok(m, url, headers=None, delay=1):
     async with aiohttp.ClientSession() as session:
@@ -38,6 +39,7 @@ async def extract_supported_url(m):
         await tiktok_dl(m, url)
 
 async def instagram_dl(m, url):
+    PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
     try:
         headers = {
             'Content-Type': 'application/json',
@@ -103,6 +105,7 @@ async def instagram_dl(m, url):
 
 async def tiktok_dl(m, url):
     try:
+        PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
@@ -156,6 +159,7 @@ async def tiktok_dl(m, url):
 
 async def download_yt_video(m, link):
     try:
+        PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
@@ -231,6 +235,7 @@ async def music_search(m):
             break  # stop after first result
 
 async def fetch_music(m, yt_url, old, caption):
+    PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
