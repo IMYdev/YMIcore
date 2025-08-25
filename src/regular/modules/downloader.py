@@ -181,7 +181,6 @@ async def download_yt_video(m, link):
             link = hlink("Source", link, escape=False)
             vid_cap = f"{title}\n{link}"
             url = info.get("url")
-            print(url)
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 await bot.send_video(m.chat.id, video=response.content, caption=vid_cap, parse_mode="HTML")
