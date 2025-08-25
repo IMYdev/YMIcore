@@ -47,7 +47,7 @@ async def instagram_dl(m, url):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/dl/ig?url={url}"
-        data = await wait_until_ok(m, api, headers)
+        data = await wait_until_ok(api, headers)
         if data == 429 or data == 504:
             await bot.send_message(m.chat.id, f"API busy: {data}")
             return
@@ -112,7 +112,7 @@ async def tiktok_dl(m, url):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/dl/tiktok?url={url}"
-        data = await wait_until_ok(m, api, headers)
+        data = await wait_until_ok(api, headers)
         if data == 429 or data == 504:
             await bot.send_message(m.chat.id, f"API busy: {data}")
             return
@@ -253,7 +253,7 @@ async def fetch_music(m, yt_url, old, caption):
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
     }
     api = f"https://api.paxsenix.biz.id/tools/songlink?url={yt_url}"
-    data = await wait_until_ok(m, api, headers)
+    data = await wait_until_ok(api, headers)
     await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
 
     if data == 429 or data == 504:
@@ -296,7 +296,7 @@ async def download_music(m, headers, song, choice):
         URL="https://api.paxsenix.biz.id/dl"
         if choice == "tidal":
             api = f"{URL}/{choice}?url={song}&quality=LOSSLESS"
-            data = await wait_until_ok(m, api, headers)
+            data = await wait_until_ok(api, headers)
 
             if data == 429 or data == 504:
                 await bot.send_message(m.chat.id, f"API busy: {data}")
@@ -313,7 +313,7 @@ async def download_music(m, headers, song, choice):
 
         elif choice == "deezer":
             api = f"{URL}/{choice}?url={song}&quality=flac"
-            data = await wait_until_ok(m, api, headers)
+            data = await wait_until_ok(api, headers)
 
             if data == 429 or data == 504:
                 await bot.send_message(m.chat.id, f"API busy: {data}")
@@ -330,7 +330,7 @@ async def download_music(m, headers, song, choice):
 
         elif choice == "spotify":
             api = f"{URL}/{choice}?url={song}&serv=spotdl"
-            data = await wait_until_ok(m, api, headers)
+            data = await wait_until_ok(api, headers)
 
             if data == 429 or data == 504:
                 await bot.send_message(m.chat.id, f"API busy: {data}")

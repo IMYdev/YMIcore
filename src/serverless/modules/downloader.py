@@ -8,7 +8,7 @@ from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
 import random
 
-async def wait_until_ok(m, url, headers=None, delay=1):
+async def wait_until_ok(url, headers=None, delay=1):
     async with aiohttp.ClientSession() as session:
         while True:
             async with session.get(url, headers=headers) as response:
@@ -46,7 +46,7 @@ async def instagram_dl(m, url):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/dl/ig?url={url}"
-        data = await wait_until_ok(m, api, headers)
+        data = await wait_until_ok(api, headers)
         if data == 429 or data == 504:
             await bot.send_message(m.chat.id, f"API busy: {data}")
             return
@@ -111,7 +111,7 @@ async def tiktok_dl(m, url):
             'Authorization': f"Bearer {PAXSENIX_TOKEN}"
         }
         api=f"https://api.paxsenix.biz.id/dl/tiktok?url={url}"
-        data = await wait_until_ok(m, api, headers)
+        data = await wait_until_ok(api, headers)
         if data == 429 or data == 504:
             await bot.send_message(m.chat.id, f"API busy: {data}")
             return
@@ -172,7 +172,7 @@ async def download_yt_video(m, link):
 
         api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=360"
         source = hlink("Source", link, escape=False)
-        data = await wait_until_ok(m, api, headers)
+        data = await wait_until_ok(api, headers)
         task_url = data['task_url']
         link, thumb, title = await check_yt_dl_status(task_url)
         caption = f"{title}\n{source}"
@@ -187,7 +187,7 @@ async def download_yt_video(m, link):
 async def download_yt_audio(m, link, headers):
     try:
         api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=mp3"
-        data = await wait_until_ok(m, api, headers)
+        data = await wait_until_ok(api, headers)
         task_url = data['task_url']
         link = await check_yt_dl_status(task_url)
         return link[0]
@@ -241,7 +241,7 @@ async def fetch_music(m, yt_url, old, caption):
         'Authorization': f"Bearer {PAXSENIX_TOKEN}"
     }
     api = f"https://api.paxsenix.biz.id/tools/songlink?url={yt_url}"
-    data = await wait_until_ok(m, api, headers)
+    data = await wait_until_ok(api, headers)
 
     if data == 429 or data == 504:
         link = await download_yt_audio(m, yt_url)
@@ -284,7 +284,7 @@ async def download_music(m, headers, song, choice):
         URL="https://api.paxsenix.biz.id/dl"
         if choice == "tidal":
             api = f"{URL}/{choice}?url={song}&quality=LOSSLESS"
-            data = await wait_until_ok(m, api, headers)
+            data = await wait_until_ok(api, headers)
 
             if data == 429 or data == 504:
                 await bot.send_message(m.chat.id, f"API busy: {data}")
@@ -301,7 +301,7 @@ async def download_music(m, headers, song, choice):
 
         elif choice == "deezer":
             api = f"{URL}/{choice}?url={song}&quality=flac"
-            data = await wait_until_ok(m, api, headers)
+            data = await wait_until_ok(api, headers)
 
             if data == 429 or data == 504:
                 await bot.send_message(m.chat.id, f"API busy: {data}")
@@ -318,7 +318,7 @@ async def download_music(m, headers, song, choice):
 
         elif choice == "spotify":
             api = f"{URL}/{choice}?url={song}&serv=spotdl"
-            data = await wait_until_ok(m, api, headers)
+            data = await wait_until_ok(api, headers)
 
             if data == 429 or data == 504:
                 await bot.send_message(m.chat.id, f"API busy: {data}")
