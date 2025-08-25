@@ -254,17 +254,17 @@ async def fetch_music(m, yt_url, old, caption):
     }
     api = f"https://api.paxsenix.biz.id/tools/songlink?url={yt_url}"
     data = await wait_until_ok(m, api, headers)
+    await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
 
     if data == 429 or data == 504:
         link = await download_yt_audio(m, yt_url)
+        await bot.delete_message(m.chat.id, old.id)
         await bot.send_chat_action(m.chat.id, "upload_voice")
         await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
         return
 
     links = data.get('links')
 
-    await bot.edit_message_text("Fetching song...", m.chat.id, old.id)
-    
     if links:
         spotify  = links[3].get('url') or "N/A"
         deezer   = links[5].get('url') or "N/A"
