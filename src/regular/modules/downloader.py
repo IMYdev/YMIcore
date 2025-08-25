@@ -181,9 +181,10 @@ async def download_yt_video(m, link):
             link = hlink("Source", link, escape=False)
             vid_cap = f"{title}\n{link}"
             url = info.get("url")
+            print(url)
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                await bot.send_video(m.chat.id, video=resp.content, caption=vid_cap, parse_mode="HTML")
+            async with session.get(url) as response:
+                await bot.send_video(m.chat.id, video=response.content, caption=vid_cap, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -192,7 +193,7 @@ async def download_yt_video(m, link):
 audio_opts = {
     "quiet": True,
     "no_warnings": True,
-    "format": "bestaudio/best",
+    "format": "bestaudio/best"
 }
 
 async def download_yt_audio(m, link):
