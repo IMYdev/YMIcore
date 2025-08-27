@@ -272,12 +272,16 @@ async def fetch_music(m, yt_url, old, caption):
             deezer   = links[5].get('url') or "N/A"
 
             if deezer != "N/A":
+                await bot.edit_message_text("Fetching song from Deezer...", m.chat.id, old.id)
                 link = await download_music(m, deezer, "deezer")
 
             elif spotify != "N/A":
+                await bot.edit_message_text("Fetching song from Spotify...", m.chat.id, old.id)
                 link = await download_music(m, spotify, "spotify")
 
-        link = await download_yt_audio(m, yt_url)
+            else:
+                await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
+                link = await download_yt_audio(m, yt_url)
 
         await bot.delete_message(m.chat.id, old.id)
 
