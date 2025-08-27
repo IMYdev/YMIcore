@@ -290,10 +290,10 @@ async def fetch_music(m, yt_url, old, caption):
             deezer   = links[5].get('url') or "N/A"
 
             if deezer != "N/A":
-                link = await download_music(m, deezer, "deezer", links)
+                link = await download_music(m, deezer, "deezer")
 
             elif spotify != "N/A":
-                link = await download_music(m, spotify, "spotify", links)
+                link = await download_music(m, spotify, "spotify")
 
         link = await download_yt_audio(m, yt_url)
 

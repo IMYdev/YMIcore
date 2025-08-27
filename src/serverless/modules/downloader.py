@@ -47,7 +47,7 @@ async def extract_supported_url(m):
     elif "instagram.com" in url:
         url = url.split("?", 1)[0]
         await instagram_dl(m, url)
-        
+
     elif "tiktok.com" in url:
         await tiktok_dl(m, url)
 
@@ -272,10 +272,10 @@ async def fetch_music(m, yt_url, old, caption):
             deezer   = links[5].get('url') or "N/A"
 
             if deezer != "N/A":
-                link = await download_music(m, deezer, "deezer", links)
+                link = await download_music(m, deezer, "deezer")
 
             elif spotify != "N/A":
-                link = await download_music(m, spotify, "spotify", links)
+                link = await download_music(m, spotify, "spotify")
 
         link = await download_yt_audio(m, yt_url)
 
