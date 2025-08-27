@@ -52,7 +52,7 @@ async def extract_supported_url(m):
     elif "tiktok.com" in url:
         await tiktok_dl(m, url)
     
-    elif "facebook.com/reel" in url or "facebook.com/share/v":
+    elif "facebook.com" in url:
         await facebook_dl(m, url)
 
 async def instagram_dl(m, url):
@@ -189,7 +189,12 @@ async def facebook_dl(m, url):
             await bot.send_message(m.chat.id, f"API Error: {data}")
             return
 
-        link = data['url'][0]['downloadUrl']
+        links = data.get('url')
+
+        if len(links) < 1:
+            return
+
+        link = links[0]['downloadUrl']
         source = hlink("Source", url, escape=False)
 
         await bot.send_video(m.chat.id, video=link, caption=source, parse_mode="HTML")
