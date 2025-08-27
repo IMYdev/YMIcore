@@ -24,7 +24,6 @@ COMMANDS = {
     "/id": group_id,
     "/animewall": anime,
     "/sauce": search,
-    "/imagine": image_gen,
     "/purge": purge,
     "/nuke": purge,
     "/filter": set_filter,
