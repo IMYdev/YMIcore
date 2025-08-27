@@ -24,7 +24,7 @@ It's also a ready-to-use general group management bot.
 - Clean up chats by deleting batches of messages at once.
 - Reset the bot’s AI memory for a fresh start whenever needed.
 - Toggle and control various bot modules for extra features or disabling unwanted ones.
-- Search for and fetch music tracks from platforms like TIDAL, Deezer, Spotify, and YouTube Music.
+- Search for and fetch music tracks from platforms like Deezer, Spotify, and YouTube Music.
 - Grab media content from Instagram, TikTok, and YouTube links.
 - Provide NSFW content for users who want it.
 

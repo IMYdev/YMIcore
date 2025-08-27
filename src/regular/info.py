@@ -39,7 +39,7 @@ if AWAN_LLM_KEY is None:
     AI = False
 
 if PAXSENIX_TOKENS is None:
-    print("Warning: Continuing without features reliant of PaxSenix API.")
+    print("Warning: Continuing without features reliant on PaxSenix API.")
     Downloader = False
 
 

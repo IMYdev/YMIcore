@@ -10,7 +10,7 @@ if os.path.exists(".env"):
 TOKEN = os.getenv("BOT_TOKEN")
 ERROR_LOG_CHAT_ID = os.getenv("LOG_ID")
 AWAN_LLM_KEY = os.getenv("AWAN_LLM")
-PAXSENIX_TOKEN= os.getenv("PAX")
+PAXSENIX_TOKENS = os.getenv("PAX").split()
 BOT_OWNER= os.getenv("OWNER")
 
 Logs = True
@@ -38,8 +38,8 @@ if AWAN_LLM_KEY is None:
     print("Continuing without AI functions.")
     AI = False
 
-if PAXSENIX_TOKEN is None:
-    print("Warning: Continuing without features reliant of PaxSenix API.")
+if PAXSENIX_TOKENS is None:
+    print("Warning: Continuing without features reliant on PaxSenix API.")
     Downloader = False
 
 
