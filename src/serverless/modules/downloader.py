@@ -118,6 +118,12 @@ async def instagram_dl(m, url):
                 await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
+
+        if "HTTP URL" in str(error):
+            async with aiohttp.ClientSession() as session:
+                async with session.get(link) as response:
+                    await bot.send_video(m.chat.id, response.content, caption=caption, parse_mode="HTML")
+                    return
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
