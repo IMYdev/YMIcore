@@ -53,6 +53,9 @@ async def extract_supported_url(m):
     
     elif "tiktok.com" in url:
         await tiktok_dl(m, url)
+    
+    elif "facebook.com/reel" in url or "facebook.com/share/v":
+        await facebook_dl(m, url)
 
 async def instagram_dl(m, url):
     try:
@@ -170,6 +173,28 @@ async def tiktok_dl(m, url):
         elif post_type == 'video':
             link = links['video']
             await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
+
+    except Exception as error:
+        await bot.send_message(m.chat.id, "An error occurred.")
+        await log_error(bot, error, m)
+
+async def facebook_dl(m, url):
+    try:
+        api=f"https://api.paxsenix.biz.id/dl/fb?url={url}"
+        data = await wait_until_ok(api)
+
+        if data == 429 or data == 504:
+            await bot.send_message(m.chat.id, f"API busy: {data}")
+            return
+
+        if data == 500:
+            await bot.send_message(m.chat.id, f"API Error: {data}")
+            return
+
+        link = data['url'][0]['downloadUrl']
+        source = hlink("Source", url, escape=False)
+
+        await bot.send_video(m.chat.id, video=link, caption=source, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
