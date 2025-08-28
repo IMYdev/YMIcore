@@ -56,7 +56,9 @@ async def reply_to_filter(m):
         filters = db.get('filters', {})
 
         for keyword, reply_with in filters.items():
-            if keyword in m.text.lower():
+            words = m.text.lower().split()
+
+            if keyword in words:
                 t = reply_with["type"]
                 d = reply_with["data"]
                 if t == "text":
@@ -74,6 +76,7 @@ async def reply_to_filter(m):
                 else:
                     await bot.send_message(m.chat.id, "Unsupported response type.")
                 break
+
     except Exception as error:
         await log_error(bot, error, context_msg=m)
         await bot.reply_to(m, "An error occurred.")
