@@ -109,12 +109,12 @@ async def instagram_dl(m, url):
 
                 media_list.append(media)
 
-                if len(media_list) > 10:
-                    new_list = media_list[10:]
-                    media_list = media_list[:10]
-                    await bot.send_media_group(m.chat.id, media_list)
-                    await bot.send_media_group(m.chat.id, new_list)
-                    return
+            if len(media_list) > 10:
+                new_list = media_list[10:]
+                media_list = media_list[:10]
+                await bot.send_media_group(m.chat.id, media_list)
+                await bot.send_media_group(m.chat.id, new_list)
+                return
 
             await bot.send_media_group(m.chat.id, media_list)
 
