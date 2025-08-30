@@ -90,20 +90,34 @@ async def instagram_dl(m, url):
                 file_ext = links[i]['ext']
 
                 if file_ext == 'mp4':
+
                     if media_count == 0:
-                        media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
 
                     else:
-                        media = InputMediaVideo(link)
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaVideo(link)
 
                     media_count += 1
 
                 else:
+
                     if media_count == 0:
-                        media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
 
                     else:
-                        media = InputMediaPhoto(link)
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaPhoto(link)
 
                     media_count += 1
 
@@ -134,6 +148,20 @@ async def instagram_dl(m, url):
                 async with session.get(link) as response:
                     await bot.send_video(m.chat.id, response.content, caption=caption, parse_mode="HTML")
                     return
+
+        if "Too Many Requests" in str(error):
+            parts = str(error).split()
+            wait_time = None
+            for part in parts:
+
+                if part.isdigit() and part != "429":
+                    wait_time = int(part)
+                    break
+
+            if wait_time:
+                await asyncio.sleep(wait_time)
+                return await bot.send_media_group(m.chat.id, new_list)
+
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
