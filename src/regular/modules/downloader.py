@@ -199,24 +199,36 @@ async def tiktok_dl(m, url):
 
             if len(images) > 1:
                 for link in range(len(images)):
+
                     if media_count == 0:
                         media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
+
                     else:
                         media = InputMediaPhoto(link)
+
                     media_count += 1
                     media_list.append(media)
                 await bot.send_media_group(m.chat.id, media_list)
 
+                if music:
+                        await bot.send_audio(m.chat.id, music)
+
             else:
                 photo = images[0]
                 await bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="HTML")
-                await bot.send_audio(m.chat.id, music)
+
+                if music:
+                        await bot.send_audio(m.chat.id, music)
 
         elif post_type == 'video':
             link = links['video']
             await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
+
+        if "wrong type" or "HTTP URL" in str(error):
+            return
+
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
