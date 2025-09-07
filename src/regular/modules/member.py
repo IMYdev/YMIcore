@@ -77,6 +77,7 @@ help_categories = {
     - `/modules`: Manages activation of different modules and their subcommands.
     - `/horny`: Hentai content.
     - `/music`: Music search and fetching.
+    - `/spoiler`: Resends message with spoiler added.
     """
 }
 
