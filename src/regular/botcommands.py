@@ -7,7 +7,7 @@ from modules.filters import set_filter, get_filters, remove_filter
 from modules.notes import set_note, notes_list, remove_note
 from modules.member import (
     user_info, start, promote, demote, pin,
-    ban, unban, help_command, group_id
+    ban, unban, help_command, group_id, spoiler
 )
 from module_manager import send_module_keyboard
 from modules.quotes import quote_handler
@@ -43,8 +43,8 @@ COMMANDS = {
     "/q": quote_handler,
     "/horny": spice,
     "/music": music_search,
+    "/spoiler": spoiler
 }
-
 
 async def handle_command(message, text):
     """ Recive command and call associated module"""

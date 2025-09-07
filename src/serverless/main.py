@@ -38,7 +38,8 @@ async def is_module_enabled_in_group(command, chat_id):
                                 'ask', 'animewall', 'horny', 'sauce', 'imagine',
                                 'purge', 'filter', 'filist', 'stop', 'notes',
                                 'remove', 'add', 'help', 'goodbye', 'greeting',
-                                'reset', 'modules', 'q', 'music', 'leave'])
+                                'reset', 'modules', 'q', 'music', 'leave',
+                                'spoiler'])
 
 async def cmd_handler(m):
     db = IMYDB('runtime/banned/groups.json')

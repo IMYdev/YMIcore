@@ -1,6 +1,7 @@
 from info import bot
 from telebot.util import user_link
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.formatting import hspoiler
 import asyncio
 from core.utils import log_error
 
@@ -191,7 +192,7 @@ async def user_info(m):
             await bot.send_message(m.chat.id, caption + "\nNo profile image available.", parse_mode='HTML')
     except Exception as error:
         await log_error(bot, error, m)
-        await bot.reply_to(m, "An error occurred. Please try again later.")
+        await bot.reply_to(m, "An error occurred.")
 
 async def pin(m):
     try:
@@ -206,7 +207,7 @@ async def pin(m):
             await bot.reply_to(m, "Reply to target message to pin.")
     except Exception as error:
         await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred. Please try again later.")
+        await bot.reply_to(m, "An error occurred.")
 
 async def ban(m):
     try:
@@ -231,7 +232,8 @@ async def ban(m):
         if "user is an administrator" in str(error):
             await bot.reply_to(m, "Cannot ban an admin.")
         else:
-            log_error(bot, error, m)
+            await bot.reply_to(m, "An error occurred.")
+            await log_error(bot, error, m)
 
 async def unban(m):
     try:
@@ -283,19 +285,48 @@ async def group_id(m):
     except Exception as error:
         await log_error(bot, error, m)
 
-async def kick(m):
+async def spoiler(m):
     try:
-        necessary_evil = await bot.get_chat_member(m.chat.id, m.from_user.id)
-        rank = necessary_evil.status
-        username = m.reply_to_message.from_user.username if m.reply_to_message.from_user.username else m.reply_to_message.from_user.first_name
-        if rank == "member":
-            kick = await bot.kick_chat_member(m.chat.id, m.from_user.id)
-            if kick:
-                await bot.reply_to(m, f"Farewell @{username}.")
-        elif rank == "creator":
-            await bot.reply_to(m, "Cannot kick the creator of the group.")
-        else:
-            await bot.reply_to(m, "Cannot kick admins.")
+        spoiler_text = None
+        
+        if not m.reply_to_message:
+            await bot.reply_to(m, "Reply to a message to apply spoiler.")
+            return
+
+        original_message = m.reply_to_message
+        self = await bot.get_me()
+        info = await bot.get_chat_member(m.chat.id, self.id)
+
+        if not info.can_delete_messages:
+            await bot.reply_to(m, "Missing permission to delete messages.")
+            return
+
+        await bot.delete_message(m.chat.id, original_message.id)
+
+        if m.reply_to_message.photo:
+            media = m.reply_to_message.photo[0]
+            media = media.file_id
+
+            if m.reply_to_message.caption:
+                spoiler_text = hspoiler(m.reply_to_message.caption)
+        
+            await bot.send_photo(m.chat.id, photo=media, has_spoiler=True, reply_to_message_id=m.id, caption=spoiler_text, parse_mode='HTML')
+            return
+
+        elif m.reply_to_message.video:
+            media = m.reply_to_message.video
+            media = media.file_id
+
+            if m.reply_to_message.caption:
+                spoiler_text = hspoiler(m.reply_to_message.caption)
+
+            await bot.send_video(m.chat.id, video=media, has_spoiler=True, reply_to_message_id=m.id, caption=spoiler_text, parse_mode='HTML')
+            return
+
+        elif m.reply_to_message.text:
+            spoiler_text = hspoiler(m.reply_to_message.text)
+            await bot.reply_to(m, spoiler_text, parse_mode="HTML")
+
     except Exception as error:
-        await bot.reply_to(m, "An error occurred.")
-        log_error(bot, error, m)
+        await bot.send_message(m.chat.id, "An error occurred.")
+        await log_error(bot, error, m)

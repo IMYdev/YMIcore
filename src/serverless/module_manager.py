@@ -12,7 +12,7 @@ modules = {
     'notes' : ['notes', 'add', 'remove'],
     'filters': ['filter', 'filist', 'stop'],
     'greetings': ['greeting', 'goodbye'],
-    'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'id', 'music', 'leave']
+    'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'id', 'music', 'leave', 'spoiler']
 }
 
 # Disable adult features by default.
