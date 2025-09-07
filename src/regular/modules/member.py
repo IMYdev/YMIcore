@@ -285,23 +285,42 @@ async def group_id(m):
     except Exception as error:
         await log_error(bot, error, m)
 
+async def is_user_admin(chat_id, user_id):
+    chat_admins = await bot.get_chat_administrators(chat_id)
+    for admin in chat_admins:
+
+        if admin.user.id == user_id:
+            return True
+
+    return False
+
 async def spoiler(m):
     try:
+        delete_og = True
+
+        if not is_user_admin:
+            delete_og = False
+
+        user = await bot.get_chat_member(m.chat.id, m.from_user.id)
+        user_can_delete = user.can_delete_messages
+        original_message = m.reply_to_message
+        self = await bot.get_me()
+        self = await bot.get_chat_member(m.chat.id, self.id)
+
+        if not user_can_delete and user.status != "creator":
+            delete_og = False
+
+        if not self.can_delete_messages:
+            delete_og = False
+
+        if delete_og:
+            await bot.delete_message(m.chat.id, original_message.id)
+
         spoiler_text = None
         
         if not m.reply_to_message:
             await bot.reply_to(m, "Reply to a message to apply spoiler.")
             return
-
-        original_message = m.reply_to_message
-        self = await bot.get_me()
-        info = await bot.get_chat_member(m.chat.id, self.id)
-
-        if not info.can_delete_messages:
-            await bot.reply_to(m, "Missing permission to delete messages.")
-            return
-
-        await bot.delete_message(m.chat.id, original_message.id)
 
         if m.reply_to_message.photo:
             media = m.reply_to_message.photo[0]
