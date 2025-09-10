@@ -10,6 +10,7 @@ from modules.member import help_categories
 from module_manager import create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled
 from modules.greetings import hello, bye
 from botcommands import handle_command
+from modules.blocklist import sticker_block
 
 async def is_module_enabled_in_group(command, chat_id):
     db = IMYDB('runtime/modules/module_controller.json')
@@ -34,7 +35,7 @@ async def is_module_enabled_in_group(command, chat_id):
                                 'purge', 'filter', 'filist', 'stop', 'notes',
                                 'remove', 'add', 'help', 'goodbye', 'greeting',
                                 'reset', 'modules', 'q', 'music', 'leave',
-                                'spoiler'])
+                                'spoiler', 'blockset', 'blocklist', 'unblockset'])
 
 async def cmd_handler(m):
     db = IMYDB('runtime/banned/groups.json')
@@ -86,12 +87,16 @@ async def chat_m(m: types.ChatMemberUpdated):
     await hello(m)
     await bye(m)
 
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler()
 async def reply_message(m):
     await reply_to_filter(m)
     await get_notes(m)
     if "instagram.com/reel" or "youtube.com" or "youtu.be" or "tiktok.com" or "facebook.com" in m.text:
         await extract_supported_url(m)
+
+@bot.message_handler(content_types=['sticker'])
+async def sticker_handler(m):
+    await sticker_block(m)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("help_"))
 async def help_category_switch(call):

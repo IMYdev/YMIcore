@@ -11,6 +11,7 @@ from modules.member import help_categories
 from module_manager import create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled
 from modules.greetings import hello, bye
 from botcommands import handle_command
+from modules.blocklist import sticker_block
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 app = FastAPI()
@@ -97,6 +98,10 @@ async def reply_message(m):
     await get_notes(m)
     if "instagram.com/reel" or "youtube.com" or "youtu.be" or "tiktok.com" or "facebook.com" in m.text:
         await extract_supported_url(m)
+
+@bot.message_handler(content_types=['sticker'])
+async def sticker_handler(m):
+    await sticker_block(m)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("help_"))
 async def help_category_switch(call):

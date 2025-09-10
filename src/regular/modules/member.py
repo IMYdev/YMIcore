@@ -81,7 +81,6 @@ help_categories = {
     """
 }
 
-
 async def promote(m):
     try:
         target_user = m.reply_to_message
@@ -121,7 +120,6 @@ async def promote(m):
         else:
             log_error(bot, error, m)
             await bot.reply_to(m, "An error occurred.")
-
 
 async def demote(m):
     try:

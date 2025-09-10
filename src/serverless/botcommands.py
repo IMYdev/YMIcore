@@ -7,12 +7,12 @@ from modules.filters import set_filter, get_filters, remove_filter
 from modules.notes import set_note, notes_list, remove_note
 from modules.member import (
     user_info, start, promote, demote, pin,
-    ban, unban, help_command, group_id, spoiler
-)
+    ban, unban, help_command, group_id, spoiler)
 from module_manager import send_module_keyboard
 from modules.quotes import quote_handler
 from modules.greetings import set_greeting, set_goodbye
 from modules.downloader import music_search
+from modules.blocklist import (block_set, unblock_set, get_blacklist)
 
 COMMANDS = {
     "/info": user_info,
@@ -43,7 +43,10 @@ COMMANDS = {
     "/q": quote_handler,
     "/horny": spice,
     "/music": music_search,
-    "/spoiler": spoiler
+    "/spoiler": spoiler,
+    "/blockset": block_set,
+    "/blocklist": get_blacklist,
+    "/unblockset": unblock_set
 }
 
 async def handle_command(message, text):
