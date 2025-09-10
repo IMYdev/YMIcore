@@ -54,6 +54,10 @@ help_categories = {
     - `/animewall`: Sends an anime-themed wallpaper.
     - `/sauce`: Reverse search engine for anime, give a picture and get the name of the anime.
     - `/imagine [prompt]`: Generate an AI image based on your prompt.
+    - `/horny`: Hentai content.
+    - `/music`: Music search and fetching.
+    - `/spoiler`: Resends message with spoiler added.
+    - `/notes`: Displays a list of saved notes.
     """,
     
     "Admin": """
@@ -64,7 +68,6 @@ help_categories = {
     - `/filters`: Lists all active filters in the chat.
     - `/stop [keyword]`: Removes a specific filter by keyword.
     - `/add [note]`: Adds a custom note to be recalled later.
-    - `/notes`: Displays a list of saved notes.
     - `/remove [note_ID]`: Removes a specific note by ID.
     - `/promote [user]`: Promotes a user to admin status.
     - `/greeting [message]`: Sets a greeting message for new members, reply to media to attach it.
@@ -75,9 +78,9 @@ help_categories = {
     - `/unban [user]`: Unbans a user from the chat.
     - `/reset`: Resets the bot's memory.
     - `/modules`: Manages activation of different modules and their subcommands.
-    - `/horny`: Hentai content.
-    - `/music`: Music search and fetching.
-    - `/spoiler`: Resends message with spoiler added.
+    - `/blockset`: Reply to a sticker to blacklist its set in the chat.
+    - `/unblockset [set_name]`: Removes a sticker set from the blacklist.
+    - `/blacklist`: Shows all currently blacklisted sticker sets.
     """
 }
 
