@@ -80,7 +80,7 @@ help_categories = {
     - `/modules`: Manages activation of different modules and their subcommands.
     - `/blockset`: Reply to a sticker to blacklist its set in the chat.
     - `/unblockset [set_name]`: Removes a sticker set from the blacklist.
-    - `/blacklist`: Shows all currently blacklisted sticker sets.
+    - `/blocklist`: Shows all currently blacklisted sticker sets.
     """
 }
 
