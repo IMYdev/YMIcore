@@ -14,7 +14,6 @@ It's also a ready-to-use general group management bot.
 - Show info about users or yourself anytime.
 - Custom greetings and farewell messages when a member joins or leaves (can attach pics or videos.)
 - Grab and send wallpapers from various sources, including anime-themed ones.
-- Generate cool AI images from a text prompt.
 - Reverse search anime pictures to identify the anime.
 - Chat with AI. Ask questions and get quick, smart answers  
 - Save, list, and remove notes inside the chat.
@@ -27,6 +26,8 @@ It's also a ready-to-use general group management bot.
 - Search for and fetch music tracks from platforms like Deezer, Spotify, and YouTube Music.
 - Grab media content from Instagram, TikTok, and YouTube links.
 - Provide NSFW content for users who want it.
+- Ability to add spoilers to media and text.
+- Block sticker sets that are unwanted in the group chat.
 
 ---
 
