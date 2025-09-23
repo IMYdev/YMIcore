@@ -1,7 +1,7 @@
 from modules.wallpapers import wallpaper
 from modules.img import image_gen
 from modules.chat import chat, reset_memory
-from modules.anime import anime, search, spice
+from modules.anime import anime, search
 from modules.purge import purge
 from modules.filters import set_filter, get_filters, remove_filter
 from modules.notes import set_note, notes_list, remove_note
@@ -41,7 +41,6 @@ COMMANDS = {
     "/reset": reset_memory,
     "/modules": send_module_keyboard,
     "/q": quote_handler,
-    "/horny": spice,
     "/music": music_search,
     "/spoiler": spoiler,
     "/blockset": block_set,

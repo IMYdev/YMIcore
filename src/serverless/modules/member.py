@@ -53,8 +53,6 @@ help_categories = {
     - `/ask [question]`: Ask a question and get an AI-generated response.
     - `/animewall`: Sends an anime-themed wallpaper.
     - `/sauce`: Reverse search engine for anime, give a picture and get the name of the anime.
-    - `/imagine [prompt]`: Generate an AI image based on your prompt.
-    - `/horny`: Hentai content.
     - `/music`: Music search and fetching.
     - `/spoiler`: Resends message with spoiler added.
     - `/notes`: Displays a list of saved notes.

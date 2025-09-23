@@ -7,7 +7,7 @@ db = IMYDB('runtime/modules/module_controller.json')
 
 # Define the main modules and categorize the commands
 modules = {
-    'anime': ['animewall', 'horny', 'sauce'],
+    'anime': ['animewall', 'sauce'],
     'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge', 'goodbye', 'greeting'],
     'notes' : ['notes', 'add', 'remove'],
     'filters': ['filter', 'filist', 'stop'],
@@ -17,7 +17,6 @@ modules = {
 
 # Disable adult features by default.
 default_disabled = {
-    'horny': False
 }
 
 # Function to check if the user is an admin

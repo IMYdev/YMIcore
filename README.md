@@ -25,7 +25,6 @@ It's also a ready-to-use general group management bot.
 - Toggle and control various bot modules for extra features or disabling unwanted ones.
 - Search for and fetch music tracks from platforms like Deezer, Spotify, and YouTube Music.
 - Grab media content from Instagram, TikTok, and YouTube links.
-- Provide NSFW content for users who want it.
 - Ability to add spoilers to media and text.
 - Block sticker sets that are unwanted in the group chat.
 
