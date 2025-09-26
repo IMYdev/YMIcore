@@ -54,7 +54,7 @@ async def quote_handler(m):
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post("https://api.paxsenix.biz.id/maker/quotly", json=payload) as resp:
+            async with session.post("https://api.paxsenix.org/maker/quotly", json=payload) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     try:

@@ -109,7 +109,7 @@ requirements.txt # Project dependencies.
 - **[SyndicateAIbot](https://t.me/ProjectZ_mind_control_delete_bot)** for serverless (Vercel + MongoDB.)
 ---
 ## Credits: 
-- **PaxSenix for their incredible [API](https://api.paxsenix.biz.id/) .**
+- **PaxSenix for their incredible [API](https://api.paxsenix.org/) .**
 - **[Awan LLM](https://www.awanllm.com/) for YMIcore's LLM functions.**
 ---
 ## License

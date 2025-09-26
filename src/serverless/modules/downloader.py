@@ -57,7 +57,7 @@ async def extract_supported_url(m):
 
 async def instagram_dl(m, url):
     try:
-        api=f"https://api.paxsenix.biz.id/dl/ig?url={url}"
+        api=f"https://api.paxsenix.org/dl/ig?url={url}"
         data = await wait_until_ok(api)
 
         if data == 429 or data == 504:
@@ -165,7 +165,7 @@ async def instagram_dl(m, url):
 
 async def tiktok_dl(m, url):
     try:
-        api=f"https://api.paxsenix.biz.id/dl/tiktok?url={url}"
+        api=f"https://api.paxsenix.org/dl/tiktok?url={url}"
         data = await wait_until_ok(api)
 
         if data == 429 or data == 504:
@@ -232,7 +232,7 @@ async def tiktok_dl(m, url):
 
 async def facebook_dl(m, url):
     try:
-        api=f"https://api.paxsenix.biz.id/dl/fb?url={url}"
+        api=f"https://api.paxsenix.org/dl/fb?url={url}"
         data = await wait_until_ok(api)
 
         if data == 429 or data == 504:
@@ -265,7 +265,7 @@ async def download_yt_video(m, link):
             await bot.send_audio(m.chat.id, audio=link, reply_to_message_id=m.id)
             return
 
-        api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=360"
+        api=f"https://api.paxsenix.org/yt/savetube?url={link}&quality=360"
         source = hlink("Source", link, escape=False)
         data = await wait_until_ok(api)
         task_url = data['task_url']
@@ -281,7 +281,7 @@ async def download_yt_video(m, link):
 
 async def download_yt_audio(m, link):
     try:
-        api=f"https://api.paxsenix.biz.id/yt/savetube?url={link}&quality=mp3"
+        api=f"https://api.paxsenix.org/yt/savetube?url={link}&quality=mp3"
         data = await wait_until_ok(api)
         task_url = data['task_url']
         link = await check_yt_dl_status(task_url)
@@ -331,7 +331,7 @@ async def music_search(m):
 
 async def fetch_music(m, yt_url, old, caption):
     try:
-        api = f"https://api.paxsenix.biz.id/tools/songlink?url={yt_url}"
+        api = f"https://api.paxsenix.org/tools/songlink?url={yt_url}"
         data = await wait_until_ok(api)
 
         if data == 429 or data == 504:
@@ -384,7 +384,7 @@ async def fetch_music(m, yt_url, old, caption):
 
 async def download_music(m, song, choice):
     try:
-        URL="https://api.paxsenix.biz.id/dl"
+        URL="https://api.paxsenix.org/dl"
 
         if choice == "deezer":
             api = f"{URL}/{choice}?url={song}&quality=flac"

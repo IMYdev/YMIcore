@@ -22,7 +22,7 @@ async def generate_image(api_url, prompt):
 
 async def image_gen(m):
     # Define the API endpoint
-    api_url = "https://api.paxsenix.biz.id/ai-image/magicstudio"
+    api_url = "https://api.paxsenix.org/ai-image/magicstudio"
     
     # Generate image
     try:
