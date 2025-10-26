@@ -8,6 +8,7 @@ from yt_dlp import YoutubeDL
 from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
 import random
+import os
 
 async def wait_until_ok(url, delay=1):
     PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
@@ -265,6 +266,11 @@ vid_opts = {
     "format": "18",
 }
 
+cookie_file = "cookies.txt"
+
+if os.path.exists(cookie_file):
+    vid_opts["cookiefile"] = cookie_file
+
 async def download_yt_video(m, link):
     try:
         if len(m.text.split(" ", 1)) > 1 and m.text.split(" ", 1)[1] == "-audio":
@@ -294,6 +300,11 @@ audio_opts = {
     "no_warnings": True,
     "format": "bestaudio/best"
 }
+
+cookie_file = "cookies.txt"
+
+if os.path.exists(cookie_file):
+    audio_opts["cookiefile"] = cookie_file
 
 async def download_yt_audio(m, link):
     try:
