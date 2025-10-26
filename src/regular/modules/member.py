@@ -119,7 +119,7 @@ async def promote(m):
         if "not enough rights" in str(error):
             await bot.reply_to(m, "Not enough rights to promote.")
         else:
-            log_error(bot, error, m)
+            await log_error(bot, error, m)
             await bot.reply_to(m, "An error occurred.")
 
 async def demote(m):
@@ -260,7 +260,7 @@ async def unban(m):
         else:
             await bot.reply_to(m, "Reply to a message to unban its sender.")
     except Exception as error:
-        log_error(bot, error, m)
+        await log_error(bot, error, m)
 
 
 async def help_command(m, category="General"):

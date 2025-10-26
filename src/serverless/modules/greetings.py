@@ -63,7 +63,7 @@ async def set_greeting(m):
             await bot.reply_to(m, "Admins only.")
     except Exception as e:
         await bot.send_message(m.chat.id, "An error occurred")
-        log_error(bot, e, m)
+        await log_error(bot, e, m)
 
 
 async def set_goodbye(m):
@@ -121,7 +121,7 @@ async def set_goodbye(m):
             await bot.reply_to(m, "Admins only.")
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
-        log_error(bot, error, m)
+        await log_error(bot, error, m)
 
 async def hello(m):
     old = m.old_chat_member
