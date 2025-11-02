@@ -281,6 +281,8 @@ async def download_yt_video(m, link):
         with YoutubeDL(params=vid_opts) as ydl:
             info = ydl.extract_info(link, download=False)
             file_size = info.get("filesize") or info.get("filesize_approx")
+            if not file_size:
+                return
             if file_size > 52428800:
                 return
             title = info.get("title")
