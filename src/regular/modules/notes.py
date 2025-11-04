@@ -1,7 +1,7 @@
 from info import bot
 from core.imysdb import IMYDB
 from core.utils import log_error
-from telebot.formatting import format_text, mbold, mitalic
+from telebot.formatting import format_text, hbold, hitalic, hcode
 
 async def is_user_admin(chat_id, user_id):
     chat_admins = await bot.get_chat_administrators(chat_id)
@@ -97,14 +97,14 @@ async def notes_list(m):
         db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
         notes = db.get('notes', {})
 
-        formatted_notes = '\n'.join([f"`{note_id}.` {note['name']}" for note_id, note in notes.items()])
+        formatted_notes = '\n'.join([f"{hcode(note_id)}. {note['name']}" for note_id, note in notes.items()])
         formatted_reply = format_text(
-            mitalic("Catalog of notes:"),
+            hitalic("Catalog of notes:"),
             formatted_notes,
-            mbold("Retrieve notes via #note_number", escape=False)
+            hbold("Retrieve notes via #note_number")
         )
         if formatted_notes:
-            await bot.send_message(m.chat.id, formatted_reply, parse_mode="Markdown")
+            await bot.send_message(m.chat.id, formatted_reply, parse_mode="HTML")
         else:
             await bot.send_message(m.chat.id, "Catalog empty. No notes registered.")
     except Exception as error:
