@@ -9,6 +9,9 @@ from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
 import random
 import os
+import json
+import tempfile
+import subprocess
 
 async def wait_until_ok(url, delay=1):
     PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
@@ -322,30 +325,88 @@ async def download_yt_audio(m, link):
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
+
+async def embed_metadata(audio_data, title, artist):
+    try:
+        with tempfile.NamedTemporaryFile(suffix='.audio', delete=False) as input_file:
+            input_file.write(audio_data)
+            input_path = input_file.name
+
+        probe_cmd = [
+            'ffprobe',
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_format',
+            '-show_streams',
+            input_path
+        ]
+        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
+        if probe_result.returncode != 0:
+            raise Exception(f"FFprobe error: {probe_result.stderr}")
+
+        probe_data = json.loads(probe_result.stdout)
+        audio_stream = next((s for s in probe_data['streams'] if s['codec_type'] == 'audio'), None)
+        if not audio_stream:
+            raise Exception("No audio stream found")
+
+        output_extension = '.mp3'
+        output_format = 'mp3'
+        with tempfile.NamedTemporaryFile(suffix=output_extension, delete=False) as output_file:
+            output_path = output_file.name
+
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-i', input_path,
+            '-c:a', 'libmp3lame',
+            '-b:a', '320k',
+            '-metadata', f'title={title}',
+            '-metadata', f'artist={artist}',
+            '-f', output_format,
+            '-y',
+            output_path
+        ]
+
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            os.unlink(input_path)
+            if os.path.exists(output_path):
+                os.unlink(output_path)
+            return audio_data
+
+        os.unlink(input_path)
+        return output_path
+
+    except Exception as e:
+        try:
+            if 'input_path' in locals():
+                os.unlink(input_path)
+            if 'output_path' in locals():
+                os.unlink(output_path)
+        except:
+            pass
+        return audio_data
+
 async def music_search(m):
     if not Downloader:
         return
-    client = InnerTube("WEB")
 
+    client = InnerTube("WEB")
     query = m.text.split(" ", 1)
 
     if len(query) > 1:
         query = query[1]
         old = await bot.reply_to(m, "Looking for song...")
-
     else:
         await bot.reply_to(m, "No song name provided.")
         return
 
-    data = client.search(query=query, params="EgWKAQwI") # *params* are the music filter here
+    data = client.search(query=query, params="EgWKAQwI")  # *params* are the music filter
     sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']
 
     for section in sections:
         items = section.get('itemSectionRenderer', {}).get('contents', [])
-
         for item in items:
             video = item.get('videoRenderer')
-
             if not video:
                 continue
 
@@ -356,28 +417,41 @@ async def music_search(m):
             author = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
             caption = f"{author} - {title}"
 
-            await fetch_music(m, url, old, caption)
+            thumbnails = video.get("thumbnail", {}).get("thumbnails", [])
+            cover_url = thumbnails[-1]["url"] if thumbnails else None
+
+            await fetch_music(m, url, old, caption, title, author, cover_url)
             break  # stop after first result
 
-async def fetch_music(m, yt_url, old, caption):
+
+async def fetch_music(m, yt_url, old, caption, title, artist, cover):
     try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(cover, timeout=10) as resp:
+                if resp.status == 200:
+                    img_data = await resp.read()
+                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as img_file:
+                        img_file.write(img_data)
+                        cover_path = img_file.name
         api = f"https://api.paxsenix.org/tools/songlink?url={yt_url}"
         data = await wait_until_ok(api)
 
         if data == 429 or data == 504:
             await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
             link = await download_yt_audio(m, yt_url)
+            link = await embed_metadata(link, title, artist)
             await bot.delete_message(m.chat.id, old.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+            await bot.send_audio(m.chat.id, audio=open(link, 'rb'), caption=caption, thumbnail=open(cover_path, 'rb'), reply_to_message_id=m.id)
             return
 
         if data == 500:
             await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
             link = await download_yt_audio(m, yt_url)
+            link = await embed_metadata(link, title, artist)
             await bot.delete_message(m.chat.id, old.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+            await bot.send_audio(m.chat.id, audio=open(link, 'rb'), caption=caption, thumbnail=open(cover_path, 'rb'), reply_to_message_id=m.id)
             return
 
         links = data.get('links')
@@ -389,6 +463,8 @@ async def fetch_music(m, yt_url, old, caption):
             if deezer != "N/A":
                 await bot.edit_message_text("Fetching song from Deezer...", m.chat.id, old.id)
                 link = await download_music(m, deezer, "deezer")
+                if link != "failed":
+                    link = await embed_metadata(link, title, artist)
 
             elif spotify != "N/A":
                 await bot.edit_message_text("Fetching song from Spotify...", m.chat.id, old.id)
@@ -397,16 +473,18 @@ async def fetch_music(m, yt_url, old, caption):
             else:
                 await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
                 link = await download_yt_audio(m, yt_url)
+                link = await embed_metadata(link, title, artist)
 
         await bot.delete_message(m.chat.id, old.id)
 
         if link != "failed":
             await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+            await bot.send_audio(m.chat.id, audio=open(link, 'rb'), caption=caption, thumbnail=open(cover_path, 'rb'), reply_to_message_id=m.id)
         else:
             link = await download_yt_audio(m, yt_url)
+            link = await embed_metadata(link, title, artist)
             await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+            await bot.send_audio(m.chat.id, audio=open(link, 'rb'), caption=caption, thumbnail=open(cover_path, 'rb'), reply_to_message_id=m.id)
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
@@ -417,7 +495,7 @@ async def download_music(m, song, choice):
         URL="https://api.paxsenix.org/dl"
 
         if choice == "deezer":
-            api = f"{URL}/{choice}?url={song}&quality=flac"
+            api = f"{URL}/{choice}?url={song}&quality=320kbps"
             data = await wait_until_ok(api)
 
             if data == 429 or data == 504:
@@ -453,7 +531,12 @@ async def download_music(m, song, choice):
                 return "failed"
             
             link = data['directUrl']
-            return link
+            if link and link != "failed":
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(link) as response:
+                        if response.status == 200:
+                            return await response.content.read()
+            return "failed"
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
