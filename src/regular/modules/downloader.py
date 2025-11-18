@@ -69,9 +69,17 @@ async def extract_supported_url(m):
     elif "x.com" in url:
         await twitter_dl(m, url)
 
+class loggerOutputs:
+    def error(msg):
+        pass
+    def warning(msg):
+        pass
+    def debug(msg):
+        pass
+
 ig_opts = {
     "quiet": True,
-    "no_warnings": True,
+    "logger": loggerOutputs
 }
 
 async def instagram_dl(m, url):
@@ -192,23 +200,24 @@ async def twitter_dl(m, url):
         source = hlink("Source", url, escape=False)
         caption = f"{hcite(title, expandable=True)}\n{username}\n{source}"
 
-
         if len(caption) > 1024:
             caption = source
 
         if info.get('ext') == 'mp4':
             await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
-        else:
-            await bot.send_photo(m.chat.id, photo=link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
+        if "No video" in str(error):
+            url = url.replace("x.com", "d.fixupx.com") if "x.com" in url else url.replace("twitter.com", "d.fxtwitter.com")
+            await bot.send_photo(m.chat.id, photo=url)
+            return
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
 vid_opts = {
     "quiet": True,
-    "no_warnings": True,
     "format": "18",
+    "logger": loggerOutputs
 }
 
 cookie_file = "cookies.txt"
@@ -245,7 +254,8 @@ async def download_yt_video(m, link):
 audio_opts = {
     "quiet": True,
     "no_warnings": True,
-    "format": "bestaudio/best"
+    "format": "bestaudio/best",
+    "logger": loggerOutputs
 }
 
 cookie_file = "cookies.txt"
