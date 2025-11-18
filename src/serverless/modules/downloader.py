@@ -166,6 +166,33 @@ async def facebook_dl(m, url):
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
+async def twitter_dl(m, url):
+    try:
+        with YoutubeDL(ig_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        for fmt in info.get('formats', []):
+            if fmt.get('ext') == 'mp4' and fmt.get('protocol') == 'https':
+                link = fmt.get('url')
+                break
+
+        title = info.get('title')
+        username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
+        source = hlink("Source", url, escape=False)
+        caption = f"{hcite(title, expandable=True)}\n{username}\n{source}"
+
+
+        if len(caption) > 1024:
+            caption = source
+
+        if info.get('ext') == 'mp4':
+            await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
+        else:
+            await bot.send_photo(m.chat.id, photo=link, caption=caption, parse_mode="HTML")
+
+    except Exception as error:
+        await bot.send_message(m.chat.id, "An error occurred.")
+        await log_error(bot, error, m)
+
 async def download_yt_video(m, link):
     try:
 

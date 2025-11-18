@@ -92,7 +92,7 @@ async def chat_m(m: types.ChatMemberUpdated):
 async def reply_message(m):
     await reply_to_filter(m)
     await get_notes(m)
-    if "instagram.com/reel" or "youtube.com" or "youtu.be" or "tiktok.com" or "facebook.com" in m.text:
+    if "instagram.com/reel" or "youtube.com" or "youtu.be" or "tiktok.com" or "facebook.com" or "twitter.com" or "x.com" in m.text:
         await extract_supported_url(m)
 
 @bot.message_handler(content_types=['sticker'])
