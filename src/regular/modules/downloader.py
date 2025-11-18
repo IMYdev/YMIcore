@@ -6,7 +6,7 @@ import aiohttp
 import asyncio
 from yt_dlp import YoutubeDL
 from innertube import InnerTube
-from telebot.types import InputMediaPhoto, InputMediaVideo
+from telebot.types import InputMediaPhoto
 import random
 import os
 import json
@@ -51,7 +51,7 @@ async def extract_supported_url(m):
     if "youtube.com" in url or "youtu.be" in url:
         await download_yt_video(m, url)
 
-    elif "instagram.com" in url:
+    elif "instagram.com/reel" in url:
         url = url.split("?", 1)[0]
         await instagram_dl(m, url)
     
@@ -63,109 +63,20 @@ async def extract_supported_url(m):
 
 async def instagram_dl(m, url):
     try:
-        api=f"https://api.paxsenix.org/dl/ig?url={url}"
-        data = await wait_until_ok(api)
+        ydl_opts = {'quiet': True}
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
 
-        if data == 429 or data == 504:
-            await bot.send_message(m.chat.id, f"API busy: {data}")
-            return
-
-        if data == 500:
-            await bot.send_message(m.chat.id, f"API Error: {data}")
-            return
-
-        links = data['downloadUrls']
-        media_list = []
-        source = hlink("Source", url, escape=False)
-        username = data['detail']['username']
-        author = hlink(f"@{username}", f"www.instagram.com/{username}", escape=False)
-        author = author.replace("\\", "")
-        description = data['detail']['title']
-        description = hcite(description, expandable=True)
-        caption = f"{description}\n{author}\n{source}"
-        media_count = 0
-
+        username = info.get('uploader', '')
+        description = info.get('description', '') or info.get('title', '')
+        caption = f"{hcite(description, expandable=True)}\n{hlink(f'@{username}', f'instagram.com/{username}', escape=False)}\n{hlink('Source', url, escape=False)}"
+        
         if len(caption) > 1024:
-            caption = f"{author}\n{source}"
+            caption = f"{hlink(f'@{username}', f'instagram.com/{username}', escape=False)}\n{hlink('Source', url, escape=False)}"
 
-        if len(links) > 1:
-            for i in range(len(links)):
-                link = links[i]['url']
-                file_ext = links[i]['ext']
-
-                if file_ext == 'mp4':
-
-                    if media_count == 0:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
-
-                    else:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaVideo(link)
-
-                    media_count += 1
-
-                else:
-
-                    if media_count == 0:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
-
-                    else:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaPhoto(link)
-
-                    media_count += 1
-
-                media_list.append(media)
-
-            if len(media_list) > 10:
-                new_list = media_list[10:]
-                media_list = media_list[:10]
-                await bot.send_media_group(m.chat.id, media_list)
-                await bot.send_media_group(m.chat.id, new_list)
-                return
-
-            await bot.send_media_group(m.chat.id, media_list)
-
-        else:
-            file_ext = links[0]['ext']
-            link = links[0]['url']
-
-            if file_ext == 'mp4':
-                await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
-            else:
-                await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
-
+        url = url.replace("instagram", "kkinstagram")
+        await bot.send_video(m.chat.id, url, caption=caption, parse_mode="HTML")
     except Exception as error:
-
-        if "HTTP URL" in str(error):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(link) as response:
-                    await bot.send_video(m.chat.id, response.content, caption=caption, parse_mode="HTML")
-                    return
-
-        if "Too Many Requests" in str(error):
-            parts = str(error).split()
-            wait_time = None
-            for part in parts:
-
-                if part.isdigit() and part != "429":
-                    wait_time = int(part)
-                    break
-
-            if wait_time:
-                await asyncio.sleep(wait_time)
-                return await bot.send_media_group(m.chat.id, new_list)
-
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
 
