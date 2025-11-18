@@ -149,26 +149,18 @@ async def tiktok_dl(m, url):
 
 async def facebook_dl(m, url):
     try:
-        api=f"https://api.paxsenix.org/dl/fb?url={url}"
-        data = await wait_until_ok(api)
-
-        if data == 429 or data == 504:
-            await bot.send_message(m.chat.id, f"API busy: {data}")
-            return
-
-        if data == 500:
-            await bot.send_message(m.chat.id, f"API Error: {data}")
-            return
-
-        links = data.get('url')
-
-        if len(links) < 1:
-            return
-
-        link = links[0]['downloadUrl']
+        with YoutubeDL(ig_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        link = info.get('formats')[1].get('url')
+        title = info.get('description')
+        username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
         source = hlink("Source", url, escape=False)
+        caption = f"{hcite(title, expandable=True)}\n{username}\n{source}"
 
-        await bot.send_video(m.chat.id, video=link, caption=source, parse_mode="HTML")
+        if len(caption) > 1024:
+            caption = source
+
+        await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
