@@ -1,5 +1,6 @@
 from info import (bot, Downloader, PAXSENIX_TOKENS)
 from telebot.formatting import (hlink, hcite)
+from telebot.util import user_link
 import re
 from core.utils import log_error
 import aiohttp
@@ -56,21 +57,25 @@ async def extract_supported_url(m):
     elif "facebook.com" in url:
         await facebook_dl(m, url)
 
+ig_opts = {
+    "quiet": True,
+    "no_warnings": True,
+}
+
 async def instagram_dl(m, url):
     try:
-        ydl_opts = {'quiet': True}
-        with YoutubeDL(ydl_opts) as ydl:
+        with YoutubeDL(ig_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
-        username = info.get('uploader', '')
+        username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
         description = info.get('description', '') or info.get('title', '')
-        caption = f"{hcite(description, expandable=True)}\n{hlink(f'@{username}', f'instagram.com/{username}', escape=False)}\n{hlink('Source', url, escape=False)}"
+        caption = f"{hcite(description, expandable=True)}\n{username}\n{hlink('Source', url, escape=False)}"
         
         if len(caption) > 1024:
-            caption = f"{hlink(f'@{username}', f'instagram.com/{username}', escape=False)}\n{hlink('Source', url, escape=False)}"
+            caption = f"{username}\n{hlink('Source', url, escape=False)}"
 
         url = url.replace("instagram", "kkinstagram")
-        await bot.send_video(m.chat.id, video=url, caption=caption, parse_mode="HTML")
+        await bot.send_video(m.chat.id, url, caption=caption, parse_mode="HTML")
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
