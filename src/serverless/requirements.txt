@@ -3,4 +3,5 @@ aiohttp
 fastapi
 python-dotenv
 innertube
+yt-dlp
 pymongo[srv]
