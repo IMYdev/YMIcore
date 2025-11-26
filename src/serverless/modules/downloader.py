@@ -47,7 +47,7 @@ async def extract_supported_url(m):
     if "youtube.com" in url or "youtu.be" in url:
         await download_yt_video(m, url)
 
-    elif url.startswith("https://instagram.com"):
+    elif url.startswith("https://www.instagram.com") or url.startswith("https://instagram.com"):
         url = url.split("?", 1)[0]
         await instagram_dl(m, url)
     
@@ -57,10 +57,10 @@ async def extract_supported_url(m):
     elif "facebook.com" in url:
         await facebook_dl(m, url)
 
-    elif url.startswith("https://twitter.com"):
+    elif url.startswith("https://twitter.com") or url.startswith("https://www.twitter.com"):
         await twitter_dl(m, url)
 
-    elif url.startswith("https://x.com"):
+    elif url.startswith("https://x.com") or url.startswith("https://www.x.com"):
         await twitter_dl(m, url)
 
 
