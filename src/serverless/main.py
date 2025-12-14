@@ -155,4 +155,4 @@ async def webhook(request: Request):
 @app.on_event("startup")
 async def startup():
     await bot.remove_webhook()
-    await bot.set_webhook(url=f"{WEBHOOK_URL}/webhook", allowed_updates=['message', 'chat_member', 'callback_query'])
+    await bot.set_webhook(url=f"{WEBHOOK_URL}/webhook", allowed_updates=['message', 'chat_member', 'callback_query'], drop_pending_updates=True)

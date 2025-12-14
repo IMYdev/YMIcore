@@ -141,7 +141,7 @@ async def handle_back_to_modules_callback(call):
     await bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=keyboard)
 
 async def main():
-    await bot.infinity_polling(allowed_updates=['message', 'chat_member', 'callback_query'])
+    await bot.infinity_polling(allowed_updates=['message', 'chat_member', 'callback_query'], skip_pending=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
