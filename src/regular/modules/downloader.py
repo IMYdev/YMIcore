@@ -8,7 +8,7 @@ import aiohttp
 import asyncio
 from yt_dlp import YoutubeDL
 from innertube import InnerTube
-from telebot.types import InputMediaPhoto
+from telebot.types import InputMediaPhoto, InputMediaVideo
 import random
 import os
 import json
@@ -84,18 +84,65 @@ ig_opts = {
 
 async def instagram_dl(m, url):
     try:
-        with YoutubeDL(ig_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+        api = f"https://delirius-apiofc.vercel.app/download/instagram?url={url}"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api) as response:
+                if response.status != 200:
+                    await bot.send_message("An error occurred")
+                data_json = await response.json()
+
+        if not data_json.get("status") or not data_json.get("data"):
+            await bot.send_message("An error occurred")
+        
+        items = data_json.get("data", [])
+
+        description = ""
+        try:
+            with YoutubeDL(ig_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                description = info.get('description') or info.get('title') or ""
+        except Exception:
+            description = ""
 
         username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
-        description = info.get('description', '') or info.get('title', '')
-        caption = f"{hcite(description, expandable=True)}\n{username}\n{hlink('Source', url, escape=False)}"
+        
+        if description:
+            caption = f"{hcite(description, expandable=True)}\n{username}\n{hlink('Source', url, escape=False)}"
+        else:
+            caption = f"{username}\n{hlink('Source', url, escape=False)}"
         
         if len(caption) > 1024:
             caption = f"{username}\n{hlink('Source', url, escape=False)}"
 
-        url = url.replace("instagram", "kkinstagram")
-        await bot.send_video(m.chat.id, url, caption=caption, parse_mode="HTML")
+        media_list = []
+        for i, item in enumerate(items):
+            media_type = item.get("type")
+            media_url = item.get("url")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(media_url) as response:
+                    media_url = await response.content.read()
+            
+            current_caption = caption if i == 0 else None
+            
+            if media_type == "image":
+                media_list.append(InputMediaPhoto(media_url, caption=current_caption, parse_mode="HTML"))
+            else:
+                media_list.append(InputMediaVideo(media_url, caption=current_caption, parse_mode="HTML"))
+
+        if len(media_list) == 1:
+            if items[0]["type"] == "image":
+                media_url = items[0]["url"]
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(media_url) as response:
+                        media_url = await response.content.read()
+                await bot.send_photo(m.chat.id, media_url, caption=caption, parse_mode="HTML")
+            else:
+                await bot.send_video(m.chat.id, media_url, caption=caption, parse_mode="HTML")
+        else:
+            for i in range(0, len(media_list), 10):
+                await bot.send_media_group(m.chat.id, media_list[i:i+10])
+
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
