@@ -86,10 +86,11 @@ help_categories = {
 
 START_TIME = time.time()
 
-def format_time(seconds):
+async def format_time(seconds):
     mins, secs = divmod(int(seconds), 60)
     hrs, mins = divmod(mins, 60)
-    days, hrs = divmod(hrs, 24)                                                                     return f"{days}d {hrs}h {mins}m {secs}s"
+    days, hrs = divmod(hrs, 24)
+    return f"{days}d {hrs}h {mins}m {secs}s"
 
 async def promote(m):
     try:
@@ -285,9 +286,6 @@ async def help_command(m, category="General"):
 async def start(m):
     await bot.reply_to(m, "Welcome. Use /help for assistance and further understanding of the bot's functions.")
 
-async def runtime(m):
-    running_time = time.time() - START_TIME                                                         await bot.reply_to(m, f"Bot runtime:\n⏱ {format_time(running_time)}")
-
 async def group_id(m):
     try:
         chat_id = m.chat.id
@@ -361,3 +359,7 @@ async def spoiler(m):
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
+
+async def runtime(m):
+    running_time = time.time() - START_TIME
+    await bot.reply_to(m, f"Bot runtime:\n⏱ {await format_time(running_time)}")
