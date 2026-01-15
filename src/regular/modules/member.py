@@ -3,6 +3,7 @@ from telebot.util import user_link
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot.formatting import hspoiler
 import asyncio
+import time
 from core.utils import log_error
 
 demoting_params = {
@@ -56,6 +57,7 @@ help_categories = {
     - `/music`: Music search and fetching.
     - `/spoiler`: Resends message with spoiler added.
     - `/notes`: Displays a list of saved notes.
+    - `/runtime`: Test robot's liveness.
     """,
     
     "Admin": """
@@ -81,6 +83,13 @@ help_categories = {
     - `/blocklist`: Shows all currently blacklisted sticker sets.
     """
 }
+
+START_TIME = time.time()
+
+def format_time(seconds):                                                                           mins, secs = divmod(int(seconds), 60)
+    hrs, mins = divmod(mins, 60)
+    days, hrs = divmod(hrs, 24)
+    return f"{days}d {hrs}h {mins}m {secs}s"
 
 async def promote(m):
     try:
@@ -275,6 +284,10 @@ async def help_command(m, category="General"):
 
 async def start(m):
     await bot.reply_to(m, "Welcome. Use /help for assistance and further understanding of the bot's functions.")
+
+async def runtime(m):
+    running_time = time.time() - START_TIME
+    await bot.reply_to(m, f"Bot runtime:\n⏱ {format_time(running_time)}")
 
 async def group_id(m):
     try:
