@@ -102,6 +102,8 @@ async def reply_message(m):
 
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):
+    if not (await bot.get_chat_member(m.chat.id, bot.user.id)).can_delete_messages:
+        return
     await sticker_block(m)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("help_"))
