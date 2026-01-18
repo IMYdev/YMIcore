@@ -9,6 +9,8 @@ from innertube import InnerTube
 from yt_dlp import YoutubeDL
 from telebot.types import InputMediaPhoto
 import random
+import os
+import tempfile
 
 async def wait_until_ok(url, delay=1):
     PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
@@ -239,27 +241,24 @@ async def download_yt_audio(m, link):
 async def music_search(m):
     if not Downloader:
         return
-    client = InnerTube("WEB")
 
+    client = InnerTube("WEB")
     query = m.text.split(" ", 1)
 
     if len(query) > 1:
         query = query[1]
         old = await bot.reply_to(m, "Looking for song...")
-
     else:
         await bot.reply_to(m, "No song name provided.")
         return
 
-    data = client.search(query=query, params="EgWKAQwI") # *params* are the music filter here
+    data = client.search(query=query, params="EgWKAQwI")  # *params* are the music filter
     sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']
 
     for section in sections:
         items = section.get('itemSectionRenderer', {}).get('contents', [])
-
         for item in items:
             video = item.get('videoRenderer')
-
             if not video:
                 continue
 
@@ -270,61 +269,91 @@ async def music_search(m):
             author = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
             caption = f"{author} - {title}"
 
-            await fetch_music(m, url, old, caption)
+            thumbnails = video.get("thumbnail", {}).get("thumbnails", [])
+            cover_url = thumbnails[-1]["url"] if thumbnails else None
+
+            await fetch_music(m, url, old, caption, cover_url)
             break  # stop after first result
 
-async def fetch_music(m, yt_url, old, caption):
+async def fetch_music(m, yt_url, old, caption, cover):
+    cover_path = None
+    song = None
+    is_file_path = True # whether we'll use open() or not
+
     try:
-        api = f"https://api.paxsenix.org/tools/songlink?url={yt_url}"
-        data = await wait_until_ok(api)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(cover, timeout=10) as resp:
+                if resp.status == 200:
+                    img_data = await resp.read()
+                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as img_file:
+                        img_file.write(img_data)
+                        cover_path = img_file.name
 
-        if data == 429 or data == 504:
-            await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
-            link = await download_yt_audio(m, yt_url)
-            await bot.delete_message(m.chat.id, old.id)
-            await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
-            return
+        api_url = f"https://api.paxsenix.org/tools/songlink?url={yt_url}"
+        data = await wait_until_ok(api_url)
 
-        if data == 500:
-            await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
-            link = await download_yt_audio(m, yt_url)
-            await bot.delete_message(m.chat.id, old.id)
-            await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
-            return
+        if isinstance(data, dict) and data.get('links'):
+            links = data['links']
+            
+            spotify_url = links[3].get('url') if len(links) > 3 else None
+            deezer_url  = links[5].get('url') if len(links) > 5 else None
 
-        links = data.get('links')
-
-        if links:
-            spotify  = links[3].get('url') or "N/A"
-            deezer   = links[5].get('url') or "N/A"
-
-            if deezer != "N/A":
+            if deezer_url:
                 await bot.edit_message_text("Fetching song from Deezer...", m.chat.id, old.id)
-                link = await download_music(m, deezer, "deezer")
+                link = await download_music(m, deezer_url, "deezer")
+                if link and link != "failed":
+                    song = link
+                    is_file_path = True 
 
-            elif spotify != "N/A":
+            if not song and spotify_url:
                 await bot.edit_message_text("Fetching song from Spotify...", m.chat.id, old.id)
-                link = await download_music(m, spotify, "spotify")
+                link = await download_music(m, spotify_url, "spotify")
+                if link and link != "failed":
+                    song = link
+                    is_file_path = False
 
-            else:
-                await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
-                link = await download_yt_audio(m, yt_url)
-
-        await bot.delete_message(m.chat.id, old.id)
-
-        if link != "failed":
-            await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
-        else:
+        if not song:
+            await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
             link = await download_yt_audio(m, yt_url)
+            if link and link != "failed":
+                song = link
+                is_file_path = True
+
+        if song:
+            await bot.delete_message(m.chat.id, old.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
-            await bot.send_audio(m.chat.id, audio=link, caption=caption, reply_to_message_id=m.id)
+
+            with open(cover_path, 'rb') as thumb:
+                if is_file_path:
+                    with open(song, 'rb') as audio:
+                        await bot.send_audio(
+                            m.chat.id, 
+                            audio=audio, 
+                            caption=caption, 
+                            thumbnail=thumb, 
+                            reply_to_message_id=m.id
+                        )
+                else:
+                    await bot.send_audio(
+                        m.chat.id, 
+                        audio=song, 
+                        caption=caption, 
+                        thumbnail=thumb, 
+                        reply_to_message_id=m.id
+                    )
+        else:
+            await bot.send_message(m.chat.id, "Failed to download audio from all sources.")
 
     except Exception as error:
         await bot.send_message(m.chat.id, "An error occurred.")
         await log_error(bot, error, m)
+
+    finally:
+        if cover_path and os.path.exists(cover_path):
+            try:
+                os.remove(cover_path)
+            except Exception:
+                pass
 
 async def download_music(m, song, choice):
     try:
