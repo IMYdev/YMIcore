@@ -6,7 +6,7 @@ from modules.filters import set_filter, get_filters, remove_filter
 from modules.notes import set_note, notes_list, remove_note
 from modules.member import (
     user_info, start, promote, demote, pin,
-    ban, unban, help_command, group_id, spoiler)
+    ban, unban, help_command, group_id, spoiler, runtime)
 from module_manager import send_module_keyboard
 from modules.quotes import quote_handler
 from modules.greetings import set_greeting, set_goodbye
@@ -16,6 +16,7 @@ from modules.blocklist import (block_set, unblock_set, get_blacklist)
 COMMANDS = {
     "/info": user_info,
     "/start": start,
+    "/runtime": runtime,
     "/greeting": set_greeting,
     "/goodbye": set_goodbye,
     "/wallpaper": wallpaper,
