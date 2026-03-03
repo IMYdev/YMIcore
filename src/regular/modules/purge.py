@@ -1,7 +1,7 @@
 from info import bot
 from time import perf_counter
 import asyncio
-from core.utils import handle_errors, is_user_admin
+from core.utils import (handle_errors, is_user_admin)
 
 def chunk_list(lst, chunk_size=100):
     for i in range(0, len(lst), chunk_size):

@@ -2,7 +2,7 @@ import random
 import aiohttp
 from info import bot
 from core.utils import handle_errors
-from telebot.formatting import hlink, hbold, format_text
+from telebot.formatting import (hlink, hbold, format_text)
 
 @handle_errors
 async def wallpaper(m):

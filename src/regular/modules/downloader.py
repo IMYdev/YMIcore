@@ -2,7 +2,7 @@ from info import (bot, Downloader, PAXSENIX_TOKENS)
 from telebot.formatting import (hlink, hcite)
 from telebot.util import user_link
 import re
-from core.utils import handle_errors, get_args
+from core.utils import (handle_errors, get_args)
 import aiohttp
 import asyncio
 from yt_dlp import YoutubeDL

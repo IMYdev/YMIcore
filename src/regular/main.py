@@ -1,6 +1,6 @@
 import asyncio
 from telebot import types
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
+from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from info import (bot, BOT_OWNER)
 from core.imysdb import IMYDB
 from core.utils import handle_errors
@@ -8,9 +8,9 @@ from modules.downloader import extract_supported_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
-from module_manager import create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled
-from modules.greetings import hello, bye, send_standard_greeting
-from botcommands import handle_command, COMMANDS
+from module_manager import (create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled)
+from modules.greetings import (hello, bye, send_standard_greeting)
+from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block
 
 async def is_module_enabled_in_group(command, chat_id):

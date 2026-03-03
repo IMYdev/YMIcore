@@ -1,6 +1,6 @@
-import traceback
-import html
 import functools
+import traceback
+from telebot.formatting import (hbold, hcode, format_text, escape_html)
 from datetime import datetime
 from info import Logs, ERROR_LOG_CHAT_ID, bot
 
@@ -18,30 +18,34 @@ async def log_error(bot, error, context_msg=None):
         if context_msg:
             try:
                 user = context_msg.from_user
-                user_info = f"{html.escape(user.first_name)} (ID: <code>{user.id}</code>)"
+                user_info = f"{escape_html(user.first_name)} (ID: {hcode(user.id)})"
             except:
                 pass
 
             try:
                 chat = context_msg.chat
                 title = chat.title or chat.first_name
-                chat_info = f"{html.escape(title or 'Unknown')} (ID: <code>{chat.id}</code>)"
+                chat_info = f"{escape_html(title or 'Unknown')} (ID: {hcode(chat.id)})"
             except:
                 pass
 
             try:
-                context_text = html.escape(context_msg.text or str(context_msg))
+                context_text = escape_html(context_msg.text or str(context_msg))
             except:
                 pass
 
-        err_text = (
-            f"⚠️ <b><u>Bot Error Report</u></b>\n\n"
-            f"<b>🧑‍💻 User:</b> {user_info}\n"
-            f"<b>💬 Chat:</b> {chat_info}\n"
-            f"<b>🕒 Time:</b> <code>{timestamp}</code>\n\n"
-            f"<b>📍 Context:</b> <code>{context_text}</code>\n\n"
-            f"<b>🚨 Error:</b>\n<code>{html.escape(str(error))}</code>\n\n"
-            f"<b>📜 Traceback:</b>\n<code>{html.escape(traceback.format_exc())}</code>"
+        err_text = format_text(
+            hbold("⚠️ Bot Error Report"),
+            "",
+            f"{hbold('🧑‍💻 User:')} {user_info}",
+            f"{hbold('💬 Chat:')} {chat_info}",
+            f"{hbold('🕒 Time:')} {hcode(timestamp)}",
+            "",
+            f"{hbold('📍 Context:')} {hcode(context_text)}",
+            "",
+            f"{hbold('🚨 Error:')}\n{hcode(str(error))}",
+            "",
+            f"{hbold('📜 Traceback:')}\n{hcode(traceback.format_exc())}"
         )
 
         await bot.send_message(ERROR_LOG_CHAT_ID, err_text, parse_mode="HTML")

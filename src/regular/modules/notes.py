@@ -1,7 +1,7 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import handle_errors, is_user_admin, get_args
-from telebot.formatting import format_text, hbold, hitalic, hcode
+from core.utils import (handle_errors, is_user_admin, get_args)
+from telebot.formatting import (format_text, hbold, hitalic, hcode)
 
 @handle_errors
 async def set_note(m):

@@ -1,8 +1,8 @@
 from info import bot
 from telebot.util import user_link
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
+from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from telebot.formatting import hspoiler
-from core.utils import handle_errors, is_user_admin, get_target_user
+from core.utils import (handle_errors, is_user_admin, get_target_user)
 
 demoting_params = {
     'can_change_info': False, 'can_post_messages': False, 'can_edit_messages': False,
@@ -28,7 +28,6 @@ help_categories = {
     - `/info`: Displays user information.
     - `/start`: Starts the bot.
     - `/wallpaper`: Sends a wallpaper.
-    - `/ask [question]`: Ask AI a question.
     - `/animewall`: Sends an anime wallpaper.
     - `/sauce`: Reverse search anime from image.
     - `/music`: Music search.
@@ -54,6 +53,8 @@ help_categories = {
     - `/modules`: Manage modules.
     - `/blockset`: Blacklist sticker set.
     - `/blocklist`: List blacklisted sets.
+    - `/setcaptcha`: Set captcha question.
+    - `/captcha`: Toggle captcha feature.
     """
 }
 
@@ -142,22 +143,35 @@ async def pin(m):
 
     await bot.pin_chat_message(m.chat.id, m.reply_to_message.message_id)
 
+from telebot.formatting import hbold, hcode, hlink, format_text
+from telebot.util import user_link
+
 @handle_errors
 async def user_info(m):
     target = await get_target_user(m) or m.from_user
-    
-    info = (
-        f"👤 <b>User Info</b>\n"
-        f"<b>Name:</b> {target.first_name}\n"
-        f"<b>ID:</b> <code>{target.id}</code>\n"
-        f"<b>Username:</b> @{target.username if target.username else 'N/A'}\n"
-        f"<b>Link:</b> {user_link(target)}"
+
+    info = format_text(
+        f"👤 {hbold('User Info')}",
+        f"{hbold('Name:')} {target.first_name}",
+        f"{hbold('ID:')} {hcode(target.id)}",
+        f"{hbold('Username:')} @{target.username if target.username else 'N/A'}",
+        f"{hbold('Link:')} {user_link(target)}"
     )
-    await bot.reply_to(m, info, parse_mode="HTML")
+
+    try:
+        photos = await bot.get_user_profile_photos(target.id, limit=1)
+        if photos.total_count > 0:
+            await bot.send_photo(m.chat.id, photos.photos[0][-1].file_id, caption=info, parse_mode="HTML")
+        else:
+            await bot.reply_to(m, info, parse_mode="HTML")
+    except Exception:
+        await bot.reply_to(m, info, parse_mode="HTML")
+
 
 @handle_errors
 async def group_id(m):
-    await bot.reply_to(m, f"Chat ID: <code>{m.chat.id}</code>", parse_mode="HTML")
+    await bot.reply_to(m, f"Chat ID: {hcode(m.chat.id)}", parse_mode="HTML")
+
 
 @handle_errors
 async def help_command(m):

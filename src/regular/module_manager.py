@@ -1,4 +1,4 @@
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from info import bot
 from core.imysdb import IMYDB
 from core.utils import is_user_admin

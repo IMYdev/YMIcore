@@ -1,6 +1,6 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import handle_errors, is_user_admin, get_args
+from core.utils import (handle_errors, is_user_admin, get_args)
 
 @handle_errors
 async def sticker_block(m):
