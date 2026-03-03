@@ -70,7 +70,7 @@ async def notes_list(m):
     if not notes:
         return await bot.send_message(m.chat.id, "Catalog empty. No notes registered.")
 
-    formatted_notes = '\n'.join([f"{hcode(nid)}. {n['name']}" for nid, n in notes.items()])
+    formatted_notes = '\n'.join([f"{hcode(str(nid))}. {n['name']}" for nid, n in notes.items()])
     formatted_reply = format_text(
         hitalic("Catalog of notes:"),
         formatted_notes,

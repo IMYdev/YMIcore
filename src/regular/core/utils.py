@@ -16,21 +16,27 @@ async def log_error(bot, error, context_msg=None):
         context_text = "No context"
 
         if context_msg:
-            try:
-                user = context_msg.from_user
-                user_info = f"{escape_html(user.first_name)} (ID: {hcode(user.id)})"
-            except:
-                pass
+            msg = getattr(context_msg, 'message', context_msg)
+            user = getattr(context_msg, 'from_user', None)
+            chat = getattr(msg, 'chat', None)
+
+            if user:
+                try:
+                    name = escape_html(user.first_name or "User")
+                    user_info = f"{name} (ID: {hcode(str(user.id))})"
+                except Exception as e:
+                    print(f"Error extracting user_info: {e}")
+
+            if chat:
+                try:
+                    title = chat.title or chat.first_name or "Chat"
+                    chat_info = f"{escape_html(title)} (ID: {hcode(str(chat.id))})"
+                except Exception as e:
+                    print(f"Error extracting chat_info: {e}")
 
             try:
-                chat = context_msg.chat
-                title = chat.title or chat.first_name
-                chat_info = f"{escape_html(title or 'Unknown')} (ID: {hcode(chat.id)})"
-            except:
-                pass
-
-            try:
-                context_text = escape_html(context_msg.text or str(context_msg))
+                text = getattr(context_msg, 'text', None) or getattr(context_msg, 'data', None) or str(context_msg)
+                context_text = escape_html(text[:1000]) # Limit length
             except:
                 pass
 
@@ -52,6 +58,7 @@ async def log_error(bot, error, context_msg=None):
 
     except Exception as log_err:
         print("Error while logging another error:", log_err)
+        traceback.print_exc()
 
 
 def handle_errors(func):

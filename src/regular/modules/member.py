@@ -1,7 +1,8 @@
 from info import bot
 from telebot.util import user_link
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
-from telebot.formatting import hspoiler
+from telebot.formatting import hbold, hcode, format_text, hspoiler
+from telebot.util import user_link
 from core.utils import (handle_errors, is_user_admin, get_target_user)
 
 demoting_params = {
@@ -143,17 +144,15 @@ async def pin(m):
 
     await bot.pin_chat_message(m.chat.id, m.reply_to_message.message_id)
 
-from telebot.formatting import hbold, hcode, hlink, format_text
-from telebot.util import user_link
 
 @handle_errors
 async def user_info(m):
     target = await get_target_user(m) or m.from_user
 
     info = format_text(
-        f"👤 {hbold('User Info')}",
+        f"{hbold('User Info')}",
         f"{hbold('Name:')} {target.first_name}",
-        f"{hbold('ID:')} {hcode(target.id)}",
+        f"{hbold('ID:')} {hcode(str(target.id))}",
         f"{hbold('Username:')} @{target.username if target.username else 'N/A'}",
         f"{hbold('Link:')} {user_link(target)}"
     )
@@ -170,7 +169,8 @@ async def user_info(m):
 
 @handle_errors
 async def group_id(m):
-    await bot.reply_to(m, f"Chat ID: {hcode(m.chat.id)}", parse_mode="HTML")
+    await bot.reply_to(m, f"Chat ID: {hcode(str(m.chat.id))}", parse_mode="HTML")
+
 
 
 @handle_errors
