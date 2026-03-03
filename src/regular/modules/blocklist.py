@@ -1,106 +1,74 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import log_error
+from core.utils import handle_errors, is_user_admin, get_args
 
-async def is_user_admin(chat_id, user_id):
-    chat_admins = await bot.get_chat_administrators(chat_id)
-    for admin in chat_admins:
-
-        if admin.user.id == user_id:
-            return True
-
-    return False
-
+@handle_errors
 async def sticker_block(m):
-    try:
-        chat_id = str(m.chat.id).lstrip('-')
-        db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
-        banned = db.get('stickers', [])
-        self = await bot.get_me()
-        self = await bot.get_chat_member(m.chat.id, self.id)
-
-        if not self.can_delete_messages:
-            return
-
-        if m.sticker and m.sticker.set_name in banned:
-            await bot.delete_message(m.chat.id, m.id)
-
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
-
-async def block_set(m):
-    try:
-
-        if not await is_user_admin(m.chat.id, m.from_user.id):
-            await bot.reply_to(m, "Admin only.")
-            return
-
-        if not m.reply_to_message:
-            await bot.reply_to(m, "Reply to a sticker.")
-            return
-
-        elif not m.reply_to_message.sticker:
-            await bot.reply_to(m, "Reply to a sticker.")
-            return
-
-        set_name = m.reply_to_message.sticker.set_name
-        chat_id = str(m.chat.id).lstrip('-')
-        db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
-        banned = db.get('stickers', [])
-
-        if set_name not in banned:
-            banned.append(set_name)
-            db.set('stickers', banned)
-
-        await bot.reply_to(m, "Sticker set added to blacklist.")
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
-
-async def get_blacklist(m):
-    chat_id = str(m.chat.id).lstrip('-')
-    try:
-        db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
-        stickers = db.get('stickers', [])
-
-        if stickers:
-            output = '\n'.join([f"`{set_name}`" for set_name in stickers])
-            await bot.send_message(m.chat.id, f"Banned sets:\n{output}", parse_mode="Markdown")
-
-        else:
-            await bot.send_message(m.chat.id, "No banned sets.")
-
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
-
-async def unblock_set(m):
-
-    if not await is_user_admin(m.chat.id, m.from_user.id):
-        await bot.reply_to(m, "Admin only.")
+    if not m.sticker or not m.sticker.set_name:
         return
 
     chat_id = str(m.chat.id).lstrip('-')
-    try:
-        parts = m.text.split(maxsplit=1)
+    db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
+    banned = db.get('stickers', [])
 
-        if len(parts) < 2:
-            await bot.reply_to(m, "Please specify a sticker set to remove.")
-            return
+    if m.sticker.set_name in banned:
+        try:
+            await bot.delete_message(m.chat.id, m.message_id)
+        except:
+            pass
 
-        set_name = parts[1]
-        db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
-        stickers = db.get('stickers') or []
+@handle_errors
+async def block_set(m):
+    if not await is_user_admin(m.chat.id, m.from_user.id):
+        return await bot.reply_to(m, "Admin only.")
 
-        if set_name in stickers:
-            stickers.remove(set_name)
-            db.set('stickers', stickers)
-            await bot.send_message(m.chat.id, f"Sticker set `{set_name}` unblocked.")
+    if not m.reply_to_message or not m.reply_to_message.sticker:
+        return await bot.reply_to(m, "Reply to a sticker to block its set.")
 
-        else:
-            await bot.send_message(m.chat.id, f"Sticker set `{set_name}` is not blocked.")
+    set_name = m.reply_to_message.sticker.set_name
+    if not set_name:
+        return await bot.reply_to(m, "This sticker doesn't belong to a set.")
 
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
+    chat_id = str(m.chat.id).lstrip('-')
+    db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
+    banned = db.get('stickers', [])
+
+    if set_name not in banned:
+        banned.append(set_name)
+        db.set('stickers', banned)
+        await bot.reply_to(m, f"Sticker set `{set_name}` added to blacklist.")
+    else:
+        await bot.reply_to(m, f"Sticker set `{set_name}` is already blacklisted.")
+
+@handle_errors
+async def get_blacklist(m):
+    chat_id = str(m.chat.id).lstrip('-')
+    db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
+    stickers = db.get('stickers', [])
+
+    if stickers:
+        output = '\n'.join([f"`{name}`" for name in stickers])
+        await bot.send_message(m.chat.id, f"Banned sticker sets:\n{output}", parse_mode="Markdown")
+    else:
+        await bot.send_message(m.chat.id, "No sticker sets are currently banned.")
+
+@handle_errors
+async def unblock_set(m):
+    if not await is_user_admin(m.chat.id, m.from_user.id):
+        return await bot.reply_to(m, "Admin only.")
+
+    args = get_args(m)
+    if not args:
+        return await bot.reply_to(m, "Please specify a sticker set name to unblock.")
+
+    set_name = args[0]
+    chat_id = str(m.chat.id).lstrip('-')
+    db = IMYDB(f'runtime/banned/{chat_id}_stickers.json')
+    stickers = db.get('stickers', [])
+
+    if set_name in stickers:
+        stickers.remove(set_name)
+        db.set('stickers', stickers)
+        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` unblocked.")
+    else:
+        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` is not blocked.")

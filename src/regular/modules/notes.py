@@ -1,143 +1,102 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import log_error
+from core.utils import handle_errors, is_user_admin, get_args
 from telebot.formatting import format_text, hbold, hitalic, hcode
 
-async def is_user_admin(chat_id, user_id):
-    chat_admins = await bot.get_chat_administrators(chat_id)
-    for admin in chat_admins:
-        if admin.user.id == user_id:
-            return True
-    return False
-
+@handle_errors
 async def set_note(m):
-    try:
-        if not await is_user_admin(m.chat.id, m.from_user.id):
-            await bot.reply_to(m, "Admin only")
-            return
-        note_name = m.text.split()[1]
-        chat_id = str(m.chat.id).lstrip('-')
-        db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
-
-        reply_with = {}
-        if m.reply_to_message:
-            if m.reply_to_message.text:
-                reply_with = {"type": "text", "data": str(m.reply_to_message.text)}
-            elif m.reply_to_message.sticker:
-                reply_with = {"type": "sticker", "data": m.reply_to_message.sticker.file_id}
-            elif m.reply_to_message.photo:
-                reply_with = {"type": "photo", "data": m.reply_to_message.photo[-1].file_id}
-            elif m.reply_to_message.document:
-                reply_with = {"type": "document", "data": m.reply_to_message.document.file_id}
-            elif m.reply_to_message.video:
-                reply_with = {"type": "video", "data": m.reply_to_message.video.file_id}
-            else:
-                reply_with = {"type": "unknown", "data": None}
-
-        notes = db.get('notes', {})
-        next_id = max(map(int, notes.keys()), default=0) + 1
-        notes[str(next_id)] = {"name": str(note_name), "reply": reply_with}
-        db.set('notes', notes)
-
-        await bot.reply_to(m, f"Note saved. ID: {next_id}.")
-    except IndexError:
-        await bot.reply_to(m, "Please provide a note name.")
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
-
-
-
-async def get_notes(m):
+    if not await is_user_admin(m.chat.id, m.from_user.id):
+        return await bot.reply_to(m, "Admin only")
+    
+    args = get_args(m)
+    if not args:
+        return await bot.reply_to(m, "Please provide a note name.")
+    
+    note_name = args[0]
     chat_id = str(m.chat.id).lstrip('-')
-    if "#" in m.text:
-        try:
-            parts = m.text.split("#")
-            if len(parts) > 1:
-                note_id = parts[1].strip()
+    db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
 
-                if note_id.isdigit():
-                    db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
-                    notes = db.get('notes', {})
+    if not m.reply_to_message:
+        return await bot.reply_to(m, "Reply to a message to save as a note.")
 
-                    if note_id in notes:
-                        note = notes[note_id]
-                        reply_type = note['reply']['type']
-                        reply_data = note['reply']['data']
+    msg = m.reply_to_message
+    reply_with = {}
+    if msg.text: reply_with = {"type": "text", "data": msg.text}
+    elif msg.sticker: reply_with = {"type": "sticker", "data": msg.sticker.file_id}
+    elif msg.photo: reply_with = {"type": "photo", "data": msg.photo[-1].file_id}
+    elif msg.document: reply_with = {"type": "document", "data": msg.document.file_id}
+    elif msg.video: reply_with = {"type": "video", "data": msg.video.file_id}
+    else: reply_with = {"type": "unknown", "data": None}
 
-                        if reply_type == "text":
-                            await bot.send_message(m.chat.id, reply_data)
-                        elif reply_type == "sticker":
-                            await bot.send_sticker(m.chat.id, reply_data)
-                        elif reply_type == "photo":
-                            await bot.send_photo(m.chat.id, reply_data)
-                        elif reply_type == "document":
-                            await bot.send_document(m.chat.id, reply_data)
-                        elif reply_type == "video":
-                            await bot.send_video(m.chat.id, reply_data)
-                        else:
-                            await bot.send_message(m.chat.id, "Note is unreadable.")
-                    else:
-                        await bot.send_message(m.chat.id, f"No note with ID {note_id}.")
-            else:
-                await bot.send_message(m.chat.id, "No note ID after '#'.")
-        except (IndexError, ValueError):
-            await bot.reply_to(m, "Invalid note ID.")
-        except Exception as error:
-            await log_error(bot, error, context_msg=m)
-            await bot.reply_to(m, "An error occurred.")
+    notes = db.get('notes', {})
+    next_id = max(map(int, notes.keys()), default=0) + 1
+    notes[str(next_id)] = {"name": note_name, "reply": reply_with}
+    db.set('notes', notes)
+
+    await bot.reply_to(m, f"Note saved. ID: {next_id}.")
+
+@handle_errors
+async def get_notes(m):
+    if not m.text or "#" not in m.text or not m.text.startswith("#"): return
+    
+    chat_id = str(m.chat.id).lstrip('-')
+    parts = m.text.split("#")
+    if len(parts) <= 1: return
+    
+    note_id = parts[1].strip().split()[0]
+    if not note_id.isdigit(): return
+
+    db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
+    notes = db.get('notes', {})
+
+    if note_id in notes:
+        note = notes[note_id]
+        t, d = note['reply']['type'], note['reply']['data']
+        if t == "text": await bot.send_message(m.chat.id, d)
+        elif t == "sticker": await bot.send_sticker(m.chat.id, d)
+        elif t == "photo": await bot.send_photo(m.chat.id, d)
+        elif t == "document": await bot.send_document(m.chat.id, d)
+        elif t == "video": await bot.send_video(m.chat.id, d)
+        else: await bot.send_message(m.chat.id, "Note is unreadable.")
     else:
-        pass
+        await bot.send_message(m.chat.id, f"No note with ID {note_id}.")
 
-
-
+@handle_errors
 async def notes_list(m):
     chat_id = str(m.chat.id).lstrip('-')
-    try:
-        db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
-        notes = db.get('notes', {})
+    db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
+    notes = db.get('notes', {})
 
-        formatted_notes = '\n'.join([f"{hcode(note_id)}. {note['name']}" for note_id, note in notes.items()])
-        formatted_reply = format_text(
-            hitalic("Catalog of notes:"),
-            formatted_notes,
-            hbold("Retrieve notes via #note_number")
-        )
-        if formatted_notes:
-            await bot.send_message(m.chat.id, formatted_reply, parse_mode="HTML")
-        else:
-            await bot.send_message(m.chat.id, "Catalog empty. No notes registered.")
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
+    if not notes:
+        return await bot.send_message(m.chat.id, "Catalog empty. No notes registered.")
 
+    formatted_notes = '\n'.join([f"{hcode(nid)}. {n['name']}" for nid, n in notes.items()])
+    formatted_reply = format_text(
+        hitalic("Catalog of notes:"),
+        formatted_notes,
+        hbold("Retrieve notes via #note_number")
+    )
+    await bot.send_message(m.chat.id, formatted_reply, parse_mode="HTML")
 
+@handle_errors
 async def remove_note(m):
     if not await is_user_admin(m.chat.id, m.from_user.id):
-        await bot.reply_to(m, "Admin only")
-        return
+        return await bot.reply_to(m, "Admin only")
 
-    chat_id = str(m.chat.id).lstrip('-')
-    try:
-        note_key = m.text.split()[1]
-    except IndexError:
-        await bot.reply_to(m, "Command error: Note ID required for removal.")
-        return
+    args = get_args(m)
+    if not args:
+        return await bot.reply_to(m, "Command error: Note ID required for removal.")
     
-    try:
-        db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
-        notes = db.get('notes', {})
-        
-        if note_key in notes:
-            del notes[note_key]
-
-            # Renumber remaining notes strictly
-            notes = {str(i+1): v for i, (k, v) in enumerate(notes.items())}
-            db.set('notes', notes)
-
-            await bot.send_message(m.chat.id, f"Note ID {note_key} removed.")
-        else:
-            await bot.send_message(m.chat.id, f"No note matching ID {note_key} found.")
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
+    note_key = args[0]
+    chat_id = str(m.chat.id).lstrip('-')
+    db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
+    notes = db.get('notes', {})
+    
+    if note_key in notes:
+        del notes[note_key]
+        # Renumber remaining notes strictly
+        notes = {str(i+1): v for i, (k, v) in enumerate(notes.items())}
+        db.set('notes', notes)
+        await bot.send_message(m.chat.id, f"Note ID {note_key} removed.")
+    else:
+        await bot.send_message(m.chat.id, f"No note matching ID {note_key} found.")

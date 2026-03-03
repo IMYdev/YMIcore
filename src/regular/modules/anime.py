@@ -1,9 +1,10 @@
 import aiohttp
 import urllib.parse
 from info import bot
-from core.utils import log_error
+from core.utils import log_error, handle_errors
 from telebot.formatting import (hlink, hbold, hcode, format_text)
 
+@handle_errors
 async def anime(m):
     URL = "https://pic.re/image"
 
@@ -52,36 +53,33 @@ async def fetch_anime_name(anilist_id):
             response_json = await response.json()
             return response_json['data']['Media']['title']
 
+@handle_errors
 async def search(m):
-    try:
-        # Check if the message is a reply and contains a photo
-        if m.reply_to_message and m.reply_to_message.photo:
-            image = m.reply_to_message.photo[-1].file_id  # Get the highest resolution photo
-            url = await bot.get_file_url(image)
-            api_url = f"https://api.trace.moe/search?url={urllib.parse.quote_plus(url)}"
-            wait_message = await bot.send_message(m.chat.id, "Searching...")
+    # Check if the message is a reply and contains a photo
+    if m.reply_to_message and m.reply_to_message.photo:
+        image = m.reply_to_message.photo[-1].file_id  # Get the highest resolution photo
+        url = await bot.get_file_url(image)
+        api_url = f"https://api.trace.moe/search?url={urllib.parse.quote_plus(url)}"
+        wait_message = await bot.send_message(m.chat.id, "Searching...")
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api_url) as response:
-                    response_json = await response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url) as response:
+                response_json = await response.json()
 
-            # Handle possible error in the response
-            if response_json.get('error'):
-                await bot.reply_to(m, f"Error: {response_json['error']}")
-                return
+        # Handle possible error in the response
+        if response_json.get('error'):
+            await bot.reply_to(m, f"Error: {response_json['error']}")
+            return
 
-            # Extract first match details safely
-            first_match = response_json['result'][0]
-            anime_title = await fetch_anime_name(first_match['anilist'])
-            title = f"{anime_title.get('romaji', 'Unknown')} (Romaji), {anime_title.get('english', 'Unknown')} (English), {anime_title.get('native', 'Unknown')} (Native)"
-            episode = first_match.get('episode', 'Unknown')
-            video = first_match.get('video')
+        # Extract first match details safely
+        first_match = response_json['result'][0]
+        anime_title = await fetch_anime_name(first_match['anilist'])
+        title = f"{anime_title.get('romaji', 'Unknown')} (Romaji), {anime_title.get('english', 'Unknown')} (English), {anime_title.get('native', 'Unknown')} (Native)"
+        episode = first_match.get('episode', 'Unknown')
+        video = first_match.get('video')
 
-            await bot.delete_message(m.chat.id, wait_message.message_id)
-            await bot.send_chat_action(m.chat.id, "upload_video")
-            await bot.send_video(chat_id=m.chat.id, video=video, caption=f"Title: {title}\nEpisode: {episode}", reply_to_message_id=m.message_id)
-        else:
-            await bot.reply_to(m, "Reply with a photo to search.")
-    except Exception as error:
-        await log_error(bot, error, context_msg=m)
-        await bot.reply_to(m, "An error occurred.")
+        await bot.delete_message(m.chat.id, wait_message.message_id)
+        await bot.send_chat_action(m.chat.id, "upload_video")
+        await bot.send_video(chat_id=m.chat.id, video=video, caption=f"Title: {title}\nEpisode: {episode}", reply_to_message_id=m.message_id)
+    else:
+        await bot.reply_to(m, "Reply with a photo to search.")

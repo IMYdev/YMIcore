@@ -1,38 +1,29 @@
 from info import bot
 from time import perf_counter
 import asyncio
-from core.utils import log_error
+from core.utils import handle_errors, is_user_admin
 
-# Function to split the message IDs into chunks of 100
 def chunk_list(lst, chunk_size=100):
     for i in range(0, len(lst), chunk_size):
         yield lst[i:i + chunk_size]
 
+@handle_errors
 async def purge(m):
-    beginning = perf_counter()
-    user = await bot.get_chat_member(m.chat.id, m.from_user.id)
-    can_delete = user.can_delete_messages
+    if not await is_user_admin(m.chat.id, m.from_user.id):
+        return await bot.reply_to(m, "Admins only.")
 
-    if can_delete or user.status == "creator":
-        if m.reply_to_message is None:
-            await bot.reply_to(m, "Reply to a message to start purging from it.")
-            return
-        start = m.reply_to_message.message_id
-        end = m.id
+    if not m.reply_to_message:
+        return await bot.reply_to(m, "Reply to a message to start purging from it.")
+
+    start_time = perf_counter()
+    start_id = m.reply_to_message.message_id
+    end_id = m.message_id
     
-        message_ids = [message_id for message_id in range(start, end + 1)]
-        chunks = list(chunk_list(message_ids))
+    message_ids = list(range(start_id, end_id + 1))
+    chunks = list(chunk_list(message_ids))
 
-        tasks = [bot.delete_messages(m.chat.id, chunk) for chunk in chunks]
+    tasks = [bot.delete_messages(m.chat.id, chunk) for chunk in chunks]
+    await asyncio.gather(*tasks, return_exceptions=True)
 
-        try:
-            await asyncio.gather(*tasks)
-        except Exception as error:
-            await log_error(bot, error, context_msg=m)
-            await bot.reply_to(m, "An error occurred.")
-
-        end_time = perf_counter()
-        time_taken = end_time - beginning
-        await bot.send_message(m.chat.id, f"Messages purged in {round(time_taken, 2)}s.")
-    else:
-        await bot.reply_to(m, "You lack permission to delete messages.")
+    time_taken = perf_counter() - start_time
+    await bot.send_message(m.chat.id, f"Messages purged in {round(time_taken, 2)}s.")

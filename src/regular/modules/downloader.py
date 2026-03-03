@@ -1,9 +1,8 @@
-from time import time
 from info import (bot, Downloader, PAXSENIX_TOKENS)
 from telebot.formatting import (hlink, hcite)
 from telebot.util import user_link
 import re
-from core.utils import log_error
+from core.utils import handle_errors, get_args
 import aiohttp
 import asyncio
 from yt_dlp import YoutubeDL
@@ -11,7 +10,6 @@ from innertube import InnerTube
 from telebot.types import InputMediaPhoto
 import random
 import os
-import json
 import tempfile
 import subprocess
 
@@ -24,12 +22,10 @@ async def wait_until_ok(url, delay=1):
     async with aiohttp.ClientSession() as session:
         while True:
             async with session.get(url, headers=headers) as response:
-
-                if response.status == 429 or response.status == 504 or response.status == 500:
+                if response.status in [429, 500, 504]:
                     return response.status
                 
                 data = await response.json()
-
                 if data.get('message') == "Failed to retrieve this content":
                     return data
                 
@@ -38,13 +34,12 @@ async def wait_until_ok(url, delay=1):
                 
                 await asyncio.sleep(delay)
 
+@handle_errors
 async def extract_supported_url(m):
-
-    if not Downloader:
+    if not Downloader or not m.text:
         return
     
     match = re.search(r'https?://\S+', m.text)
-
     if not match:
         return
 
@@ -52,458 +47,221 @@ async def extract_supported_url(m):
 
     if "youtube.com" in url or "youtu.be" in url:
         await download_yt_video(m, url)
-
-    elif url.startswith("https://www.instagram.com") or url.startswith("https://instagram.com"):
-        url = url.split("?", 1)[0]
-        await instagram_dl(m, url)
-    
+    elif "instagram.com" in url:
+        await instagram_dl(m, url.split("?", 1)[0])
     elif "tiktok.com" in url:
         await tiktok_dl(m, url)
-    
     elif "facebook.com" in url:
         await facebook_dl(m, url)
-
-    elif url.startswith("https://twitter.com") or url.startswith("https://www.twitter.com"):
-        await twitter_dl(m, url)
-
-    elif url.startswith("https://x.com") or url.startswith("https://www.x.com"):
+    elif "twitter.com" in url or "x.com" in url:
         await twitter_dl(m, url)
 
 class loggerOutputs:
-    def error(msg):
-        pass
-    def warning(msg):
-        pass
-    def debug(msg):
-        pass
+    def error(msg): pass
+    def warning(msg): pass
+    def debug(msg): pass
 
-ig_opts = {
-    "quiet": True,
-    "logger": loggerOutputs
-}
+ytdl_opts = {"quiet": True, "logger": loggerOutputs}
+if os.path.exists("cookies.txt"):
+    ytdl_opts["cookiefile"] = "cookies.txt"
 
+def get_shared_caption(m, info, url):
+    username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
+    description = info.get('description') or info.get('title', '')
+    source = hlink('Source', url, escape=False)
+    caption = f"{hcite(description, expandable=True)}\n{username}\n{source}"
+    return caption if len(caption) <= 1024 else f"{username}\n{source}"
+
+@handle_errors
 async def instagram_dl(m, url):
-    try:
-        with YoutubeDL(ig_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+    with YoutubeDL(ytdl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    
+    caption = get_shared_caption(m, info, url)
+    dl_url = url.replace("instagram", "kkinstagram")
+    await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
 
-        username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
-        description = info.get('description', '') or info.get('title', '')
-        caption = f"{hcite(description, expandable=True)}\n{username}\n{hlink('Source', url, escape=False)}"
-        
-        if len(caption) > 1024:
-            caption = f"{username}\n{hlink('Source', url, escape=False)}"
-
-        url = url.replace("instagram", "kkinstagram")
-        await bot.send_video(m.chat.id, url, caption=caption, parse_mode="HTML")
-    except Exception as error:
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
-
+@handle_errors
 async def tiktok_dl(m, url):
-    try:
-        api=f"https://api.paxsenix.org/dl/tiktok?url={url}"
-        data = await wait_until_ok(api)
+    api = f"https://api.paxsenix.org/dl/tiktok?url={url}"
+    data = await wait_until_ok(api)
 
-        if data == 429 or data == 504:
-            await bot.send_message(m.chat.id, f"API busy: {data}")
-            return
+    if isinstance(data, int):
+        return await bot.send_message(m.chat.id, f"API Error: {data}")
 
-        if data == 500:
-            await bot.send_message(m.chat.id, f"API Error: {data}")
-            return
+    source = hlink("Source", url, escape=False)
+    username = data['detail']['author']
+    author = hlink(f"@{username}", data['detail']['authorProfileLink'].replace("\\", ""), escape=False)
+    description = hcite(data['detail']['description'], expandable=True)
+    caption = f"{description}\n{author}\n{source}"
+    if len(caption) > 1024: caption = f"{author}\n{source}"
 
-        media_list = []
-        source = hlink("Source", url, escape=False)
-        username = data['detail']['author']
-        author = hlink(f"@{username}", data['detail']['authorProfileLink'], escape=False)
-        author = author.replace("\\", "")
-        description = data['detail']['description']
-        description = hcite(description, expandable=True)
-        caption = f"{description}\n{author}\n{source}"
-        media_count = 0
-        links = data['downloadUrls']
-        post_type = data['detail']['type']
+    links = data['downloadUrls']
+    if data['detail']['type'] == 'image':
+        images, music = links['images'], links.get('music')
+        if len(images) > 1:
+            media_list = [InputMediaPhoto(img, caption=caption if i == 0 else "", parse_mode="HTML") for i, img in enumerate(images)]
+            await bot.send_media_group(m.chat.id, media_list)
+            if music: await bot.send_audio(m.chat.id, music)
+        else:
+            await bot.send_photo(m.chat.id, images[0], caption=caption, parse_mode="HTML")
+            if music: await bot.send_audio(m.chat.id, music)
+    else:
+        await bot.send_video(m.chat.id, links['video'], caption=caption, parse_mode="HTML")
 
-        if len(caption) > 1024:
-            caption = f"{author}\n{source}"
-
-        if post_type == 'image':
-            images = links['images']
-            music = links['music']
-
-            if len(images) > 1:
-                for link in range(len(images)):
-
-                    if media_count == 0:
-                        media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
-
-                    else:
-                        media = InputMediaPhoto(link)
-
-                    media_count += 1
-                    media_list.append(media)
-                await bot.send_media_group(m.chat.id, media_list)
-
-                if music:
-                        await bot.send_audio(m.chat.id, music)
-
-            else:
-                photo = images[0]
-                await bot.send_photo(m.chat.id, photo, caption=caption, parse_mode="HTML")
-
-                if music:
-                        await bot.send_audio(m.chat.id, music)
-
-        elif post_type == 'video':
-            link = links['video']
-            await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
-
-    except Exception as error:
-
-        if "wrong type" or "HTTP URL" in str(error):
-            return
-
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
-
+@handle_errors
 async def facebook_dl(m, url):
-    try:
-        with YoutubeDL(ig_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-        link = info.get('formats')[1].get('url')
-        title = info.get('description')
-        username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
-        source = hlink("Source", url, escape=False)
-        caption = f"{hcite(title, expandable=True)}\n{username}\n{source}"
+    with YoutubeDL(ytdl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    link = info.get('formats')[1].get('url')
+    caption = get_shared_caption(m, info, url)
+    await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
 
-        if len(caption) > 1024:
-            caption = source
-
-        await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
-
-    except Exception as error:
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
-
+@handle_errors
 async def twitter_dl(m, url):
     try:
-        with YoutubeDL(ig_opts) as ydl:
+        with YoutubeDL(ytdl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-        for fmt in info.get('formats', []):
-            if fmt.get('ext') == 'mp4' and fmt.get('protocol') == 'https':
-                link = fmt.get('url')
-                break
-
-        title = info.get('title')
-        username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
-        source = hlink("Source", url, escape=False)
-        caption = f"{hcite(title, expandable=True)}\n{username}\n{source}"
-
-        if len(caption) > 1024:
-            caption = source
-
-        if info.get('ext') == 'mp4':
+        link = next((f['url'] for f in info.get('formats', []) if f.get('ext') == 'mp4' and f.get('protocol') == 'https'), None)
+        caption = get_shared_caption(m, info, url)
+        if link:
             await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
+        else:
+            raise Exception("No video")
+    except Exception as e:
+        if "No video" in str(e):
+            fix_url = url.replace("x.com", "d.fixupx.com") if "x.com" in url else url.replace("twitter.com", "d.fxtwitter.com")
+            await bot.send_photo(m.chat.id, photo=fix_url)
+        else:
+            raise e
 
-    except Exception as error:
-        if "No video" in str(error):
-            url = url.replace("x.com", "d.fixupx.com") if "x.com" in url else url.replace("twitter.com", "d.fxtwitter.com")
-            await bot.send_photo(m.chat.id, photo=url)
-            return
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
-
-vid_opts = {
-    "quiet": True,
-    "format": "18",
-    "logger": loggerOutputs
-}
-
-cookie_file = "cookies.txt"
-
-if os.path.exists(cookie_file):
-    vid_opts["cookiefile"] = cookie_file
-
+@handle_errors
 async def download_yt_video(m, link):
-    try:
-        if len(m.text.split(" ", 1)) > 1 and m.text.split(" ", 1)[1] == "-audio":
-            link = await download_yt_audio(m, link)
-            await bot.send_audio(m.chat.id, audio=link, reply_to_message_id=m.id)
-            return
+    if "-audio" in m.text:
+        audio_data = await download_yt_audio(m, link)
+        if audio_data: await bot.send_audio(m.chat.id, audio=audio_data, reply_to_message_id=m.message_id)
+        return
 
-        with YoutubeDL(params=vid_opts) as ydl:
-            info = ydl.extract_info(link, download=False)
-            file_size = info.get("filesize") or info.get("filesize_approx")
-            if not file_size:
-                return
-            if file_size > 52428800:
-                return
-            title = info.get("title")
-            link = hlink("Source", link, escape=False)
-            vid_cap = f"{title}\n{link}"
-            url = info.get("url")
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                await bot.send_video(m.chat.id, video=response.content, caption=vid_cap, parse_mode="HTML")
-
-    except Exception as error:
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
-
-audio_opts = {
-    "quiet": True,
-    "no_warnings": True,
-    "format": "bestaudio/best",
-    "logger": loggerOutputs
-}
-
-cookie_file = "cookies.txt"
-
-if os.path.exists(cookie_file):
-    audio_opts["cookiefile"] = cookie_file
+    opts = ytdl_opts.copy()
+    opts["format"] = "18"
+    with YoutubeDL(params=opts) as ydl:
+        info = ydl.extract_info(link, download=False)
+        file_size = info.get("filesize") or info.get("filesize_approx")
+        if file_size and file_size > 52428800: return
+        vid_cap = f"{info.get('title')}\n{hlink('Source', link, escape=False)}"
+        url = info.get("url")
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            await bot.send_video(m.chat.id, video=await response.read(), caption=vid_cap, parse_mode="HTML")
 
 async def download_yt_audio(m, link):
-    try:
-        with YoutubeDL(params=audio_opts) as ydl:
-            info = ydl.extract_info(link, download=False)
-            audio_url = info['url']
-        async with aiohttp.ClientSession() as session:
-            async with session.get(audio_url) as response:
-                link = await response.content.read()
-                return link
-
-    except Exception as error:
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
-
+    opts = ytdl_opts.copy()
+    opts["format"] = "bestaudio/best"
+    with YoutubeDL(params=opts) as ydl:
+        info = ydl.extract_info(link, download=False)
+        audio_url = info['url']
+    async with aiohttp.ClientSession() as session:
+        async with session.get(audio_url) as response:
+            return await response.read()
 
 async def embed_metadata(audio_data, title, artist):
     try:
-        with tempfile.NamedTemporaryFile(suffix='.audio', delete=False) as input_file:
-            input_file.write(audio_data)
-            input_path = input_file.name
+        with tempfile.NamedTemporaryFile(suffix='.audio', delete=False) as f:
+            f.write(audio_data)
+            in_path = f.name
 
-        probe_cmd = [
-            'ffprobe',
-            '-v', 'quiet',
-            '-print_format', 'json',
-            '-show_format',
-            '-show_streams',
-            input_path
-        ]
-        probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
-        if probe_result.returncode != 0:
-            raise Exception(f"FFprobe error: {probe_result.stderr}")
+        out_path = in_path + ".mp3"
+        cmd = ['ffmpeg', '-i', in_path, '-c:a', 'libmp3lame', '-b:a', '320k', '-metadata', f'title={title}', '-metadata', f'artist={artist}', '-y', out_path]
+        
+        if subprocess.run(cmd, capture_output=True).returncode == 0:
+            os.unlink(in_path)
+            return out_path
+        os.unlink(in_path)
+    except: pass
+    return audio_data
 
-        probe_data = json.loads(probe_result.stdout)
-        audio_stream = next((s for s in probe_data['streams'] if s['codec_type'] == 'audio'), None)
-        if not audio_stream:
-            raise Exception("No audio stream found")
-
-        output_extension = '.mp3'
-        output_format = 'mp3'
-        with tempfile.NamedTemporaryFile(suffix=output_extension, delete=False) as output_file:
-            output_path = output_file.name
-
-        ffmpeg_cmd = [
-            'ffmpeg',
-            '-i', input_path,
-            '-c:a', 'libmp3lame',
-            '-b:a', '320k',
-            '-metadata', f'title={title}',
-            '-metadata', f'artist={artist}',
-            '-f', output_format,
-            '-y',
-            output_path
-        ]
-
-        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            os.unlink(input_path)
-            if os.path.exists(output_path):
-                os.unlink(output_path)
-            return audio_data
-
-        os.unlink(input_path)
-        return output_path
-
-    except Exception as e:
-        try:
-            if 'input_path' in locals():
-                os.unlink(input_path)
-            if 'output_path' in locals():
-                os.unlink(output_path)
-        except:
-            pass
-        return audio_data
-
+@handle_errors
 async def music_search(m):
-    if not Downloader:
-        return
+    if not Downloader: return
+    args = get_args(m)
+    if not args: return await bot.reply_to(m, "No song name provided.")
 
+    query = " ".join(args)
+    old = await bot.reply_to(m, "Looking for song...")
+    
     client = InnerTube("WEB")
-    query = m.text.split(" ", 1)
-
-    if len(query) > 1:
-        query = query[1]
-        old = await bot.reply_to(m, "Looking for song...")
-    else:
-        await bot.reply_to(m, "No song name provided.")
-        return
-
-    data = client.search(query=query, params="EgWKAQwI")  # *params* are the music filter
+    data = client.search(query=query, params="EgWKAQwI")
     sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']
 
     for section in sections:
         items = section.get('itemSectionRenderer', {}).get('contents', [])
         for item in items:
             video = item.get('videoRenderer')
-            if not video:
-                continue
-
-            video_id = video['videoId']
-            url = f"https://www.youtube.com/watch?v={video_id}"
-
+            if not video: continue
+            
+            url = f"https://www.youtube.com/watch?v={video['videoId']}"
             title = video.get("title", {}).get("runs", [{}])[0].get("text")
-            author = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
-            caption = f"{author} - {title}"
+            artist = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
+            cover = video.get("thumbnail", {}).get("thumbnails", [{}])[-1].get("url")
+            
+            await fetch_music(m, url, old, f"{artist} - {title}", title, artist, cover)
+            return
 
-            thumbnails = video.get("thumbnail", {}).get("thumbnails", [])
-            cover_url = thumbnails[-1]["url"] if thumbnails else None
-
-            await fetch_music(m, url, old, caption, title, author, cover_url)
-            break  # stop after first result
-
-
-async def fetch_music(m, yt_url, old, caption, title, artist, cover):
+async def fetch_music(m, yt_url, status_msg, caption, title, artist, cover):
     cover_path = None
-    song = None
-    is_file_path = True # whether we'll use open() or not
-
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(cover, timeout=10) as resp:
-                if resp.status == 200:
-                    img_data = await resp.read()
-                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as img_file:
-                        img_file.write(img_data)
-                        cover_path = img_file.name
+        if cover:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(cover) as resp:
+                    if resp.status == 200:
+                        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+                            f.write(await resp.read())
+                            cover_path = f.name
 
         api_url = f"https://api.paxsenix.org/tools/songlink?url={yt_url}"
         data = await wait_until_ok(api_url)
-
+        song_data = None
+        
         if isinstance(data, dict) and data.get('links'):
             links = data['links']
-            
-            spotify_url = links[3].get('url') if len(links) > 3 else None
-            deezer_url  = links[5].get('url') if len(links) > 5 else None
+            for choice in [('deezer', 5), ('spotify', 3)]:
+                if len(links) > choice[1]:
+                    await bot.edit_message_text(f"Fetching from {choice[0].capitalize()}...", m.chat.id, status_msg.id)
+                    res = await download_music_api(m, links[choice[1]]['url'], choice[0])
+                    if res:
+                        song_data = res
+                        break
 
-            if deezer_url:
-                await bot.edit_message_text("Fetching song from Deezer...", m.chat.id, old.id)
-                link = await download_music(m, deezer_url, "deezer")
-                if link and link != "failed":
-                    # Deezer needs metadata + open()
-                    song = await embed_metadata(link, title, artist)
-                    is_file_path = True 
+        if not song_data:
+            await bot.edit_message_text("Fetching from YT...", m.chat.id, status_msg.id)
+            song_data = await download_yt_audio(m, yt_url)
 
-            if not song and spotify_url:
-                await bot.edit_message_text("Fetching song from Spotify...", m.chat.id, old.id)
-                link = await download_music(m, spotify_url, "spotify")
-                if link and link != "failed":
-                    song = link
-                    is_file_path = False
-
-        if not song:
-            await bot.edit_message_text("Fetching song from YT...", m.chat.id, old.id)
-            link = await download_yt_audio(m, yt_url)
-            if link and link != "failed":
-                song = await embed_metadata(link, title, artist)
-                is_file_path = True
-
-        if song:
-            await bot.delete_message(m.chat.id, old.id)
+        if song_data:
+            await bot.delete_message(m.chat.id, status_msg.id)
             await bot.send_chat_action(m.chat.id, "upload_voice")
-
-            with open(cover_path, 'rb') as thumb:
-                if is_file_path:
-                    with open(song, 'rb') as audio:
-                        await bot.send_audio(
-                            m.chat.id, 
-                            audio=audio, 
-                            caption=caption, 
-                            thumbnail=thumb, 
-                            reply_to_message_id=m.id
-                        )
-                else:
-                    await bot.send_audio(
-                        m.chat.id, 
-                        audio=song, 
-                        caption=caption, 
-                        thumbnail=thumb, 
-                        reply_to_message_id=m.id
-                    )
+            
+            processed = await embed_metadata(song_data, title, artist)
+            thumb = open(cover_path, 'rb') if cover_path else None
+            
+            audio_arg = open(processed, 'rb') if isinstance(processed, str) else processed
+            await bot.send_audio(m.chat.id, audio=audio_arg, caption=caption, thumbnail=thumb, reply_to_message_id=m.message_id)
+            if isinstance(processed, str): os.unlink(processed)
+            if thumb: thumb.close()
         else:
-            await bot.send_message(m.chat.id, "Failed to download audio from all sources.")
-
-    except Exception as error:
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
+            await bot.edit_message_text("Failed to download.", m.chat.id, status_msg.id)
 
     finally:
-        if cover_path and os.path.exists(cover_path):
-            try:
-                os.remove(cover_path)
-            except Exception:
-                pass
+        if cover_path: os.unlink(cover_path)
 
-async def download_music(m, song, choice):
-    try:
-        URL="https://api.paxsenix.org/dl"
-
-        if choice == "deezer":
-            api = f"{URL}/{choice}?url={song}&quality=320kbps"
-            data = await wait_until_ok(api)
-
-            if data == 429 or data == 504:
-                await bot.send_message(m.chat.id, f"API busy: {data}")
-                return "failed"
-
-            if data == 500:
-                await bot.send_message(m.chat.id, f"API Error: {data}")
-                return "failed"
-
-            if data['message'] == "Failed to retrieve this content":
-                return "failed"
-            
-            link = data['directUrl']
-            async with aiohttp.ClientSession() as session:
-                async with session.get(link) as response:
-                    return await response.content.read()
-
-        elif choice == "spotify":
-            api = f"{URL}/{choice}?url={song}&serv=spotdl"
-            data = await wait_until_ok(api)
-
-            if data == 429 or data == 504:
-                await bot.send_message(m.chat.id, f"API busy: {data}")
-                return "failed"
-
-            if data == 500:
-                await bot.send_message(m.chat.id, f"API Error: {data}")
-                return "failed"
-
-            if data['message'] == "Failed to retrieve this content":
-                return "failed"
-            
-            link = data['directUrl']
-            if link and link != "failed":
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(link) as response:
-                        if response.status == 200:
-                            return await response.content.read()
-            return "failed"
-
-    except Exception as error:
-        await bot.send_message(m.chat.id, "An error occurred.")
-        await log_error(bot, error, m)
+async def download_music_api(m, url, choice):
+    api = f"https://api.paxsenix.org/dl/{choice}?url={url}"
+    if choice == "deezer": api += "&quality=320kbps"
+    else: api += "&serv=spotdl"
+    
+    data = await wait_until_ok(api)
+    if isinstance(data, dict) and data.get('directUrl'):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(data['directUrl']) as resp:
+                if resp.status == 200: return await resp.read()
+    return None
