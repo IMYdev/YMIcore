@@ -1,37 +1,40 @@
 import aiohttp
 import urllib.parse
 from info import bot
-from core.utils import log_error, handle_errors
+from core.utils import handle_errors
 from telebot.formatting import (hlink, hbold, hcode, format_text)
 
 @handle_errors
 async def anime(m):
-    URL = "https://pic.re/image"
+    try:
+        URL = "https://pic.re/image"
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(URL) as response:
-            data = await response.json()
-            tags = data.get('tags', [])
-            tag_str = ' '.join(hcode(f"#{tag}") for tag in tags)
-            author = data.get('author', 'Unknown')
-            res = f"{data.get('width')}x{data.get('height')}"
-            image_url = f"https://{data.get('file_url')}"
-            dl_string = hlink("HQ Download", image_url, escape=False)
-            
-            caption = format_text(
-                f"Tags: {tag_str}",
-                f"Author: {hbold(author)}",
-                f"Resolution: {hbold(res)}",
-                f"{dl_string}"
-            )
-            
-            await bot.send_photo(
-                chat_id=m.chat.id,
-                photo=image_url,
-                caption=caption,
-                reply_to_message_id=m.message_id,
-                parse_mode="HTML"
-            )
+        async with aiohttp.ClientSession() as session:
+            async with session.post(URL) as response:
+                data = await response.json()
+                tags = data.get('tags', [])
+                tag_str = ' '.join(hcode(f"#{tag}") for tag in tags)
+                author = data.get('author', 'Unknown')
+                res = f"{data.get('width')}x{data.get('height')}"
+                image_url = f"https://{data.get('file_url')}"
+                dl_string = hlink("HQ Download", image_url, escape=False)
+                
+                caption = format_text(
+                    f"Tags: {tag_str}",
+                    f"Author: {hbold(author)}",
+                    f"Resolution: {hbold(res)}",
+                    f"{dl_string}"
+                )
+                
+                await bot.send_photo(
+                    chat_id=m.chat.id,
+                    photo=image_url,
+                    caption=caption,
+                    reply_to_message_id=m.message_id,
+                    parse_mode="HTML"
+                )
+    except:
+        pass
 
 async def fetch_anime_name(anilist_id):
     QUERY = '''
