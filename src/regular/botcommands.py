@@ -9,7 +9,7 @@ from modules.member import (
     ban, unban, help_command, group_id, spoiler)
 from module_manager import send_module_keyboard
 from modules.quotes import quote_handler
-from modules.greetings import set_greeting, set_goodbye
+from modules.greetings import set_greeting, set_goodbye, set_captcha, captcha_toggle
 from modules.downloader import music_search
 from modules.blocklist import (block_set, unblock_set, get_blacklist)
 
@@ -44,7 +44,9 @@ COMMANDS = {
     "/spoiler": spoiler,
     "/blockset": block_set,
     "/blocklist": get_blacklist,
-    "/unblockset": unblock_set
+    "/unblockset": unblock_set,
+    "/setcaptcha": set_captcha,
+    "/captcha": captcha_toggle
 }
 
 async def handle_command(message, text):

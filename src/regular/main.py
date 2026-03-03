@@ -1,6 +1,7 @@
 import asyncio
 from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import ChatPermissions
 from info import (bot, BOT_OWNER)
 from core.imysdb import IMYDB
 from modules.downloader import extract_supported_url
@@ -8,7 +9,7 @@ from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
 from module_manager import create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled
-from modules.greetings import hello, bye
+from modules.greetings import hello, bye, send_standard_greeting
 from botcommands import handle_command
 from modules.blocklist import sticker_block
 
@@ -31,11 +32,11 @@ async def is_module_enabled_in_group(command, chat_id):
 
 @bot.message_handler(commands=['start', 'ban', 'unban', 'info', 'promote',
                                 'demote', 'pin', 'id', 'image', 'wallpaper',
-                                'ask', 'animewall', 'horny', 'sauce', 'imagine',
+                                'ask', 'animewall', 'sauce', 'imagine',
                                 'purge', 'filter', 'filist', 'stop', 'notes',
                                 'remove', 'add', 'help', 'goodbye', 'greeting',
                                 'reset', 'modules', 'q', 'music', 'leave',
-                                'spoiler', 'blockset', 'blocklist', 'unblockset'])
+                                'spoiler', 'blockset', 'blocklist', 'unblockset', 'setcaptcha', 'captcha'])
 
 async def cmd_handler(m):
     db = IMYDB('runtime/banned/groups.json')
@@ -141,6 +142,37 @@ async def handle_back_to_modules_callback(call):
     group_id = call.data.split(":")[1]
     keyboard = create_module_list_keyboard(group_id)
     await bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("v_cap:"))
+async def verify_captcha(call):
+    _, answer, user_id = call.data.split(":")
+    if str(call.from_user.id) != user_id:
+        return await bot.answer_callback_query(call.id, "This isn't your captcha!", show_alert=True)
+
+    chat_id_str = str(call.message.chat.id).lstrip('-')
+    db = IMYDB(f'runtime/greetings/{chat_id_str}_greetings.json')
+    
+    max_tries = db.get('captcha_max_tries', 1)
+    user_attempts = db.get('user_attempts', {})
+    current_count = user_attempts.get(user_id, 0)
+
+    if answer == db.get('captcha_ans'):
+        await bot.restrict_chat_member(call.message.chat.id, int(user_id), 
+            permissions=ChatPermissions(can_send_messages=True, can_send_polls=True, 
+                                        can_send_other_messages=True, can_add_web_page_previews=True))
+        await bot.delete_message(call.message.chat.id, call.message.message_id)
+        await bot.answer_callback_query(call.id, "Correct! Welcome.")
+        await send_standard_greeting(call.message.chat.id, call.from_user, db)
+        current_count += 1
+        if current_count >= max_tries:
+            await bot.answer_callback_query(call.id, "Too many failed attempts! You have been removed.", show_alert=True)
+            await bot.ban_chat_member(call.message.chat.id, int(user_id))
+            await bot.unban_chat_member(call.message.chat.id, int(user_id))
+            await bot.delete_message(call.message.chat.id, call.message.message_id)
+        else:
+            user_attempts[user_id] = current_count
+            db.set('user_attempts', user_attempts)
+            await bot.answer_callback_query(call.id, f"Wrong! {max_tries - current_count} attempts left.", show_alert=True)
 
 async def main():
     await bot.infinity_polling(allowed_updates=['message', 'chat_member', 'callback_query'], skip_pending=True)

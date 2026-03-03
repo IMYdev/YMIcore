@@ -11,7 +11,7 @@ modules = {
     'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge', 'goodbye', 'greeting'],
     'notes' : ['notes', 'add', 'remove'],
     'filters': ['filter', 'filist', 'stop'],
-    'greetings': ['greeting', 'goodbye'],
+    'greetings': ['greeting', 'goodbye', 'setcaptcha', 'captcha'],
     'general': ['start', 'info', 'wallpaper', 'ask', 'imagine', 'help', 'reset', 'modules', 'id', 'music', 'leave', 'spoiler', 'blockset', 'blocklist', 'unblockset']
 }
 
