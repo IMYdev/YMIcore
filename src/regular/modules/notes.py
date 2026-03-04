@@ -37,15 +37,11 @@ async def set_note(m):
 
 @handle_errors
 async def get_notes(m):
-    if not m.text or "#" not in m.text or not m.text.startswith("#"): return
+    if not m.text or not m.text.startswith("#") or not m.text[1:].isdigit():
+        return
     
+    note_id = m.text[1:]
     chat_id = str(m.chat.id).lstrip('-')
-    parts = m.text.split("#")
-    if len(parts) <= 1: return
-    
-    note_id = parts[1].strip().split()[0]
-    if not note_id.isdigit(): return
-
     db = IMYDB(f'runtime/notes/{chat_id}_notes.json')
     notes = db.get('notes', {})
 
