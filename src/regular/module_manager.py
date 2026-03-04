@@ -11,7 +11,8 @@ modules = {
     'notes' : ['notes', 'add', 'remove'],
     'filters': ['filter', 'filist', 'stop'],
     'greetings': ['greeting', 'goodbye', 'setcaptcha', 'captcha'],
-    'general': ['start', 'info', 'wallpaper', 'help', 'modules', 'id', 'music', 'spoiler', 'blockset', 'blocklist', 'unblockset']
+    'downloader': ['music', 'autodl'],
+    'general': ['start', 'info', 'wallpaper', 'help', 'modules', 'id', 'spoiler', 'blockset', 'blocklist', 'unblockset']
 }
 
 default_disabled = {
@@ -20,12 +21,15 @@ default_disabled = {
 def create_module_list_keyboard(group_id):
     keyboard = InlineKeyboardMarkup(row_width=2)
     
-    for module in modules.keys():
+    for module, cmds in modules.items():
         if module == 'general':
             continue
         
-        current_permission = db.get(f"groups.{group_id}.{module}_enabled", True)
-        button_text = f"{module.capitalize()} (Enabled)" if current_permission else f"{module.capitalize()} (Disabled)"
+        # If at least one command is enabled then the module is active.
+        any_enabled = any(db.get(f"groups.{group_id}.{cmd}_enabled", default_disabled.get(cmd, True)) for cmd in cmds)
+        status_text = "Enabled" if any_enabled else "Disabled"
+        button_text = f"{module.capitalize()} ({status_text})"
+        
         module_button = InlineKeyboardButton(text=button_text, callback_data=f"show_commands:{module}:{group_id}")
         keyboard.add(module_button)
     

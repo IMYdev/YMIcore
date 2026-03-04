@@ -15,16 +15,10 @@ from modules.blocklist import sticker_block
 
 async def is_module_enabled_in_group(command, chat_id):
     db = IMYDB('runtime/modules/module_controller.json')
-    module_name = next((k for k, v in modules.items() if command in v), None)
-
-    if module_name is None:
-        return False
-
     group_id = str(chat_id)
-    module_enabled = db.get(f"groups.{group_id}.{module_name}_enabled", True)
     default_state = default_disabled.get(command, True)
     current_permission = db.get(f"groups.{group_id}.{command}_enabled", default_state)
-    return module_enabled and current_permission
+    return current_permission
 
 @bot.message_handler(commands=list(COMMANDS.keys()))
 @handle_errors
@@ -84,7 +78,8 @@ async def reply_message(m):
     await get_notes(m)
     supported_platforms = ["instagram.com/reel", "youtube.com", "youtu.be", "tiktok.com", "facebook.com", "twitter.com", "x.com"]
     if m.text and any(platform in m.text for platform in supported_platforms):
-        await extract_supported_url(m)
+        if await is_module_enabled_in_group('autodl', m.chat.id):
+            await extract_supported_url(m)
 
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):
