@@ -12,7 +12,8 @@ modules = {
     'filters': ['filter', 'filist', 'stop'],
     'greetings': ['greeting', 'goodbye', 'setcaptcha', 'captcha'],
     'downloader': ['music', 'autodl'],
-    'general': ['start', 'info', 'wallpaper', 'help', 'modules', 'id', 'spoiler', 'blockset', 'blocklist', 'unblockset']
+    'general': ['start', 'info', 'wallpaper', 'help', 'modules', 'id', 'spoiler', 'blockset', 'blocklist', 'unblockset'],
+    'ai': ['chat']
 }
 
 default_disabled = {

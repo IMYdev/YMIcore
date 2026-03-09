@@ -12,6 +12,7 @@ from module_manager import (create_command_list_keyboard, modules, create_module
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block
+from modules.ai import process_ai_message
 
 async def is_module_enabled_in_group(command, chat_id):
     db = IMYDB('runtime/modules/module_controller.json')
@@ -80,6 +81,8 @@ async def reply_message(m):
     if m.text and any(platform in m.text for platform in supported_platforms):
         if await is_module_enabled_in_group('autodl', m.chat.id):
             await extract_supported_url(m)
+    if m.text and not m.text.startswith('/'):
+        await process_ai_message(m)
 
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):
