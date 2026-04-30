@@ -74,6 +74,12 @@ ytdl_opts = {"quiet": True, "logger": loggerOutputs}
 if os.path.exists("cookies.txt"):
     ytdl_opts["cookiefile"] = "cookies.txt"
 
+ig_opts = {
+    "format": "best[ext=mp4]/best", 
+    "quiet": True,
+    "logger": loggerOutputs
+}
+
 def get_shared_caption(m, info, url):
     username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
     description = info.get('description') or info.get('title', '')
@@ -83,12 +89,12 @@ def get_shared_caption(m, info, url):
 
 async def instagram_dl(m, url, reel=False):
     try:
-        with YoutubeDL(ytdl_opts) as ydl:
+        with YoutubeDL(ig_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
         if reel:
             caption = get_shared_caption(m, info, url)
-            dl_url = link = info.get('formats')[3].get('url')
+            dl_url = info.get('url')
             await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
             return
 
