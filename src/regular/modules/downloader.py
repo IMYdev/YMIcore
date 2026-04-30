@@ -7,7 +7,7 @@ import aiohttp
 import asyncio
 from yt_dlp import YoutubeDL
 from innertube import InnerTube
-from telebot.types import InputMediaPhoto
+from telebot.types import InputMediaPhoto, InputMediaVideo
 import random
 import os
 import tempfile
@@ -47,12 +47,21 @@ async def extract_supported_url(m):
 
     if "youtube.com" in url or "youtu.be" in url:
         await download_yt_video(m, url)
+
     elif "instagram.com" in url:
+
+        if "reel" in url:
+            await instagram_dl(m, url.split("?", 1)[0], True)
+            return
+
         await instagram_dl(m, url.split("?", 1)[0])
+
     elif "tiktok.com" in url:
         await tiktok_dl(m, url)
+
     elif "facebook.com" in url:
         await facebook_dl(m, url)
+
     elif "twitter.com" in url or "x.com" in url:
         await twitter_dl(m, url)
 
@@ -72,14 +81,110 @@ def get_shared_caption(m, info, url):
     caption = f"{hcite(description, expandable=True)}\n{username}\n{source}"
     return caption if len(caption) <= 1024 else f"{username}\n{source}"
 
-@handle_errors
-async def instagram_dl(m, url):
-    with YoutubeDL(ytdl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-    
-    caption = get_shared_caption(m, info, url)
-    dl_url = url.replace("instagram", "vxinstagram")
-    await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
+async def instagram_dl(m, url, reel=False):
+    try:
+        with YoutubeDL(ytdl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+
+        if reel:
+            caption = get_shared_caption(m, info, url)
+            dl_url = link = info.get('formats')[3].get('url')
+            await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
+            return
+
+        api=f"https://api.paxsenix.org/dl/ig?url={url}"
+        data = await wait_until_ok(api)
+
+        if data == 429 or data == 504:
+            await bot.send_message(m.chat.id, f"API busy: {data}")
+            return
+
+        if data == 500:
+            await bot.send_message(m.chat.id, f"API Error: {data}")
+            return
+
+        links = data['downloadUrls']
+        media_list = []
+        caption = get_shared_caption(m, info, url)
+        media_count = 0
+
+        if len(links) > 1:
+            for i in range(len(links)):
+                link = links[i]['url']
+                file_ext = links[i]['ext']
+
+                if file_ext == 'mp4':
+
+                    if media_count == 0:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
+
+                    else:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaVideo(link)
+
+                    media_count += 1
+
+                else:
+                    if media_count == 0:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
+
+                    else:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(link) as response:
+                                link = await response.content.read()
+                                media = InputMediaPhoto(link)
+
+                    media_count += 1
+
+                media_list.append(media)
+
+            if len(media_list) > 10:
+                new_list = media_list[10:]
+                media_list = media_list[:10]
+                await bot.send_media_group(m.chat.id, media_list)
+                await bot.send_media_group(m.chat.id, new_list)
+                return
+
+            await bot.send_media_group(m.chat.id, media_list)
+
+        else:
+            file_ext = links[0]['ext']
+            link = links[0]['url']
+
+            if file_ext == 'mp4':
+                await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
+            else:
+                await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
+
+    except Exception as error:
+        if "HTTP URL" in str(error):
+            async with aiohttp.ClientSession() as session:
+                async with session.get(link) as response:
+                    await bot.send_video(m.chat.id, response.content, caption=caption, parse_mode="HTML")
+                    return
+
+        if "Too Many Requests" in str(error):
+            parts = str(error).split()
+            wait_time = None
+            for part in parts:
+
+                if part.isdigit() and part != "429":
+                    wait_time = int(part)
+                    break
+
+            if wait_time:
+                await asyncio.sleep(wait_time)
+                return await bot.send_media_group(m.chat.id, new_list)
+        else:
+            await bot.reply_to(m, error)
 
 @handle_errors
 async def tiktok_dl(m, url):
