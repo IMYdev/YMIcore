@@ -78,7 +78,7 @@ async def instagram_dl(m, url):
         info = ydl.extract_info(url, download=False)
     
     caption = get_shared_caption(m, info, url)
-    dl_url = url.replace("instagram", "kksave")
+    dl_url = url.replace("instagram", "vxinstagram")
     await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
 
 @handle_errors
