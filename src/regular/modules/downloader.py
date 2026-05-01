@@ -89,10 +89,9 @@ def get_shared_caption(m, info, url):
 
 async def instagram_dl(m, url, reel=False):
     try:
-        with YoutubeDL(ig_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-
         if reel:
+            with YoutubeDL(ig_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
             caption = get_shared_caption(m, info, url)
             dl_url = info.get('url')
             await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
@@ -111,8 +110,17 @@ async def instagram_dl(m, url, reel=False):
 
         links = data['downloadUrls']
         media_list = []
-        caption = get_shared_caption(m, info, url)
+        source = hlink("Source", url, escape=False)
+        username = data['detail']['username']
+        author = hlink(f"@{username}", f"www.instagram.com/{username}", escape=False)
+        author = author.replace("\\", "")
+        description = data['detail']['title']
+        description = hcite(description, expandable=True)
+        caption = f"{description}\n{author}\n{source}"
         media_count = 0
+
+        if len(caption) > 1024:
+            caption = f"{author}\n{source}"
 
         if len(links) > 1:
             for i in range(len(links)):
