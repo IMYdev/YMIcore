@@ -5,7 +5,7 @@ from modules.filters import (set_filter, get_filters, remove_filter)
 from modules.notes import (set_note, notes_list, remove_note)
 from modules.member import (
     user_info, start, promote, demote, pin,
-    ban, unban, help_command, group_id, spoiler)
+    ban, unban, help_command, group_id, spoiler, tag_admins)
 from module_manager import send_module_keyboard
 from modules.greetings import (set_greeting, set_goodbye, set_captcha, captcha_toggle)
 from modules.downloader import music_search
@@ -38,6 +38,7 @@ COMMANDS = {
     "modules": send_module_keyboard,
     "music": music_search,
     "spoiler": spoiler,
+    "report": tag_admins,
     "blockset": block_set,
     "blocklist": get_blacklist,
     "unblockset": unblock_set,

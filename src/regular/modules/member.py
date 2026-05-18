@@ -48,6 +48,7 @@ help_categories = {
     - `/pin`: Pin a message.
     - `/ban`: Ban a user.
     - `/unban`: Unban a user.
+    - `/tagall`: Tag every member.
     - `/greeting`: Set welcome message.
     - `/goodbye`: Set farewell message.
     - `/reset`: Reset bot memory.
@@ -171,6 +172,29 @@ async def user_info(m):
 async def group_id(m):
     await bot.reply_to(m, f"Chat ID: {hcode(str(m.chat.id))}", parse_mode="HTML")
 
+
+@handle_errors
+async def tag_admins(m):
+    args = m.text.split(None, 1)
+    message_to_send = args[1] if len(args) > 1 else "Attention!"
+
+    members = await bot.get_chat_administrators(m.chat.id)
+        
+    mentions = []
+    for member in members:
+        if member.user.is_bot:
+            continue
+            
+        if member.user.username:
+            mentions.append(f"@{member.user.username}")
+        else:
+            mentions.append(user_link(member.user))
+
+    chunk_size = 5
+    for i in range(0, len(mentions), chunk_size):
+        chunk = " ".join(mentions[i:i + chunk_size])
+        await bot.send_message(m.chat.id, f"{message_to_send}\n\n{chunk}", parse_mode="HTML")
+            
 
 
 @handle_errors
