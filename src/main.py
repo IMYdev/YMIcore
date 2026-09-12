@@ -13,6 +13,8 @@ from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block
 from modules.ai import process_ai_message
+from web.groups import record_group
+from web.server import start_web_server
 
 async def is_module_enabled_in_group(command, chat_id):
     db = IMYDB('runtime/modules/module_controller.json')
@@ -24,6 +26,8 @@ async def is_module_enabled_in_group(command, chat_id):
 @bot.message_handler(commands=list(COMMANDS.keys()))
 @handle_errors
 async def cmd_handler(m):
+    record_group(m.chat.id, getattr(m.chat, "title", None))
+
     db = IMYDB('runtime/banned/groups.json')
     banned_groups = db.get("groups.group_ids", [])
 
@@ -75,6 +79,7 @@ async def chat_m(m: types.ChatMemberUpdated):
 
 @bot.message_handler()
 async def reply_message(m):
+    record_group(m.chat.id, getattr(m.chat, "title", None))
     await reply_to_filter(m)
     await get_notes(m)
     supported_platforms = ["instagram.com", "youtube.com", "youtu.be", "facebook.com", "twitter.com", "x.com"]
@@ -167,7 +172,19 @@ async def verify_captcha(call):
 
 async def main():
     print("Bot started...")
-    await bot.infinity_polling(allowed_updates=['message', 'chat_member', 'callback_query'], skip_pending=True)
+    await asyncio.gather(
+        _run_polling(), start_web_server(),
+    )
+
+
+async def _run_polling():
+    try:
+        await bot.infinity_polling(
+            allowed_updates=['message', 'chat_member', 'callback_query'],
+            skip_pending=True,
+        )
+    except Exception as exc:
+        print(f"[-] Fatal polling error, bot offline. Web panel keeps running: {exc}")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -11,6 +11,7 @@ from modules.greetings import (set_greeting, set_goodbye, set_captcha, captcha_t
 from modules.downloader import music_search
 from modules.blocklist import (block_set, unblock_set, get_blacklist)
 from modules.ai import manage_session
+from web.panel import panel_command
 
 COMMANDS = {
     "info": user_info,
@@ -43,7 +44,8 @@ COMMANDS = {
     "unblockset": unblock_set,
     "setcaptcha": set_captcha,
     "captcha": captcha_toggle,
-    "chat": manage_session
+    "chat": manage_session,
+    "panel": panel_command
 }
 
 async def handle_command(message):

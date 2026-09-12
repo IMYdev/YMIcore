@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Owner</p>
+<h1 class="lecp-title">Global settings</h1>
+<p class="lecp-body lecp-mt-3">Environment configuration. These values come from <code>.env</code> and are read-only, edit them there and restart the bot.</p>
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title lecp-mb-5">Environment</h2>
+  <ul class="list-rows">
+    {% for label, value, hint in values %}
+    <li class="list-row">
+      <div class="lecp-flex lecp-flex-col lecp-gap-1">
+        <span class="toggle-label">{{ label }}</span>
+        <span class="lecp-caption">{{ hint }}</span>
+      </div>
+      <span class="lecp-caption">{{ value }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

@@ -8,7 +8,6 @@ import html
 from core.utils import (handle_errors, get_args)
 import aiohttp
 from yt_dlp import YoutubeDL
-from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
 import os
 import tempfile
@@ -285,6 +284,7 @@ async def music_search(m):
     query = " ".join(args)
     old = await bot.reply_to(m, "Looking for song...")
     
+    from innertube import InnerTube
     client = InnerTube("WEB")
     data = client.search(query=query, params="EgWKAQwI")
     sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YMIcore Panel · Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/vendor/lecp-css/lecp.css">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="login-body">
+<a class="lecp-skip-link" href="#main">Skip to content</a>
+<main id="main" class="login-wrap">
+  <div class="lecp-tile login-tile">
+    <p class="lecp-eyebrow">YMIcore</p>
+    <h1 class="lecp-title">Panel login</h1>
+    <p class="lecp-body lecp-mt-3">Each admin has a permanent token. Send <code>/panel</code> to the bot in Telegram to get yours. Paste it (or its login link) below. Your token is saved in your browser so you stay signed in.</p>
+
+    {% if error %}
+    <p class="lecp-field-error-text lecp-mt-4" role="alert">⚠ {{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="/auth/token" class="lecp-mt-6">
+      <div class="lecp-field">
+        <label class="lecp-label" for="token">Panel token or login link</label>
+        <input class="lecp-input" id="token" name="token" type="text" autocomplete="off" placeholder="Paste the token /panel gives you">
+      </div>
+      <button class="lecp-btn lecp-btn--primary" type="submit" data-submitting>Open panel</button>
+    </form>
+
+    {% if use_widget %}
+    <div class="lecp-mt-6">
+      <p class="lecp-caption lecp-mb-3">or sign in with Telegram:</p>
+      <script async src="https://telegram.org/js/telegram-widget.js?22"></script>
+      <div class="tgme_widget" data-telegram-login="{{ tg_bot_username }}" data-size="large" data-auth-url="{{ widget_auth_url }}"></div>
+    </div>
+    {% endif %}
+  </div>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

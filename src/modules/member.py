@@ -56,6 +56,7 @@ help_categories = {
     - `/blocklist`: List blacklisted sets.
     - `/setcaptcha`: Set captcha question.
     - `/captcha`: Toggle captcha feature.
+    - `/panel`: Open the settings web panel.
     """
 }
 

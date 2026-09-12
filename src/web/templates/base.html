@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}YMIcore Panel{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/vendor/lecp-css/lecp.css">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<a class="lecp-skip-link" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="nav-panel" aria-label="Primary">
+    <a class="brand" href="/panel">YMI<span class="brand-dot">.</span></a>
+    <nav class="lecp-nav" aria-label="Panel">
+      <a class="lecp-nav-item {{ 'is-active' if active == 'dashboard' }}" href="/panel">
+        <span class="lecp-nav-item-index">01</span>
+        <span class="lecp-nav-item-label">Dashboard</span>
+      </a>
+      {% if is_owner %}
+      <a class="lecp-nav-item {{ 'is-active' if active == 'tokens' }}" href="/tokens">
+        <span class="lecp-nav-item-index">02</span>
+        <span class="lecp-nav-item-label">Admin tokens</span>
+      </a>
+      <a class="lecp-nav-item {{ 'is-active' if active == 'global' }}" href="/settings/global">
+        <span class="lecp-nav-item-index">03</span>
+        <span class="lecp-nav-item-label">Global settings</span>
+      </a>
+      {% endif %}
+    </nav>
+    <div class="nav-footer">
+      <p class="lecp-caption">ID {{ user_id }}</p>
+      <p class="lecp-caption">YMIcore control panel</p>
+      <a target="_blank" href="https://github.com/IMYdev/LECP-CSS" class="lecp-caption">Designed according to LECP-CSS.</a>
+      <form method="post" action="/auth/logout">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="lecp-btn lecp-btn--ghost lecp-btn--sm" type="submit">Log out</button>
+      </form>
+    </div>
+  </aside>
+  <div class="page">
+    <main id="main" class="lecp-container page-main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% if saved %}
+<div class="lecp-toast-region" role="status">
+  <div class="lecp-toast" id="saved-toast">
+    <span aria-hidden="true">✓</span>
+    <div>
+      <p class="toast-title">Settings saved.</p>
+      <p class="lecp-caption">Just now</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+<script src="/static/app.js"></script>
+</body>
+</html>
