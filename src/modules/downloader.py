@@ -2,6 +2,7 @@ from info import (bot, Downloader)
 from telebot.formatting import (hlink, hcite)
 from telebot.util import user_link
 import re
+import asyncio
 from urllib.parse import urlparse, unquote
 import html
 from core.utils import (handle_errors, get_args)
@@ -73,15 +74,44 @@ def _instagram_shortcode(url):
         return None
     return {"shortcode": shortcode, "reel": post_type in ("reel", "reels")}
 
-def _post_snowcode(shortcode, reel):
+def _post_snowcode(shortcode, reel, idx=None):
     payload = f'"i":"{shortcode}"'
     if reel:
         payload += ',"p":"reel"'
+    if idx is not None:
+        payload += f',"n":{idx}'
     return str(int.from_bytes(payload.encode(), "big"))
 
 def _og_caption(content):
     content = re.sub(r'<p[^>]*><b>.*?</b></p>', '', content, flags=re.S)
     return html.unescape(re.sub(r'<[^>]+>', '', content)).strip()
+
+def _og_total(content):
+    m = re.search(r'🖼\ufe0f?\s*(\d+)(?:\s*/\s*(\d+))?', content)
+    if not m:
+        return None
+    return int(m.group(2) or m.group(1))
+
+async def _fetch_og_items(shortcode, reel, start, end):
+    results = []
+    async with aiohttp.ClientSession() as session:
+        async def fetch(idx):
+            api = f"https://oginstagram.com/api/v1/statuses/{_post_snowcode(shortcode, reel, idx)}"
+            try:
+                async with session.get(api, headers={"User-Agent": "YMIcoreBot/1.0"}) as resp:
+                    if resp.status != 200:
+                        return None
+                    if not resp.headers.get("Content-Type", "").startswith("application/json"):
+                        return None
+                    data = await resp.json()
+            except Exception:
+                return None
+            atts = data.get("media_attachments") if isinstance(data, dict) else None
+            if not atts or not atts[0].get("url"):
+                return None
+            return atts[0]
+        results = await asyncio.gather(*(fetch(i) for i in range(start, end + 1)))
+    return [r for r in results if r]
 
 @handle_errors
 async def instagram_dl(m, url):
@@ -108,6 +138,12 @@ async def instagram_dl_og(m, url):
     attachments = data.get("media_attachments") if isinstance(data, dict) else None
     if not attachments:
         return False
+
+    total = _og_total(data.get("content") or "") or len(attachments)
+    if total > len(attachments):
+        missing = await _fetch_og_items(route["shortcode"], route["reel"], len(attachments) + 1, total)
+        if missing:
+            attachments = list(attachments) + missing
 
     account = data.get("account") or {}
     username = account.get("username")
