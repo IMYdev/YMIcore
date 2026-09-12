@@ -10,8 +10,6 @@ if os.path.exists(".env"):
 TOKEN = os.getenv("BOT_TOKEN")
 ERROR_LOG_CHAT_ID = os.getenv("LOG_ID")
 AWAN_LLM_KEY = os.getenv("AWAN_LLM")
-PAXSENIX_TOKENS = os.getenv("PAX")
-PAXSENIX_TOKENS = PAXSENIX_TOKENS.split() if PAXSENIX_TOKENS else None
 BOT_OWNER= os.getenv("OWNER")
 COHERE_API_KEY = os.getenv("COHERE_KEY")
 SYSTEM_PROMPT = None
@@ -50,10 +48,6 @@ if COHERE_API_KEY:
     print("[+] Neural link preamble initialized.\n")
 else:
     print("[?] Warning: COHERE_KEY missing. AI features will be disabled.")
-
-if PAXSENIX_TOKENS is None:
-    print("[!] Warning: Continuing without features reliant on PaxSenix API.")
-    Downloader = False
 
 
 bot = AsyncTeleBot(TOKEN)

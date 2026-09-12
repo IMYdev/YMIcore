@@ -1,38 +1,17 @@
-from info import (bot, Downloader, PAXSENIX_TOKENS)
+from info import (bot, Downloader)
 from telebot.formatting import (hlink, hcite)
 from telebot.util import user_link
 import re
+from urllib.parse import urlparse, unquote
+import html
 from core.utils import (handle_errors, get_args)
 import aiohttp
-import asyncio
 from yt_dlp import YoutubeDL
 from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
-import random
 import os
 import tempfile
 import subprocess
-
-async def wait_until_ok(url, delay=1):
-    PAXSENIX_TOKEN = random.choice(PAXSENIX_TOKENS)
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f"Bearer {PAXSENIX_TOKEN}"
-    }
-    async with aiohttp.ClientSession() as session:
-        while True:
-            async with session.get(url, headers=headers) as response:
-                if response.status in [429, 500, 504]:
-                    return response.status
-                
-                data = await response.json()
-                if data.get('message') == "Failed to retrieve this content":
-                    return data
-                
-                if data.get('ok') == True:
-                    return data
-                
-                await asyncio.sleep(delay)
 
 @handle_errors
 async def extract_supported_url(m):
@@ -49,15 +28,7 @@ async def extract_supported_url(m):
         await download_yt_video(m, url)
 
     elif "instagram.com" in url:
-
-        if "reel" in url:
-            await instagram_dl(m, url.split("?", 1)[0], True)
-            return
-
         await instagram_dl(m, url.split("?", 1)[0])
-
-    elif "tiktok.com" in url:
-        await tiktok_dl(m, url)
 
     elif "facebook.com" in url:
         await facebook_dl(m, url)
@@ -87,146 +58,115 @@ def get_shared_caption(m, info, url):
     caption = f"{hcite(description, expandable=True)}\n{username}\n{source}"
     return caption if len(caption) <= 1024 else f"{username}\n{source}"
 
-async def instagram_dl(m, url, reel=False):
-    try:
-        if reel:
-            with YoutubeDL(ig_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-            caption = get_shared_caption(m, info, url)
-            dl_url = info.get('url')
-            await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
-            return
+def _instagram_shortcode(url):
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if host != "instagram.com" and not host.endswith(".instagram.com"):
+        return None
+    segments = [unquote(s) for s in parsed.path.strip("/").split("/") if s]
+    post_type = shortcode = None
+    if len(segments) >= 2 and segments[0] in ("p", "reel", "reels"):
+        post_type, shortcode = segments[0], segments[1]
+    elif len(segments) >= 3 and segments[1] in ("p", "reel", "reels"):
+        post_type, shortcode = segments[1], segments[2]
+    if post_type is None or not re.fullmatch(r'[A-Za-z0-9_-]{1,24}', shortcode):
+        return None
+    return {"shortcode": shortcode, "reel": post_type in ("reel", "reels")}
 
-        api=f"https://api.paxsenix.org/dl/ig?url={url}"
-        data = await wait_until_ok(api)
+def _post_snowcode(shortcode, reel):
+    payload = f'"i":"{shortcode}"'
+    if reel:
+        payload += ',"p":"reel"'
+    return str(int.from_bytes(payload.encode(), "big"))
 
-        if data == 429 or data == 504:
-            await bot.send_message(m.chat.id, f"API busy: {data}")
-            return
-
-        if data == 500:
-            await bot.send_message(m.chat.id, f"API Error: {data}")
-            return
-
-        links = data['downloadUrls']
-        media_list = []
-        source = hlink("Source", url, escape=False)
-        username = data['detail']['username']
-        author = hlink(f"@{username}", f"www.instagram.com/{username}", escape=False)
-        author = author.replace("\\", "")
-        description = data['detail']['title']
-        description = hcite(description, expandable=True)
-        caption = f"{description}\n{author}\n{source}"
-        media_count = 0
-
-        if len(caption) > 1024:
-            caption = f"{author}\n{source}"
-
-        if len(links) > 1:
-            for i in range(len(links)):
-                link = links[i]['url']
-                file_ext = links[i]['ext']
-
-                if file_ext == 'mp4':
-
-                    if media_count == 0:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaVideo(link, caption=caption, parse_mode="HTML")
-
-                    else:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaVideo(link)
-
-                    media_count += 1
-
-                else:
-                    if media_count == 0:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaPhoto(link, caption=caption, parse_mode="HTML")
-
-                    else:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(link) as response:
-                                link = await response.content.read()
-                                media = InputMediaPhoto(link)
-
-                    media_count += 1
-
-                media_list.append(media)
-
-            if len(media_list) > 10:
-                new_list = media_list[10:]
-                media_list = media_list[:10]
-                await bot.send_media_group(m.chat.id, media_list)
-                await bot.send_media_group(m.chat.id, new_list)
-                return
-
-            await bot.send_media_group(m.chat.id, media_list)
-
-        else:
-            file_ext = links[0]['ext']
-            link = links[0]['url']
-
-            if file_ext == 'mp4':
-                await bot.send_video(m.chat.id, link, caption=caption, parse_mode="HTML")
-            else:
-                await bot.send_photo(m.chat.id, link, caption=caption, parse_mode="HTML")
-
-    except Exception as error:
-        if "HTTP URL" in str(error):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(link) as response:
-                    await bot.send_video(m.chat.id, response.content, caption=caption, parse_mode="HTML")
-                    return
-
-        if "Too Many Requests" in str(error):
-            parts = str(error).split()
-            wait_time = None
-            for part in parts:
-
-                if part.isdigit() and part != "429":
-                    wait_time = int(part)
-                    break
-
-            if wait_time:
-                await asyncio.sleep(wait_time)
-                return await bot.send_media_group(m.chat.id, new_list)
-        else:
-            await bot.reply_to(m, error)
+def _og_caption(content):
+    content = re.sub(r'<p[^>]*><b>.*?</b></p>', '', content, flags=re.S)
+    return html.unescape(re.sub(r'<[^>]+>', '', content)).strip()
 
 @handle_errors
-async def tiktok_dl(m, url):
-    api = f"https://api.paxsenix.org/dl/tiktok?url={url}"
-    data = await wait_until_ok(api)
+async def instagram_dl(m, url):
+    route = _instagram_shortcode(url)
+    if route and await instagram_dl_og(m, url):
+        return
+    if route and route["reel"]:
+        await instagram_dl_ytdlp(m, url)
 
-    if isinstance(data, int):
-        return await bot.send_message(m.chat.id, f"API Error: {data}")
+async def instagram_dl_og(m, url):
+    route = _instagram_shortcode(url)
+    api = f"https://oginstagram.com/api/v1/statuses/{_post_snowcode(route['shortcode'], route['reel'])}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api, headers={"User-Agent": "YMIcoreBot/1.0"}) as resp:
+                if resp.status != 200:
+                    return False
+                if not resp.headers.get("Content-Type", "").startswith("application/json"):
+                    return False
+                data = await resp.json()
+    except Exception:
+        return False
 
+    attachments = data.get("media_attachments") if isinstance(data, dict) else None
+    if not attachments:
+        return False
+
+    account = data.get("account") or {}
+    username = account.get("username")
+    caption_lines = []
+    if caption_text := _og_caption(data.get("content") or ""):
+        caption_lines.append(hcite(caption_text, expandable=True))
+    author = None
+    if username:
+        author = hlink(f"@{username}", f"https://www.instagram.com/{username}", escape=False)
+        caption_lines.append(author)
     source = hlink("Source", url, escape=False)
-    username = data['detail']['author']
-    author = hlink(f"@{username}", data['detail']['authorProfileLink'].replace("\\", ""), escape=False)
-    description = hcite(data['detail']['description'], expandable=True)
-    caption = f"{description}\n{author}\n{source}"
-    if len(caption) > 1024: caption = f"{author}\n{source}"
+    caption_lines.append(source)
+    caption = "\n".join(caption_lines)
+    if len(caption) > 1024:
+        caption = "\n".join([x for x in (author, source) if x])
 
-    links = data['downloadUrls']
-    if data['detail']['type'] == 'image':
-        images, music = links['images'], links.get('music')
-        if len(images) > 1:
-            media_list = [InputMediaPhoto(img, caption=caption if i == 0 else "", parse_mode="HTML") for i, img in enumerate(images)]
-            await bot.send_media_group(m.chat.id, media_list)
-            if music: await bot.send_audio(m.chat.id, music)
+    if len(attachments) == 1:
+        media_url = attachments[0].get("url")
+        if not media_url:
+            return False
+        if attachments[0].get("type") == "video":
+            await bot.send_video(m.chat.id, video=media_url, caption=caption, parse_mode="HTML")
         else:
-            await bot.send_photo(m.chat.id, images[0], caption=caption, parse_mode="HTML")
-            if music: await bot.send_audio(m.chat.id, music)
-    else:
-        await bot.send_video(m.chat.id, links['video'], caption=caption, parse_mode="HTML")
+            await bot.send_photo(m.chat.id, photo=media_url, caption=caption, parse_mode="HTML")
+        return True
+
+    media_list = []
+    for i, media in enumerate(attachments):
+        media_url = media.get("url")
+        if not media_url:
+            continue
+        item_caption = caption if i == 0 else ""
+        if media.get("type") == "video":
+            media_list.append(InputMediaVideo(media=media_url, caption=item_caption, parse_mode="HTML"))
+        else:
+            media_list.append(InputMediaPhoto(media=media_url, caption=item_caption, parse_mode="HTML"))
+
+    if not media_list:
+        return False
+    if len(media_list) == 1:
+        media = media_list[0]
+        if isinstance(media, InputMediaVideo):
+            await bot.send_video(m.chat.id, video=media.media, caption=caption, parse_mode="HTML")
+        else:
+            await bot.send_photo(m.chat.id, photo=media.media, caption=caption, parse_mode="HTML")
+        return True
+
+    for chunk in [media_list[i:i + 10] for i in range(0, len(media_list), 10)]:
+        await bot.send_media_group(m.chat.id, chunk)
+    return True
+
+async def instagram_dl_ytdlp(m, url):
+    with YoutubeDL(ig_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    dl_url = info.get('url')
+    if not dl_url:
+        raise Exception("Could not extract media from reel.")
+    caption = get_shared_caption(m, info, url)
+    await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
 
 @handle_errors
 async def facebook_dl(m, url):
@@ -338,23 +278,8 @@ async def fetch_music(m, yt_url, status_msg, caption, title, artist, cover):
                             f.write(await resp.read())
                             cover_path = f.name
 
-        api_url = f"https://api.paxsenix.org/tools/songlink?url={yt_url}"
-        data = await wait_until_ok(api_url)
-        song_data = None
-        
-        if isinstance(data, dict) and data.get('links'):
-            links = data['links']
-            for choice in [('deezer', 5), ('spotify', 3)]:
-                if len(links) > choice[1]:
-                    await bot.edit_message_text(f"Fetching from {choice[0].capitalize()}...", m.chat.id, status_msg.id)
-                    res = await download_music_api(m, links[choice[1]]['url'], choice[0])
-                    if res:
-                        song_data = res
-                        break
-
-        if not song_data:
-            await bot.edit_message_text("Fetching from YT...", m.chat.id, status_msg.id)
-            song_data = await download_yt_audio(m, yt_url)
+        await bot.edit_message_text("Fetching from YT...", m.chat.id, status_msg.id)
+        song_data = await download_yt_audio(m, yt_url)
 
         if song_data:
             await bot.delete_message(m.chat.id, status_msg.id)
@@ -372,15 +297,3 @@ async def fetch_music(m, yt_url, status_msg, caption, title, artist, cover):
 
     finally:
         if cover_path: os.unlink(cover_path)
-
-async def download_music_api(m, url, choice):
-    api = f"https://api.paxsenix.org/dl/{choice}?url={url}"
-    if choice == "deezer": api += "&quality=320kbps"
-    else: api += "&serv=spotdl"
-    
-    data = await wait_until_ok(api)
-    if isinstance(data, dict) and data.get('directUrl'):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(data['directUrl']) as resp:
-                if resp.status == 200: return await resp.read()
-    return None
