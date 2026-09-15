@@ -516,7 +516,17 @@ async def group_notes_add(request):
     form = request["form"]
     name = form.get("name", "").strip()
     body = form.get("body", "")
-    error = registry.validate_named_text(name, body)
+    upload = form.get("media")
+
+    relayed = None
+    if not name:
+        error = "Note name is required."
+    elif is_file_field(upload):
+        relayed = await relay_to_telegram(upload, BOT_OWNER)
+        error = None if relayed else "This file cannot be used as a note."
+    else:
+        error = registry.validate_named_text(name, body)
+
     if error:
         return render(
             request, "group_notes.html",
@@ -524,7 +534,11 @@ async def group_notes_add(request):
             notes=registry.read_notes(gid).items(),
             errors={"form": error}, saved=False,
         )
-    registry.add_note(gid, name, body)
+
+    if relayed:
+        registry.add_note(gid, name, "", relayed["type"], relayed["file_id"])
+    else:
+        registry.add_note(gid, name, body)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/notes"))
 
 

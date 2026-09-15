@@ -149,11 +149,15 @@ def read_notes(gid) -> dict:
     return _db("notes", gid).get("notes", {})
 
 
-def add_note(gid, name, body) -> None:
+def add_note(gid, name, body, media_type=None, media_id=None) -> None:
     db = _db("notes", gid)
     notes = db.get("notes", {})
     next_id = max(map(int, notes.keys()), default=0) + 1
-    notes[str(next_id)] = {"name": name, "reply": {"type": "text", "data": body}}
+    if media_type and media_id:
+        reply = {"type": media_type, "data": media_id}
+    else:
+        reply = {"type": "text", "data": body}
+    notes[str(next_id)] = {"name": name, "reply": reply}
     db.set("notes", notes)
 
 

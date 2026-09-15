@@ -57,6 +57,16 @@ def test_notes_add_delete_renumbers(tmp_path, monkeypatch):
     assert notes["1"]["name"] == "links"
 
 
+def test_notes_add_media(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    gid = "-100223"
+    registry.add_note(gid, "pic", "", "photo", "FILEY")
+    notes = registry.read_notes(gid)
+    assert notes["1"]["reply"] == {"type": "photo", "data": "FILEY"}
+    registry.add_note(gid, "txt", "plain")
+    assert registry.read_notes(gid)["2"]["reply"] == {"type": "text", "data": "plain"}
+
+
 def test_stickers_add_delete(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     gid = "-100333"
