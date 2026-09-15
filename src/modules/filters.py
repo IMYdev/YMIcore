@@ -1,6 +1,7 @@
 from info import bot
 from core.imysdb import IMYDB
 from core.utils import (handle_errors, is_user_admin)
+from core.activity import (log_event, user_label, chat_label)
 
 @handle_errors
 async def set_filter(m):
@@ -52,6 +53,12 @@ async def reply_to_filter(m):
             elif t == "document": await bot.send_document(m.chat.id, d)
             elif t == "audio": await bot.send_audio(m.chat.id, d)
             elif t == "video": await bot.send_video(m.chat.id, d)
+            log_event(
+                "filter_trigger",
+                chat_id=m.chat.id, chat_name=chat_label(m.chat),
+                user_id=getattr(m.from_user, "id", None), user_name=user_label(m.from_user),
+                detail=keyword,
+            )
             break
 
 @handle_errors

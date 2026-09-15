@@ -1,6 +1,7 @@
 from info import bot
 from core.imysdb import IMYDB
 from core.utils import (handle_errors, is_user_admin, get_args)
+from core.activity import (log_event, user_label, chat_label)
 from telebot.formatting import (format_text, hbold, hitalic, hcode)
 
 @handle_errors
@@ -54,6 +55,12 @@ async def get_notes(m):
         elif t == "document": await bot.send_document(m.chat.id, d)
         elif t == "video": await bot.send_video(m.chat.id, d)
         else: await bot.send_message(m.chat.id, "Note is unreadable.")
+        log_event(
+            "note_fetch",
+            chat_id=m.chat.id, chat_name=chat_label(m.chat),
+            user_id=getattr(m.from_user, "id", None), user_name=user_label(m.from_user),
+            detail=note.get("name") or f"#{note_id}",
+        )
     else:
         await bot.send_message(m.chat.id, f"No note with ID {note_id}.")
 
