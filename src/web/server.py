@@ -309,18 +309,13 @@ async def statistics(request):
         if total:
             group_stats.append({"gid": g["gid"], "title": g["title"], "counts": g_counts, "total": total})
     group_stats.sort(key=lambda g: g["total"], reverse=True)
+    events = read_events(limit=50)
     return render(
         request, "statistics.html",
         counts=counts, group_stats=group_stats,
-        event_labels=_EVENT_LABELS, active="statistics",
+        event_labels=_EVENT_LABELS, events=events,
+        active="statistics",
     )
-
-
-@authed
-@owner_only
-async def activity_page(request):
-    events = read_events(limit=200)
-    return render(request, "activity.html", events=events, active="activity")
 
 
 # --------------------------------------------------------------------------
@@ -667,7 +662,6 @@ def create_app() -> web.Application:
         web.get("/panel", dashboard),
         web.get("/settings/global", global_settings),
         web.get("/statistics", statistics),
-        web.get("/activity", activity_page),
         web.get("/banned", banned_groups_page),
         web.post("/banned/ban", ban_group_route),
         web.post("/banned/unban", unban_group_route),
