@@ -2,6 +2,4 @@ pytelegrambotapi
 aiohttp
 python-dotenv
 yt-dlp>=2025.8.23.234735.dev0
-cohere
 jinja2
-httpx>=0.25,<0.28

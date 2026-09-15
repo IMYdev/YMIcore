@@ -8,9 +8,7 @@ from modules.member import (
     ban, unban, help_command, group_id, spoiler)
 from module_manager import send_module_keyboard
 from modules.greetings import (set_greeting, set_goodbye, set_captcha, captcha_toggle)
-from modules.downloader import music_search
 from modules.blocklist import (block_set, unblock_set, get_blacklist)
-from modules.ai import manage_session
 from web.panel import panel_command
 
 COMMANDS = {
@@ -37,14 +35,12 @@ COMMANDS = {
     "unban": unban,
     "help": help_command,
     "modules": send_module_keyboard,
-    "music": music_search,
     "spoiler": spoiler,
     "blockset": block_set,
     "blocklist": get_blacklist,
     "unblockset": unblock_set,
     "setcaptcha": set_captcha,
-    "captcha": captcha_toggle,
-    "chat": manage_session,
+"captcha": captcha_toggle,
     "panel": panel_command
 }
 

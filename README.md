@@ -14,15 +14,12 @@ It's also a ready-to-use general group management bot.
 - Custom greetings and farewell messages when a member joins or leaves (can attach pics or videos.)
 - Grab and send wallpapers from various sources, including anime-themed ones.
 - Reverse search anime pictures to identify the anime.
-- Chat with AI. Ask questions and get quick, smart answers  
 - Save, list, and remove notes inside the chat.
 - Set up automatic keyword triggers that reply with custom messages.
 - Manage chat admins. Promote, demote, ban, or unban users.
 - Pin important messages.
 - Clean up chats by deleting batches of messages at once.
-- Reset the bot’s AI memory for a fresh start whenever needed.
 - Toggle and control various bot modules for extra features or disabling unwanted ones.
-- Search for and fetch music tracks from platforms like Deezer, Spotify, and YouTube Music.
 - Grab media content from Instagram and YouTube links.
 - Ability to add spoilers to media and text.
 - Block sticker sets that are unwanted in the group chat.
@@ -50,7 +47,6 @@ Create a `.env` file or set the following environment variables:
 BOT_TOKEN=your_telegram_bot_token
 LOG_ID=logs_channel_id_without_the_minus
 OWNER=your_telegram_id
-COHERE_KEY=token_for_LLM_functions
 ```
 Optional web panel settings:
 ```
@@ -58,7 +54,6 @@ WEB_BIND=127.0.0.1   # panel bind address
 WEB_PORT=8080        # panel port
 WEB_URL=https://your.host  # public panel URL (needed for the Telegram sign-in widget)
 WEB_SECRET=random_secret   # optional; a fresh random secret is generated per boot if unset
-SYSTEM_PROMPT=...    # optional; overrides the default AI system prompt
 ```
 
 ### 4. Run the bot
@@ -76,15 +71,13 @@ YMIcore ships with a browser-based control panel for customizing the bot.
 ## Project Structure
 ```
 core/            # Core framework logic (database, utils.)
-modules/         # All feature modules (filters, notes, chat, etc.)
+modules/         # All feature modules (filters, notes, etc.)
 web/             # Settings web panel (aiohttp server, auth, templates).
 botcommands.py   # Command router.
 main.py          # Entry point (bot + web panel).
 requirements.txt # Project dependencies.
 ```
-
-> Note: the `/music` command needs `innertube`, which requires `httpx<0.24` and so cannot be installed alongside `cohere` (which needs newer httpx). If you run AI features, `/music` falls back into the error log; install `innertube` separately only if you do not need AI.
-
+ 
 ## Creating Your Own Bot
 1. **Add needed environment variables to `.env` or your environment.**
 
