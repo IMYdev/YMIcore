@@ -1,13 +1,14 @@
 import asyncio
 import datetime
 import functools
+import re
 from pathlib import Path
 
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
 from info import (
-    BOT_OWNER, Downloader, ERROR_LOG_CHAT_ID, Logs,
+    BOT_OWNER, Downloader, ERROR_LOG_CHAT_ID, Logs, bot,
     TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
 )
 from web.auth import (
@@ -17,7 +18,9 @@ from web.auth import (
     make_session, read_session, revoke_token, token_digest, valid_login_link,
     verify_csrf, verify_tg_widget,
 )
-from web.groups import group_title, list_groups, record_group
+from web.groups import (
+    ban_group, banned_groups, group_title, list_groups, record_group, unban_group,
+)
 from web import settings_registry as registry
 from web.media import is_file_field, relay_to_telegram
 from core.activity import log_event, read_events, stats as activity_stats
@@ -321,6 +324,52 @@ async def activity_page(request):
 
 
 # --------------------------------------------------------------------------
+# Banned groups (owner)
+# --------------------------------------------------------------------------
+
+@authed
+@owner_only
+async def banned_groups_page(request):
+    banned = list(banned_groups())
+    return render(
+        request, "banned.html",
+        banned=banned, active="banned",
+        errors={}, saved="saved" in request.query,
+    )
+
+
+@authed
+@owner_only
+@csrf
+async def ban_group_route(request):
+    gid = request["form"].get("gid", "").strip().lower()
+    error = None
+    if not re.fullmatch(r"-?\d+", gid):
+        error = "Group ID must be a number (e.g. -1001234567890)."
+    if error:
+        return render(
+            request, "banned.html",
+            banned=list(banned_groups()), active="banned",
+            errors={"form": error}, saved=False,
+        )
+    if ban_group(gid):
+        try:
+            await bot.leave_chat(int(gid))
+        except Exception:
+            pass
+    raise web.HTTPFound(saved_url("/banned"))
+
+
+@authed
+@owner_only
+@csrf
+async def unban_group_route(request):
+    gid = request["form"].get("gid", "").strip().lower()
+    unban_group(gid)
+    raise web.HTTPFound(saved_url("/banned"))
+
+
+# --------------------------------------------------------------------------
 # Group pages
 # --------------------------------------------------------------------------
 
@@ -619,6 +668,9 @@ def create_app() -> web.Application:
         web.get("/settings/global", global_settings),
         web.get("/statistics", statistics),
         web.get("/activity", activity_page),
+        web.get("/banned", banned_groups_page),
+        web.post("/banned/ban", ban_group_route),
+        web.post("/banned/unban", unban_group_route),
         web.get("/groups/{gid}", lambda r: web.HTTPFound(f"/groups/{r.match_info['gid']}/modules")),
         web.get("/groups/{gid}/modules", group_modules),
         web.post("/groups/{gid}/modules", group_modules_save),
