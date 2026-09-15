@@ -123,10 +123,13 @@ def read_filters(gid) -> dict:
     return _db("filters", gid).get("filters", {})
 
 
-def add_filter(gid, keyword, body) -> None:
+def add_filter(gid, keyword, body, media_type=None, media_id=None) -> None:
     db = _db("filters", gid)
     filters = db.get("filters", {})
-    filters[keyword] = {"type": "text", "data": body}
+    if media_type and media_id:
+        filters[keyword] = {"type": media_type, "data": media_id}
+    else:
+        filters[keyword] = {"type": "text", "data": body}
     db.set("filters", filters)
 
 

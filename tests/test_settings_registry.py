@@ -33,6 +33,15 @@ def test_filters_add_delete(tmp_path, monkeypatch):
     assert registry.read_filters(gid) == {}
 
 
+def test_filters_add_media(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    gid = "-100112"
+    registry.add_filter(gid, "pic", "", "photo", "FILEX")
+    assert registry.read_filters(gid) == {"pic": {"type": "photo", "data": "FILEX"}}
+    registry.add_filter(gid, "once", "")
+    assert registry.read_filters(gid)["once"] == {"type": "text", "data": ""}
+
+
 def test_notes_add_delete_renumbers(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     gid = "-100222"

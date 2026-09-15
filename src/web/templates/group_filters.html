@@ -14,9 +14,13 @@
       <label class="lecp-label" for="keyword">Keyword</label>
       <input class="lecp-input" id="keyword" name="keyword" type="text" placeholder="welcome">
     </div>
-    <div class="lecp-field lecp-col-12 lecp-col-s-7">
+    <div class="lecp-field lecp-col-12 lecp-col-s-4">
       <label class="lecp-label" for="body">Reply text</label>
       <input class="lecp-input" id="body" name="body" type="text" placeholder="The bot replies when this word appears">
+    </div>
+    <div class="lecp-field lecp-col-12 lecp-col-s-3">
+      <label class="lecp-label" for="media">Reply media <span class="lecp-caption">(optional)</span></label>
+      <input class="lecp-input" id="media" name="media" type="file">
     </div>
     <div class="lecp-field lecp-col-12 lecp-col-s-2">
       <label class="lecp-label">&nbsp;</label>
@@ -43,7 +47,7 @@
   {% else %}
   <div class="lecp-tile lecp-tile--s">
     <h3 class="lecp-tile-label">No filters</h3>
-    <span class="lecp-body">Add a keyword above; the bot replies with your text whenever it appears in the chat.</span>
+    <span class="lecp-body">Add a keyword above; the bot replies with your text or media whenever it appears in the chat.</span>
   </div>
   {% endif %}
 </section>

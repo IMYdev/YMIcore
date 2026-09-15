@@ -19,6 +19,7 @@ from web.auth import (
 )
 from web.groups import group_title, list_groups, record_group
 from web import settings_registry as registry
+from web.media import is_file_field, relay_to_telegram
 from core.activity import log_event, read_events, stats as activity_stats
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
@@ -462,7 +463,17 @@ async def group_filters_add(request):
     form = request["form"]
     keyword = form.get("keyword", "").strip().lower()
     body = form.get("body", "")
-    error = registry.validate_named_text(keyword, body)
+    upload = form.get("media")
+
+    relayed = None
+    if not keyword:
+        error = "Keyword is required."
+    elif is_file_field(upload):
+        relayed = await relay_to_telegram(upload, BOT_OWNER)
+        error = None if relayed else "This file cannot be used as a filter."
+    else:
+        error = registry.validate_named_text(keyword, body)
+
     if error:
         return render(
             request, "group_filters.html",
@@ -470,7 +481,11 @@ async def group_filters_add(request):
             filters=registry.read_filters(gid).items(),
             errors={"form": error}, saved=False,
         )
-    registry.add_filter(gid, keyword, body)
+
+    if relayed:
+        registry.add_filter(gid, keyword, "", relayed["type"], relayed["file_id"])
+    else:
+        registry.add_filter(gid, keyword, body)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/filters"))
 
 
