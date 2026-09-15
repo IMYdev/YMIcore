@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Admin</p>
+<h1 class="lecp-title">Panel tokens</h1>
+<p class="lecp-caption lecp-mt-3">Persistent credentials for the panel. Each admin gets one from <code>/panel</code> in Telegram, or you can mint one here. Revoking a token immediately ends its sessions.</p>
+
+{% if created_token %}
+<div class="lecp-tile lecp-tile--s lecp-mt-6" role="status">
+  <p class="lecp-tile-label">Token created — copy it now, it won&rsquo;t be shown again</p>
+  <p class="token-value" id="new-token">{{ created_token }}</p>
+  <button class="lecp-btn lecp-btn--primary lecp-btn--sm lecp-mt-4" id="copy-token" type="button">Copy</button>
+</div>
+{% endif %}
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title">Create a token</h2>
+  <form method="post" action="/tokens/create" class="lecp-tile lecp-tile--s lecp-mt-4">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="lecp-field">
+      <label class="lecp-label" for="uid">Telegram user ID</label>
+      <input class="lecp-input" id="uid" name="uid" type="text" inputmode="numeric" value="{{ form_uid }}" placeholder="e.g. 123456789" autocomplete="off">
+      {% if errors.uid %}<p class="lecp-field-error-text" role="alert">⚠ {{ errors.uid }}</p>{% endif %}
+    </div>
+    <div class="lecp-field">
+      <label class="lecp-label" for="label">Label <span class="lecp-caption">(optional)</span></label>
+      <input class="lecp-input" id="label" name="label" type="text" value="{{ form_label }}" placeholder="e.g. Alice" autocomplete="off">
+      {% if errors.label %}<p class="lecp-field-error-text" role="alert">⚠ {{ errors.label }}</p>{% endif %}
+    </div>
+    <button class="lecp-btn lecp-btn--primary" type="submit">Generate token</button>
+  </form>
+</section>
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title">All tokens</h2>
+  <div class="list-rows lecp-mt-5">
+    {% for t in tokens %}
+    <div class="list-row">
+      <div class="lecp-flex-grow">
+        <p class="lecp-tile-label">{{ t.label or '—' }}</p>
+        <p class="lecp-caption">ID {{ t.uid }} &middot; {{ t.digest_short }} &middot; created {{ t.created_at|ts }}</p>
+      </div>
+      <div class="lecp-flex lecp-items-center lecp-gap-4">
+        <span class="lecp-badge {{ 'lecp-badge--success' if t.active else 'lecp-badge--error' }}">{{ 'Active' if t.active else 'Revoked' }}</span>
+        {% if t.active %}
+        <form method="post" action="/tokens/status">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="digest" value="{{ t.digest }}">
+          <input type="hidden" name="action" value="revoke">
+          <button class="lecp-btn lecp-btn--sm lecp-btn--ghost" type="submit">Revoke</button>
+        </form>
+        {% else %}
+        <form method="post" action="/tokens/status">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="digest" value="{{ t.digest }}">
+          <input type="hidden" name="action" value="activate">
+          <button class="lecp-btn lecp-btn--sm lecp-btn--ghost" type="submit">Activate</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/tokens/delete">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="digest" value="{{ t.digest }}">
+          <button class="lecp-btn lecp-btn--sm lecp-btn--danger" type="submit" data-confirm="Permanently delete this token?">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p class="lecp-caption">No tokens yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

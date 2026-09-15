@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Owner</p>
+<h1 class="lecp-title">Banned groups</h1>
+<p class="lecp-body lecp-mt-3">Groups on this list are left automatically and cannot use the bot.</p>
+
+{% if errors.form %}<p class="lecp-field-error-text lecp-mb-5" role="alert">⚠ {{ errors.form }}</p>{% endif %}
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title">Ban a group</h2>
+  <form method="post" action="/banned/ban" class="lecp-grid lecp-mt-4" data-submitting>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="lecp-field lecp-col-12 lecp-col-s-10">
+      <label class="lecp-label" for="gid">Group ID</label>
+      <input class="lecp-input" id="gid" name="gid" type="text" inputmode="numeric" placeholder="-1001234567890" autocomplete="off">
+    </div>
+    <div class="lecp-field lecp-col-12 lecp-col-s-2">
+      <label class="lecp-label">&nbsp;</label>
+      <button class="lecp-btn lecp-btn--primary" type="submit">Ban</button>
+    </div>
+  </form>
+</section>
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title">Banned groups</h2>
+  <div class="list-rows lecp-mt-5">
+    {% for b in banned %}
+    <div class="list-row">
+      <div class="lecp-flex-grow">
+        <span class="lecp-meta">{{ b.gid }}</span>
+        <h3 class="lecp-tile-label">{{ b.title }}</h3>
+      </div>
+      <form method="post" action="/banned/unban" data-submitting>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="gid" value="{{ b.gid }}">
+        <button class="lecp-btn lecp-btn--danger lecp-btn--sm" type="submit" data-confirm="Unban group '{{ b.gid }}'?">Unban</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="lecp-caption">No banned groups.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

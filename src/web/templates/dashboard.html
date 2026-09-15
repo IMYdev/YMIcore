@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Panel</p>
+<h1 class="lecp-title">Dashboard</h1>
+<p class="lecp-body lecp-mt-3">Open a group to manage its modules, greetings, captcha, filters, notes and sticker blocklist.</p>
+
+<section class="lecp-mt-7">
+  <div class="lecp-flex lecp-items-center lecp-justify-between">
+    <h2 class="lecp-section-title">Groups</h2>
+    <span class="lecp-badge">{{ groups|length }}</span>
+  </div>
+  <div class="lecp-grid lecp-mt-5">
+    {% for g in groups %}
+    <a class="lecp-tile lecp-col-12 lecp-col-s-6 lecp-col-w-4" href="/groups/{{ g.gid }}/modules">
+      <span class="lecp-meta">{{ g.gid }}</span>
+      <h3 class="lecp-tile-label">{{ g.title }}</h3>
+      <span class="lecp-body">{{ g.enabled }} of {{ g.total }} commands enabled</span>
+      <span class="lecp-tile-arrow" aria-hidden="true">→</span>
+    </a>
+    {% else %}
+    <div class="lecp-tile lecp-col-12">
+      <span class="lecp-meta">Empty</span>
+      <h3 class="lecp-tile-label">No groups yet</h3>
+      <span class="lecp-body">Groups appear here once anyone uses the bot.</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

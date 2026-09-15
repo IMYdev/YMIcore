@@ -1,6 +1,7 @@
 from info import bot
 from core.imysdb import IMYDB
 from core.utils import (handle_errors, is_user_admin, get_media_info, get_args)
+from core.activity import (log_event, user_label)
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from telebot.formatting import (hbold, hitalic)
 import re
@@ -88,11 +89,16 @@ async def send_standard_greeting(chat_id, user, db):
             await bot.send_sticker(chat_id, m_id)
             await bot.send_message(chat_id, personalized)
         else:
-            await bot.send_media_group(chat_id, [getattr(bot, f"send_{m_type}")(chat_id, m_id, caption=personalized)])
             send_func = getattr(bot, f"send_{m_type}")
             await send_func(chat_id, m_id, caption=personalized)
     else:
         await bot.send_message(chat_id, personalized)
+    log_event(
+        "greeting",
+        chat_id=chat_id,
+        user_id=getattr(user, "id", None),
+        user_name=user_label(user),
+    )
 
 async def _set_event_msg(m, event_type):
     if not await is_user_admin(m.chat.id, m.from_user.id):
@@ -157,3 +163,9 @@ async def bye(m):
             await send_func(m.chat.id, m_id, caption=personalized)
     else:
         await bot.send_message(m.chat.id, personalized)
+    log_event(
+        "farewell",
+        chat_id=m.chat.id,
+        user_id=getattr(new.user, "id", None),
+        user_name=user_label(new.user),
+    )

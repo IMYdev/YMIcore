@@ -4,6 +4,7 @@ from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermi
 from info import (bot, BOT_OWNER)
 from core.imysdb import IMYDB
 from core.utils import handle_errors
+from core.activity import (log_event, user_label, chat_label)
 from modules.downloader import extract_supported_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
@@ -12,6 +13,8 @@ from module_manager import (create_command_list_keyboard, modules, create_module
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block
+from web.groups import record_group
+from web.server import start_web_server
 
 async def is_module_enabled_in_group(command, chat_id):
     db = IMYDB('runtime/modules/module_controller.json')
@@ -23,6 +26,8 @@ async def is_module_enabled_in_group(command, chat_id):
 @bot.message_handler(commands=list(COMMANDS.keys()))
 @handle_errors
 async def cmd_handler(m):
+    record_group(m.chat.id, getattr(m.chat, "title", None))
+
     db = IMYDB('runtime/banned/groups.json')
     banned_groups = db.get("groups.group_ids", [])
 
@@ -65,6 +70,12 @@ async def cmd_handler(m):
             await bot.reply_to(m, f"The {command} command is disabled in this group.")
             return
 
+    log_event(
+        "command",
+        chat_id=m.chat.id, chat_name=chat_label(m.chat),
+        user_id=m.from_user.id, user_name=user_label(m.from_user),
+        detail=command,
+    )
     await handle_command(m)
 
 @bot.chat_member_handler()
@@ -74,6 +85,7 @@ async def chat_m(m: types.ChatMemberUpdated):
 
 @bot.message_handler()
 async def reply_message(m):
+    record_group(m.chat.id, getattr(m.chat, "title", None))
     await reply_to_filter(m)
     await get_notes(m)
     supported_platforms = ["instagram.com", "youtube.com", "youtu.be", "facebook.com", "twitter.com", "x.com"]
@@ -149,6 +161,12 @@ async def verify_captcha(call):
                                         can_send_other_messages=True, can_add_web_page_previews=True))
         await bot.delete_message(call.message.chat.id, call.message.message_id)
         await bot.answer_callback_query(call.id, "Correct! Welcome.")
+        log_event(
+            "captcha_pass",
+            chat_id=call.message.chat.id, chat_name=chat_label(call.message.chat),
+            user_id=call.from_user.id, user_name=user_label(call.from_user),
+            detail=answer,
+        )
         await send_standard_greeting(call.message.chat.id, call.from_user, db)
     else:
         current_count += 1
@@ -161,10 +179,28 @@ async def verify_captcha(call):
             user_attempts[user_id] = current_count
             db.set('user_attempts', user_attempts)
             await bot.answer_callback_query(call.id, f"Wrong! {max_tries - current_count} attempts left.", show_alert=True)
+        log_event(
+            "captcha_fail",
+            chat_id=call.message.chat.id, chat_name=chat_label(call.message.chat),
+            user_id=call.from_user.id, user_name=user_label(call.from_user),
+            detail=f"attempt {current_count}/{max_tries}",
+        )
 
 async def main():
     print("Bot started...")
-    await bot.infinity_polling(allowed_updates=['message', 'chat_member', 'callback_query'], skip_pending=True)
+    await asyncio.gather(
+        _run_polling(), start_web_server(),
+    )
+
+
+async def _run_polling():
+    try:
+        await bot.infinity_polling(
+            allowed_updates=['message', 'chat_member', 'callback_query'],
+            skip_pending=True,
+        )
+    except Exception as exc:
+        print(f"[-] Fatal polling error, bot offline. Web panel keeps running: {exc}")
 
 if __name__ == "__main__":
     asyncio.run(main())

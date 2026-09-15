@@ -1,0 +1,7 @@
+<nav class="lecp-nav lecp-nav--tabs lecp-mt-6" data-orientation="horizontal" aria-label="Group settings">
+  <a class="lecp-nav-item {{ 'is-active' if group_tab == 'modules' }}" href="/groups/{{ gid }}/modules"><span class="lecp-nav-item-label">Modules</span></a>
+  <a class="lecp-nav-item {{ 'is-active' if group_tab == 'greetings' }}" href="/groups/{{ gid }}/greetings"><span class="lecp-nav-item-label">Greetings &amp; captcha</span></a>
+  <a class="lecp-nav-item {{ 'is-active' if group_tab == 'filters' }}" href="/groups/{{ gid }}/filters"><span class="lecp-nav-item-label">Filters</span></a>
+  <a class="lecp-nav-item {{ 'is-active' if group_tab == 'notes' }}" href="/groups/{{ gid }}/notes"><span class="lecp-nav-item-label">Notes</span></a>
+  <a class="lecp-nav-item {{ 'is-active' if group_tab == 'stickers' }}" href="/groups/{{ gid }}/stickers"><span class="lecp-nav-item-label">Stickers</span></a>
+</nav>

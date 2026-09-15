@@ -9,6 +9,7 @@ from modules.member import (
 from module_manager import send_module_keyboard
 from modules.greetings import (set_greeting, set_goodbye, set_captcha, captcha_toggle)
 from modules.blocklist import (block_set, unblock_set, get_blacklist)
+from web.panel import panel_command
 
 COMMANDS = {
     "info": user_info,
@@ -39,7 +40,8 @@ COMMANDS = {
     "blocklist": get_blacklist,
     "unblockset": unblock_set,
     "setcaptcha": set_captcha,
-    "captcha": captcha_toggle
+"captcha": captcha_toggle,
+    "panel": panel_command
 }
 
 async def handle_command(message):

@@ -1,6 +1,8 @@
 from info import bot
 from core.imysdb import IMYDB
 from core.utils import (handle_errors, is_user_admin, get_args)
+from core.activity import (log_event, user_label, chat_label)
+from core.formatting import markdown_to_html
 from telebot.formatting import (format_text, hbold, hitalic, hcode)
 
 @handle_errors
@@ -21,11 +23,13 @@ async def set_note(m):
 
     msg = m.reply_to_message
     reply_with = {}
+    caption = getattr(msg, "caption", None) or ""
     if msg.text: reply_with = {"type": "text", "data": msg.text}
     elif msg.sticker: reply_with = {"type": "sticker", "data": msg.sticker.file_id}
-    elif msg.photo: reply_with = {"type": "photo", "data": msg.photo[-1].file_id}
-    elif msg.document: reply_with = {"type": "document", "data": msg.document.file_id}
-    elif msg.video: reply_with = {"type": "video", "data": msg.video.file_id}
+    elif msg.photo: reply_with = {"type": "photo", "data": msg.photo[-1].file_id, "text": caption}
+    elif msg.document: reply_with = {"type": "document", "data": msg.document.file_id, "text": caption}
+    elif msg.video: reply_with = {"type": "video", "data": msg.video.file_id, "text": caption}
+    elif msg.audio: reply_with = {"type": "audio", "data": msg.audio.file_id, "text": caption}
     else: reply_with = {"type": "unknown", "data": None}
 
     notes = db.get('notes', {})
@@ -48,12 +52,28 @@ async def get_notes(m):
     if note_id in notes:
         note = notes[note_id]
         t, d = note['reply']['type'], note['reply']['data']
-        if t == "text": await bot.send_message(m.chat.id, d)
+        caption = note['reply'].get('text')
+        if t == "text": await bot.send_message(m.chat.id, markdown_to_html(d), parse_mode="HTML")
         elif t == "sticker": await bot.send_sticker(m.chat.id, d)
-        elif t == "photo": await bot.send_photo(m.chat.id, d)
-        elif t == "document": await bot.send_document(m.chat.id, d)
-        elif t == "video": await bot.send_video(m.chat.id, d)
+        elif t == "photo":
+            if caption: await bot.send_photo(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
+            else: await bot.send_photo(m.chat.id, d)
+        elif t == "document":
+            if caption: await bot.send_document(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
+            else: await bot.send_document(m.chat.id, d)
+        elif t == "video":
+            if caption: await bot.send_video(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
+            else: await bot.send_video(m.chat.id, d)
+        elif t == "audio":
+            if caption: await bot.send_audio(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
+            else: await bot.send_audio(m.chat.id, d)
         else: await bot.send_message(m.chat.id, "Note is unreadable.")
+        log_event(
+            "note_fetch",
+            chat_id=m.chat.id, chat_name=chat_label(m.chat),
+            user_id=getattr(m.from_user, "id", None), user_name=user_label(m.from_user),
+            detail=note.get("name") or f"#{note_id}",
+        )
     else:
         await bot.send_message(m.chat.id, f"No note with ID {note_id}.")
 

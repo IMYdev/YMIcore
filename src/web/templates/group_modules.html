@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Group · {{ gid }}</p>
+<h1 class="lecp-title">{{ title }}</h1>
+{% include "partials/_group_tabs.html" %}
+
+<section class="lecp-mt-7">
+  <div class="lecp-flex lecp-items-center lecp-justify-between">
+    <h2 class="lecp-section-title">Modules &amp; commands</h2>
+  </div>
+  <div class="lecp-grid lecp-mt-5">
+    {% for module in modules %}
+    <div class="lecp-tile lecp-tile--s lecp-col-12 lecp-col-s-6 lecp-col-w-4">
+      <div class="lecp-flex lecp-items-center lecp-justify-between">
+        <h3 class="lecp-tile-label">{{ module.name|capitalize }}</h3>
+        <span class="lecp-badge {{ 'lecp-badge--success' if module.enabled else 'lecp-badge--error' }}">{{ 'Enabled' if module.enabled else 'Disabled' }}</span>
+      </div>
+      <form method="post" action="/groups/{{ gid }}/modules" data-submitting>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="module" value="{{ module.name }}">
+        <div class="toggle-list">
+          {% for cmd in module.cmds %}
+          <label class="toggle-row">
+            <input type="checkbox" name="cmd" value="{{ cmd }}" {{ 'checked' if module.states[cmd] }}>
+            <span class="toggle-label">{{ cmd }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <button class="lecp-btn lecp-btn--primary lecp-btn--sm lecp-mt-4" type="submit">Apply</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

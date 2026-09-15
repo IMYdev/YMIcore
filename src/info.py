@@ -1,5 +1,6 @@
 from telebot.async_telebot import AsyncTeleBot
 import os
+import secrets
 
 # Load env variables from .env if found
 if os.path.exists(".env"):
@@ -14,6 +15,16 @@ BOT_OWNER= os.getenv("OWNER")
 
 Logs = True
 Downloader = True
+
+WEB_BIND = os.getenv("WEB_BIND", "127.0.0.1")
+try:
+    WEB_PORT = int(os.getenv("WEB_PORT", "8080"))
+except ValueError:
+    WEB_PORT = 8080
+WEB_URL = os.getenv("WEB_URL") or os.getenv("BASE_URL")
+WEB_SECRET = os.getenv("WEB_SECRET")
+if not WEB_SECRET:
+    WEB_SECRET = secrets.token_urlsafe(32)
 
 if TOKEN is None:
     print("[x] Critical error: BOT_TOKEN environment variable is missing. Terminating...")

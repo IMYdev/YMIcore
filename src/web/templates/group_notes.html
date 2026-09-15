@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Group · {{ gid }}</p>
+<h1 class="lecp-title">{{ title }}</h1>
+{% include "partials/_group_tabs.html" %}
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title lecp-mb-5">Notes</h2>
+  {% if errors.form %}<p class="lecp-field-error-text lecp-mb-5" role="alert">⚠ {{ errors.form }}</p>{% endif %}
+
+  <form method="post" action="/groups/{{ gid }}/notes/add" class="lecp-grid lecp-mb-6" data-submitting enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="lecp-field lecp-col-12 lecp-col-s-3">
+      <label class="lecp-label" for="name">Note name</label>
+      <input class="lecp-input" id="name" name="name" type="text" placeholder="rules">
+    </div>
+    <div class="lecp-field lecp-col-12 lecp-col-s-4">
+      <label class="lecp-label" for="body">Note text <span class="lecp-caption">(caption when media is attached)</span></label>
+      <textarea class="lecp-input" id="body" name="body" rows="4" placeholder="Bold with **bold**, italic with _italic_, code with `code`"></textarea>
+      <div class="lecp-caption lecp-mt-2" id="markdown-preview"></div>
+    </div>
+    <div class="lecp-field lecp-col-12 lecp-col-s-3">
+      <label class="lecp-label" for="media">Note media <span class="lecp-caption">(optional)</span></label>
+      <input class="lecp-input" id="media" name="media" type="file">
+    </div>
+    <div class="lecp-field lecp-col-12 lecp-col-s-2">
+      <label class="lecp-label">&nbsp;</label>
+      <button class="lecp-btn lecp-btn--primary" type="submit">Add</button>
+    </div>
+  </form>
+
+  {% if notes %}
+  <ul class="list-rows">
+    {% for nid, note in notes %}
+    <li class="list-row">
+      <div class="lecp-flex lecp-items-center lecp-gap-4">
+        <span class="lecp-badge">{{ nid }}</span>
+        <span class="toggle-label">{{ note.name }}</span>
+        <span class="lecp-badge lecp-caption">{{ note.reply.type }}</span>
+        <span class="lecp-caption">fetch via #{{ nid }}</span>
+      </div>
+      <form method="post" action="/groups/{{ gid }}/notes/delete" data-submitting>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="note_id" value="{{ nid }}">
+        <button class="lecp-btn lecp-btn--danger lecp-btn--sm" type="submit" data-confirm="Delete note '{{ note.name }}'?">Delete</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="lecp-tile lecp-tile--s">
+    <h3 class="lecp-tile-label">No notes</h3>
+    <span class="lecp-body">Add a note above; anyone can fetch it in the chat with #note_number.</span>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

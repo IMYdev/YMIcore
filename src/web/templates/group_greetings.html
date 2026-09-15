@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Group · {{ gid }}</p>
+<h1 class="lecp-title">{{ title }}</h1>
+{% include "partials/_group_tabs.html" %}
+
+{% if errors.captcha %}<p class="lecp-field-error-text lecp-mt-5" role="alert">⚠ {{ errors.captcha }}</p>{% endif %}
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title lecp-mb-5">Greetings &amp; farewells</h2>
+  <div class="lecp-grid">
+    <form method="post" action="/groups/{{ gid }}/greetings" class="lecp-col-12 lecp-col-s-6" data-submitting enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="lecp-field {{ 'lecp-field--error' if errors.greeting }}">
+        <label class="lecp-label" for="greeting">Greeting message</label>
+        <textarea class="lecp-textarea" id="greeting" name="greeting">{{ greeting }}</textarea>
+        <p class="lecp-field-hint">Placeholders: {firstname}, {lastname}, {username}.</p>
+        {% if errors.greeting %}<p class="lecp-field-error-text" id="greeting-error">⚠ {{ errors.greeting }}</p>{% endif %}
+      </div>
+      {% if media.greeting[0] %}<span class="lecp-badge lecp-mb-5">{{ media.greeting[0] }} attached</span>{% endif %}
+      <div class="lecp-field">
+        <label class="lecp-label" for="greeting_media">Greeting media <span class="lecp-caption">(optional)</span></label>
+        <input class="lecp-input" id="greeting_media" name="greeting_media" type="file">
+      </div>
+      <div class="lecp-field {{ 'lecp-field--error' if errors.goodbye }}">
+        <label class="lecp-label" for="goodbye">Farewell message</label>
+        <textarea class="lecp-textarea" id="goodbye" name="goodbye">{{ goodbye }}</textarea>
+        <p class="lecp-field-hint">Placeholders: {firstname}, {lastname}, {username}.</p>
+        {% if errors.goodbye %}<p class="lecp-field-error-text" id="goodbye-error">⚠ {{ errors.goodbye }}</p>{% endif %}
+      </div>
+      {% if media.goodbye[0] %}<span class="lecp-badge lecp-mb-5">{{ media.goodbye[0] }} attached</span>{% endif %}
+      <div class="lecp-field">
+        <label class="lecp-label" for="goodbye_media">Farewell media <span class="lecp-caption">(optional)</span></label>
+        <input class="lecp-input" id="goodbye_media" name="goodbye_media" type="file">
+      </div>
+      <button class="lecp-btn lecp-btn--primary" type="submit" name="action" value="messages">Save messages</button>
+    </form>
+
+    <div class="lecp-col-12 lecp-col-s-6">
+      <div class="lecp-field">
+        <span class="lecp-label">Greeting media</span>
+        {% if media.greeting[0] %}
+        <span class="lecp-caption">{{ media.greeting[0] }} · {{ media.greeting[1] }}</span>
+        <form method="post" action="/groups/{{ gid }}/greetings">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="action" value="clear_greeting_media">
+          <button class="lecp-btn lecp-btn--danger lecp-btn--sm" type="submit" data-confirm="Remove greeting media?">Remove greeting media</button>
+        </form>
+        {% else %}
+        <span class="lecp-caption">None attached.</span>
+        {% endif %}
+      </div>
+      <div class="lecp-field">
+        <span class="lecp-label">Farewell media</span>
+        {% if media.goodbye[0] %}
+        <span class="lecp-caption">{{ media.goodbye[0] }} · {{ media.goodbye[1] }}</span>
+        <form method="post" action="/groups/{{ gid }}/greetings">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="action" value="clear_goodbye_media">
+          <button class="lecp-btn lecp-btn--danger lecp-btn--sm" type="submit" data-confirm="Remove farewell media?">Remove farewell media</button>
+        </form>
+        {% else %}
+        <span class="lecp-caption">None attached.</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lecp-mt-7">
+  <div class="lecp-flex lecp-items-center lecp-justify-between">
+    <h2 class="lecp-section-title">Captcha</h2>
+    {% if captcha.enabled %}<span class="lecp-badge lecp-badge--success">On</span>{% else %}<span class="lecp-badge lecp-badge--error">Off</span>{% endif %}
+  </div>
+  <form method="post" action="/groups/{{ gid }}/greetings" class="lecp-mt-5" data-submitting>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="action" value="captcha">
+    <label class="toggle-row">
+      <input type="checkbox" name="enabled" {{ 'checked' if captcha.enabled }}>
+      <span class="toggle-label">Require captcha for new members</span>
+    </label>
+    <div class="lecp-grid lecp-mt-5">
+      <div class="lecp-field lecp-col-12 lecp-col-s-6">
+        <label class="lecp-label" for="question">Question</label>
+        <input class="lecp-input" id="question" name="question" type="text" value="{{ captcha.question }}" placeholder="Are you human?">
+      </div>
+      <div class="lecp-field lecp-col-12 lecp-col-s-6">
+        <label class="lecp-label" for="answer">Correct answer</label>
+        <input class="lecp-input" id="answer" name="answer" type="text" value="{{ captcha.answer }}" placeholder="Yes">
+      </div>
+      <div class="lecp-field lecp-col-12 lecp-col-s-6">
+        <label class="lecp-label" for="options">Options (one per line)</label>
+        <textarea class="lecp-textarea" id="options" name="options" style="min-height:90px">{{ captcha.options|join('\n') }}</textarea>
+      </div>
+      <div class="lecp-field lecp-col-12 lecp-col-s-6">
+        <label class="lecp-label" for="tries">Max attempts</label>
+        <input class="lecp-input" id="tries" name="tries" type="number" min="1" value="{{ captcha.tries }}">
+      </div>
+    </div>
+    <button class="lecp-btn lecp-btn--primary" type="submit">Save captcha</button>
+  </form>
+</section>
+{% endblock %}

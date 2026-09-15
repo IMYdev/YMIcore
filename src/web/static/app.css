@@ -1,0 +1,213 @@
+/* YMIcore panel - based on top of the LECP design system. */
+
+:root {
+  --lecp-margin: 40px;
+}
+
+/* ------------------------------------------------------------------
+   Layout shell
+   ------------------------------------------------------------------ */
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.nav-panel {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lecp-space-6);
+  padding: var(--lecp-space-5);
+  border-right: 1px solid var(--lecp-line);
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.brand {
+  font-size: var(--lecp-type-title);
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.brand-dot {
+  color: var(--lecp-accent);
+}
+
+.nav-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--lecp-space-3);
+}
+
+.page {
+  padding: var(--lecp-space-7) 0;
+}
+
+.page-main {
+  padding-bottom: var(--lecp-space-7);
+}
+
+.site-footer {
+  padding: var(--lecp-space-5) var(--lecp-margin) var(--lecp-space-7);
+}
+
+.lecp-nav--tabs {
+  flex-wrap: wrap;
+}
+
+.lecp-nav--tabs .lecp-nav-item {
+  min-height: 40px;
+  padding: var(--lecp-space-2) var(--lecp-space-4);
+}
+
+/* ------------------------------------------------------------------
+   Login
+   ------------------------------------------------------------------ */
+
+.login-body {
+  min-height: 100vh;
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--lecp-space-5);
+}
+
+.login-tile {
+  width: 100%;
+  max-width: 480px;
+  min-height: 0;
+}
+
+.tgme_widget {
+  display: flex;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------------
+   Toggle rows (module/command switches)
+   ------------------------------------------------------------------ */
+
+.toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lecp-space-2);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--lecp-space-3);
+  min-height: 44px;
+  padding: var(--lecp-space-2) var(--lecp-space-3);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    background var(--lecp-motion-focus) var(--lecp-ease-focus),
+    border-color var(--lecp-motion-focus) var(--lecp-ease-focus);
+}
+
+.toggle-row:hover {
+  background: var(--lecp-surface-hover);
+}
+
+.toggle-row:focus-within {
+  border-color: var(--lecp-accent);
+}
+
+.toggle-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--lecp-accent);
+}
+
+.toggle-label {
+  font-size: var(--lecp-type-body);
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------------
+   Generic row lists (filters, notes, stickers, env values)
+   ------------------------------------------------------------------ */
+
+.list-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lecp-space-2);
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lecp-space-3);
+  min-height: 56px;
+  padding: var(--lecp-space-2) var(--lecp-space-4);
+  background: var(--lecp-surface);
+  border: 2px solid transparent;
+}
+
+.list-row:focus-within {
+  border-color: var(--lecp-accent);
+}
+
+.lecp-flex-grow {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.token-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--lecp-type-body);
+  line-height: 1.5;
+  word-break: break-all;
+  padding: var(--lecp-space-3);
+  margin: var(--lecp-space-3) 0 0;
+  background: var(--lecp-surface);
+  border: 1px solid var(--lecp-line);
+}
+
+/* ------------------------------------------------------------------
+   Toast tweaks
+   ------------------------------------------------------------------ */
+
+.toast-title {
+  font-size: var(--lecp-type-body);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------
+   Responsive
+   ------------------------------------------------------------------ */
+
+@media (max-width: 719px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-panel {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--lecp-line);
+  }
+
+  .nav-footer {
+    margin-top: 0;
+  }
+
+  .page {
+    padding-top: var(--lecp-space-6);
+  }
+}

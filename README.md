@@ -30,13 +30,14 @@ It's also a ready-to-use general group management bot.
 ```zsh
 git clone https://github.com/IMYdev/YMIcore
 cd "YMIcore"
+git submodule update --init   # pulls the LECP-CSS stylesheet for the web panel
 ```
 
 ### 2. Install dependencies
 ```zsh
 python3 -m venv venv
 source venv/bin/activate
-cd src/regular
+cd src/
 pip install -r requirements.txt
 ```
 
@@ -45,6 +46,14 @@ Create a `.env` file or set the following environment variables:
 ```
 BOT_TOKEN=your_telegram_bot_token
 LOG_ID=logs_channel_id_without_the_minus
+OWNER=your_telegram_id
+```
+Optional web panel settings:
+```
+WEB_BIND=127.0.0.1   # panel bind address
+WEB_PORT=8080        # panel port
+WEB_URL=https://your.host  # public panel URL (needed for the Telegram sign-in widget)
+WEB_SECRET=random_secret   # optional; a fresh random secret is generated per boot if unset
 ```
 
 ### 4. Run the bot
@@ -53,15 +62,22 @@ If self-hosting:
 python main.py
 ```
 
+## Settings Web Panel
+
+YMIcore ships with a browser-based control panel for customizing the bot.
+
+[YMIcore Control Panel Instruction Manual](src/web/README.md)
+
 ## Project Structure
 ```
 core/            # Core framework logic (database, utils.)
 modules/         # All feature modules (filters, notes, etc.)
+web/             # Settings web panel (aiohttp server, auth, templates).
 botcommands.py   # Command router.
-main.py          # Entry point.
+main.py          # Entry point (bot + web panel).
 requirements.txt # Project dependencies.
 ```
-
+ 
 ## Creating Your Own Bot
 1. **Add needed environment variables to `.env` or your environment.**
 
