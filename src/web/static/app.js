@@ -99,4 +99,35 @@
       }
     });
   });
+
+  // Live Markdown preview for note editors.
+  (function () {
+    var bodyInput = document.getElementById("body");
+    var preview = document.getElementById("markdown-preview");
+    if (!bodyInput || !preview) return;
+    function escapeHtml(s) {
+      var d = document.createElement("span");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+    function renderMarkdown(s) {
+      var o = escapeHtml(s);
+      o = o.replace(/```(\w*)\n?([\s\S]*?)```/g, "<pre><code>$2</code></pre>")
+           .replace(/`([^`]+)`/g, "<code>$1</code>")
+           .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+           .replace(/\*([^\s*][^*]*)\*/g, "<em>$1</em>")
+           .replace(/_([^\s_][^_]*?)_/g, "<em>$1</em>")
+           .replace(/~~(.+?)~~/g, "<s>$1</s>")
+           .replace(/\|\|(.+?)\|\|/g, "<s style='opacity:0.6'>$1</s>")
+           .replace(/\[([^\]]+)\]\((\S+)\)/g, "<a href='$2'>$1</a>")
+           .replace(/(?:^|\n)(#{1,6})\s+(.+)/g, "$1<strong>$2</strong>")
+           .replace(/\n/g, "<br>");
+      return o;
+    }
+    var update = function () {
+      preview.innerHTML = renderMarkdown(bodyInput.value || "");
+    };
+    bodyInput.addEventListener("input", update);
+    update();
+  })();
 })();

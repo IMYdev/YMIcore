@@ -2,6 +2,7 @@ from info import bot
 from core.imysdb import IMYDB
 from core.utils import (handle_errors, is_user_admin, get_args)
 from core.activity import (log_event, user_label, chat_label)
+from core.formatting import markdown_to_html
 from telebot.formatting import (format_text, hbold, hitalic, hcode)
 
 @handle_errors
@@ -49,7 +50,7 @@ async def get_notes(m):
     if note_id in notes:
         note = notes[note_id]
         t, d = note['reply']['type'], note['reply']['data']
-        if t == "text": await bot.send_message(m.chat.id, d)
+        if t == "text": await bot.send_message(m.chat.id, markdown_to_html(d), parse_mode="HTML")
         elif t == "sticker": await bot.send_sticker(m.chat.id, d)
         elif t == "photo": await bot.send_photo(m.chat.id, d)
         elif t == "document": await bot.send_document(m.chat.id, d)

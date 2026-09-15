@@ -15,8 +15,9 @@
       <input class="lecp-input" id="name" name="name" type="text" placeholder="rules">
     </div>
     <div class="lecp-field lecp-col-12 lecp-col-s-4">
-      <label class="lecp-label" for="body">Note text</label>
-      <input class="lecp-input" id="body" name="body" type="text" placeholder="Text shown when the note is fetched">
+      <label class="lecp-label" for="body">Note text <span class="lecp-caption">(Markdown supported)</span></label>
+      <textarea class="lecp-input" id="body" name="body" rows="4" placeholder="Bold with **bold**, italic with _italic_, code with `code`"></textarea>
+      <div class="lecp-caption lecp-mt-2" id="markdown-preview"></div>
     </div>
     <div class="lecp-field lecp-col-12 lecp-col-s-3">
       <label class="lecp-label" for="media">Note media <span class="lecp-caption">(optional)</span></label>
