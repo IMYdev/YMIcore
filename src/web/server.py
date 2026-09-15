@@ -424,6 +424,18 @@ async def group_greetings_save(request):
 
     greeting = form.get("greeting", "").strip()
     goodbye = form.get("goodbye", "").strip()
+
+    greeting_upload = form.get("greeting_media")
+    goodbye_upload = form.get("goodbye_media")
+    if is_file_field(greeting_upload):
+        g_relayed = await relay_to_telegram(greeting_upload, BOT_OWNER)
+        if g_relayed:
+            registry.set_greeting_media(gid, "greeting", g_relayed["type"], g_relayed["file_id"])
+    if is_file_field(goodbye_upload):
+        b_relayed = await relay_to_telegram(goodbye_upload, BOT_OWNER)
+        if b_relayed:
+            registry.set_greeting_media(gid, "goodbye", b_relayed["type"], b_relayed["file_id"])
+
     errors = {}
     if greeting:
         err = registry.validate_message_template(greeting)

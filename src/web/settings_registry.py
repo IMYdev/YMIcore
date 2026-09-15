@@ -102,6 +102,12 @@ def clear_greeting_media(gid, event) -> None:
     db.set(f"{event}_media_id", None)
 
 
+def set_greeting_media(gid, event, media_type, media_id) -> None:
+    db = _db("greetings", gid)
+    db.set(f"{event}_media_type", media_type)
+    db.set(f"{event}_media_id", media_id)
+
+
 def save_captcha(gid, question, options, answer, tries) -> None:
     db = _db("greetings", gid)
     db.set("captcha_q", question)

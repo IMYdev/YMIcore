@@ -89,7 +89,6 @@ async def send_standard_greeting(chat_id, user, db):
             await bot.send_sticker(chat_id, m_id)
             await bot.send_message(chat_id, personalized)
         else:
-            await bot.send_media_group(chat_id, [getattr(bot, f"send_{m_type}")(chat_id, m_id, caption=personalized)])
             send_func = getattr(bot, f"send_{m_type}")
             await send_func(chat_id, m_id, caption=personalized)
     else:

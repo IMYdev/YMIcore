@@ -98,6 +98,18 @@ def test_greetings_messages_media(tmp_path, monkeypatch):
     assert registry.read_greetings(gid)["greeting_media_type"] is None
 
 
+def test_greetings_set_media(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    gid = "-100556"
+    registry.set_greeting_media(gid, "greeting", "photo", "FILEG")
+    assert registry.read_greetings(gid)["greeting_media_type"] == "photo"
+    assert registry.read_greetings(gid)["greeting_media_id"] == "FILEG"
+    registry.set_greeting_media(gid, "greeting", "video", "FILEV")
+    assert registry.read_greetings(gid)["greeting_media_id"] == "FILEV"
+    registry.clear_greeting_media(gid, "greeting")
+    assert registry.read_greetings(gid)["greeting_media_type"] is None
+
+
 def test_captcha_save(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     gid = "-100666"
