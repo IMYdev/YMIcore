@@ -122,8 +122,9 @@ def read_events(days=RETENTION_DAYS, event_type=None, chat_id=None, limit=None) 
         if chat is not None and record.get("chat_id") != chat:
             continue
         results.append(record)
-        if limit and len(results) >= limit:
-            break
+    results.sort(key=lambda r: r.get("ts", 0), reverse=True)
+    if limit:
+        results = results[:limit]
     return results
 
 

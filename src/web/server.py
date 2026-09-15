@@ -19,6 +19,7 @@ from web.auth import (
 )
 from web.groups import group_title, list_groups, record_group
 from web import settings_registry as registry
+from core.activity import log_event, read_events, stats as activity_stats
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -76,6 +77,11 @@ def csrf(fn):
         if not verify_csrf(request["user"], form.get("csrf", "")):
             raise web.HTTPBadRequest(text="Invalid CSRF token.")
         request["form"] = form
+        log_event(
+            "panel_action",
+            user_id=request["user"]["uid"],
+            detail=request.path,
+        )
         return await fn(request)
     return wrapper
 
@@ -269,6 +275,48 @@ async def global_settings(request):
         ("WEB_URL", WEB_URL or "(unset - localhost)", "Public panel URL."),
     ]
     return render(request, "global.html", values=values, active="global")
+
+
+# --------------------------------------------------------------------------
+# Statistics & activity (owner)
+# --------------------------------------------------------------------------
+
+_EVENT_LABELS = [
+    ("Commands", "command"),
+    ("Filter triggers", "filter_trigger"),
+    ("Note fetches", "note_fetch"),
+    ("Greetings", "greeting"),
+    ("Farewells", "farewell"),
+    ("Captcha passes", "captcha_pass"),
+    ("Captcha failures", "captcha_fail"),
+    ("Panel actions", "panel_action"),
+]
+
+
+@authed
+@owner_only
+async def statistics(request):
+    counts = activity_stats()
+    groups = list_groups()
+    group_stats = []
+    for g in groups:
+        g_counts = activity_stats(chat_id=g["gid"])
+        total = sum(g_counts.values())
+        if total:
+            group_stats.append({"gid": g["gid"], "title": g["title"], "counts": g_counts, "total": total})
+    group_stats.sort(key=lambda g: g["total"], reverse=True)
+    return render(
+        request, "statistics.html",
+        counts=counts, group_stats=group_stats,
+        event_labels=_EVENT_LABELS, active="statistics",
+    )
+
+
+@authed
+@owner_only
+async def activity_page(request):
+    events = read_events(limit=200)
+    return render(request, "activity.html", events=events, active="activity")
 
 
 # --------------------------------------------------------------------------
@@ -528,6 +576,8 @@ def create_app() -> web.Application:
         web.post("/tokens/delete", admin_tokens_delete),
         web.get("/panel", dashboard),
         web.get("/settings/global", global_settings),
+        web.get("/statistics", statistics),
+        web.get("/activity", activity_page),
         web.get("/groups/{gid}", lambda r: web.HTTPFound(f"/groups/{r.match_info['gid']}/modules")),
         web.get("/groups/{gid}/modules", group_modules),
         web.post("/groups/{gid}/modules", group_modules_save),

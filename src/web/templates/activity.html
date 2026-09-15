@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Owner</p>
+<h1 class="lecp-title">Activity feed</h1>
+<p class="lecp-body lecp-mt-3">Recent bot events, newest first.</p>
+
+<section class="lecp-mt-7">
+  <div class="list-rows">
+    {% for e in events %}
+    <div class="list-row">
+      <div class="lecp-flex-grow">
+        <span class="lecp-badge lecp-mr-4">{{ e.type }}</span>
+        <span class="lecp-tile-label">{{ e.user_name or '&mdash;' }}</span>
+        <span class="lecp-caption lecp-ml-4">{{ e.chat_name or '' }}</span>
+        {% if e.detail %}
+        <span class="lecp-caption lecp-ml-4">&middot; {{ e.detail }}</span>
+        {% endif %}
+      </div>
+      <span class="lecp-caption">{{ e.ts|ts }}</span>
+    </div>
+    {% else %}
+    <p class="lecp-caption">No activity yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

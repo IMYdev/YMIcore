@@ -72,3 +72,12 @@ def test_read_events_respects_chat_filter(tmp_path, monkeypatch):
     filtered = read_events(chat_id=-1001)
     assert len(filtered) == 1
     assert filtered[0]["chat_id"] == "-1001"
+
+
+def test_read_events_newest_first_and_limit(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    log_event("command", chat_id=-1001, detail="first")
+    log_event("command", chat_id=-1001, detail="second")
+    log_event("command", chat_id=-1001, detail="third")
+    events = read_events(limit=2)
+    assert [e["detail"] for e in events] == ["third", "second"]
