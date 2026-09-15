@@ -36,8 +36,12 @@ def test_filters_add_delete(tmp_path, monkeypatch):
 def test_filters_add_media(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     gid = "-100112"
-    registry.add_filter(gid, "pic", "", "photo", "FILEX")
-    assert registry.read_filters(gid) == {"pic": {"type": "photo", "data": "FILEX"}}
+    registry.add_filter(gid, "pic", "check this out", "photo", "FILEX")
+    assert registry.read_filters(gid) == {
+        "pic": {"type": "photo", "data": "FILEX", "text": "check this out"}
+    }
+    registry.add_filter(gid, "bare", "", "photo", "FILEY")
+    assert registry.read_filters(gid)["bare"] == {"type": "photo", "data": "FILEY"}
     registry.add_filter(gid, "once", "")
     assert registry.read_filters(gid)["once"] == {"type": "text", "data": ""}
 
@@ -60,11 +64,13 @@ def test_notes_add_delete_renumbers(tmp_path, monkeypatch):
 def test_notes_add_media(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     gid = "-100223"
-    registry.add_note(gid, "pic", "", "photo", "FILEY")
+    registry.add_note(gid, "pic", "our logo", "photo", "FILEY")
     notes = registry.read_notes(gid)
-    assert notes["1"]["reply"] == {"type": "photo", "data": "FILEY"}
+    assert notes["1"]["reply"] == {"type": "photo", "data": "FILEY", "text": "our logo"}
+    registry.add_note(gid, "hero", "", "video", "FILEZ")
+    assert registry.read_notes(gid)["2"]["reply"] == {"type": "video", "data": "FILEZ"}
     registry.add_note(gid, "txt", "plain")
-    assert registry.read_notes(gid)["2"]["reply"] == {"type": "text", "data": "plain"}
+    assert registry.read_notes(gid)["3"]["reply"] == {"type": "text", "data": "plain"}
 
 
 def test_stickers_add_delete(tmp_path, monkeypatch):

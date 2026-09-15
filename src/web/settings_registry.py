@@ -133,9 +133,12 @@ def add_filter(gid, keyword, body, media_type=None, media_id=None) -> None:
     db = _db("filters", gid)
     filters = db.get("filters", {})
     if media_type and media_id:
-        filters[keyword] = {"type": media_type, "data": media_id}
+        reply = {"type": media_type, "data": media_id}
+        if body:
+            reply["text"] = body
     else:
-        filters[keyword] = {"type": "text", "data": body}
+        reply = {"type": "text", "data": body}
+    filters[keyword] = reply
     db.set("filters", filters)
 
 
@@ -161,6 +164,8 @@ def add_note(gid, name, body, media_type=None, media_id=None) -> None:
     next_id = max(map(int, notes.keys()), default=0) + 1
     if media_type and media_id:
         reply = {"type": media_type, "data": media_id}
+        if body:
+            reply["text"] = body
     else:
         reply = {"type": "text", "data": body}
     notes[str(next_id)] = {"name": name, "reply": reply}

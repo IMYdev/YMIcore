@@ -549,7 +549,7 @@ async def group_filters_add(request):
     if not keyword:
         error = "Keyword is required."
     elif is_file_field(upload):
-        relayed = await relay_to_telegram(upload, BOT_OWNER)
+        relayed = await relay_to_telegram(upload, BOT_OWNER, caption=body or None)
         error = None if relayed else "This file cannot be used as a filter."
     else:
         error = registry.validate_named_text(keyword, body)
@@ -563,7 +563,7 @@ async def group_filters_add(request):
         )
 
     if relayed:
-        registry.add_filter(gid, keyword, "", relayed["type"], relayed["file_id"])
+        registry.add_filter(gid, keyword, body, relayed["type"], relayed["file_id"])
     else:
         registry.add_filter(gid, keyword, body)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/filters"))
@@ -602,7 +602,7 @@ async def group_notes_add(request):
     if not name:
         error = "Note name is required."
     elif is_file_field(upload):
-        relayed = await relay_to_telegram(upload, BOT_OWNER)
+        relayed = await relay_to_telegram(upload, BOT_OWNER, caption=body or None)
         error = None if relayed else "This file cannot be used as a note."
     else:
         error = registry.validate_named_text(name, body)
@@ -616,7 +616,7 @@ async def group_notes_add(request):
         )
 
     if relayed:
-        registry.add_note(gid, name, "", relayed["type"], relayed["file_id"])
+        registry.add_note(gid, name, body, relayed["type"], relayed["file_id"])
     else:
         registry.add_note(gid, name, body)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/notes"))

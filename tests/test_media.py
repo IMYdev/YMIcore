@@ -57,3 +57,20 @@ def test_relay_to_telegram_binary_returns_media_type(tmp_path, monkeypatch):
     monkeypatch.setattr(bot, "send_document", fake_send_document)
     result = asyncio.run(relay_to_telegram(make_field("a.bin", "application/octet-stream", b"x"), 999))
     assert result == {"type": "document", "file_id": "FILE9"}
+
+
+def test_relay_to_telegram_forwards_caption(tmp_path, monkeypatch):
+    from info import bot
+
+    captured = {}
+
+    async def fake_send_photo(chat_id, data, **kw):
+        captured.update(kw)
+        return make_msg(photo=[type("PS", (), {"file_id": "FILE7"})()])
+
+    monkeypatch.setattr(bot, "send_photo", fake_send_photo)
+    result = asyncio.run(
+        relay_to_telegram(make_field("a.png", "image/png", b"x"), 999, caption="our logo")
+    )
+    assert result == {"type": "photo", "file_id": "FILE7"}
+    assert captured.get("caption") == "our logo"
