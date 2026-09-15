@@ -7,8 +7,8 @@ from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
 from info import (
-    BOT_OWNER, COHERE_API_KEY, Downloader, ERROR_LOG_CHAT_ID, Logs,
-    SYSTEM_PROMPT, TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
+    BOT_OWNER, Downloader, ERROR_LOG_CHAT_ID, Logs,
+    TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
 )
 from web.auth import (
     COOKIE_NAME, SESSION_TTL, USE_WIDGET,
@@ -262,8 +262,6 @@ async def global_settings(request):
         ("BOT_TOKEN", mask(TOKEN) if TOKEN else "(missing)", "Bot auth token."),
         ("LOG_ID", (ERROR_LOG_CHAT_ID) if ERROR_LOG_CHAT_ID else "(missing)", "Error report channel."),
         ("OWNER", (BOT_OWNER) if BOT_OWNER else "(missing)", "Owner Telegram ID."),
-        ("COHERE_KEY", "set" if COHERE_API_KEY else "(missing)", "AI provider key."),
-        ("SYSTEM_PROMPT", SYSTEM_PROMPT or "(default roleplay)", "AI system prompt."),
         ("Logs", Logs, "Error reporting enabled."),
         ("Downloader", Downloader, "Media downloader enabled."),
         ("WEB_BIND", WEB_BIND, "Panel bind address."),
