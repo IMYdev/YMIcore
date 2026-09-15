@@ -31,7 +31,6 @@ help_categories = {
     - `/wallpaper`: Sends a wallpaper.
     - `/animewall`: Sends an anime wallpaper.
     - `/sauce`: Reverse search anime from image.
-    - `/music`: Music search.
     - `/spoiler`: Resends message with spoiler.
     - `/notes`: Lists saved notes.
     """,
@@ -50,7 +49,6 @@ help_categories = {
     - `/unban`: Unban a user.
     - `/greeting`: Set welcome message.
     - `/goodbye`: Set farewell message.
-    - `/reset`: Reset bot memory.
     - `/modules`: Manage modules.
     - `/blockset`: Blacklist sticker set.
     - `/blocklist`: List blacklisted sets.

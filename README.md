@@ -14,15 +14,12 @@ It's also a ready-to-use general group management bot.
 - Custom greetings and farewell messages when a member joins or leaves (can attach pics or videos.)
 - Grab and send wallpapers from various sources, including anime-themed ones.
 - Reverse search anime pictures to identify the anime.
-- Chat with AI. Ask questions and get quick, smart answers  
 - Save, list, and remove notes inside the chat.
 - Set up automatic keyword triggers that reply with custom messages.
 - Manage chat admins. Promote, demote, ban, or unban users.
 - Pin important messages.
 - Clean up chats by deleting batches of messages at once.
-- Reset the bot’s AI memory for a fresh start whenever needed.
 - Toggle and control various bot modules for extra features or disabling unwanted ones.
-- Search for and fetch music tracks from platforms like Deezer, Spotify, and YouTube Music.
 - Grab media content from Instagram and YouTube links.
 - Ability to add spoilers to media and text.
 - Block sticker sets that are unwanted in the group chat.
@@ -48,7 +45,6 @@ Create a `.env` file or set the following environment variables:
 ```
 BOT_TOKEN=your_telegram_bot_token
 LOG_ID=logs_channel_id_without_the_minus
-COHERE_KEY=token_for_LLM_functions
 ```
 
 ### 4. Run the bot
@@ -60,7 +56,7 @@ python main.py
 ## Project Structure
 ```
 core/            # Core framework logic (database, utils.)
-modules/         # All feature modules (filters, notes, chat, etc.)
+modules/         # All feature modules (filters, notes, etc.)
 botcommands.py   # Command router.
 main.py          # Entry point.
 requirements.txt # Project dependencies.

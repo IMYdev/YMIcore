@@ -5,14 +5,11 @@ import re
 import asyncio
 from urllib.parse import urlparse, unquote
 import html
-from core.utils import (handle_errors, get_args)
+from core.utils import handle_errors
 import aiohttp
 from yt_dlp import YoutubeDL
-from innertube import InnerTube
 from telebot.types import InputMediaPhoto, InputMediaVideo
 import os
-import tempfile
-import subprocess
 
 @handle_errors
 async def extract_supported_url(m):
@@ -232,11 +229,6 @@ async def twitter_dl(m, url):
 
 @handle_errors
 async def download_yt_video(m, link):
-    if "-audio" in m.text:
-        audio_data = await download_yt_audio(m, link)
-        if audio_data: await bot.send_audio(m.chat.id, audio=audio_data, reply_to_message_id=m.message_id)
-        return
-
     opts = ytdl_opts.copy()
     opts["format"] = "18"
     with YoutubeDL(params=opts) as ydl:
@@ -249,87 +241,3 @@ async def download_yt_video(m, link):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             await bot.send_video(m.chat.id, video=await response.read(), caption=vid_cap, parse_mode="HTML")
-
-async def download_yt_audio(m, link):
-    opts = ytdl_opts.copy()
-    opts["format"] = "bestaudio/best"
-    with YoutubeDL(params=opts) as ydl:
-        info = ydl.extract_info(link, download=False)
-        audio_url = info['url']
-    async with aiohttp.ClientSession() as session:
-        async with session.get(audio_url) as response:
-            return await response.read()
-
-async def embed_metadata(audio_data, title, artist):
-    try:
-        with tempfile.NamedTemporaryFile(suffix='.audio', delete=False) as f:
-            f.write(audio_data)
-            in_path = f.name
-
-        out_path = in_path + ".mp3"
-        cmd = ['ffmpeg', '-i', in_path, '-c:a', 'libmp3lame', '-b:a', '320k', '-metadata', f'title={title}', '-metadata', f'artist={artist}', '-y', out_path]
-        
-        if subprocess.run(cmd, capture_output=True).returncode == 0:
-            os.unlink(in_path)
-            return out_path
-        os.unlink(in_path)
-    except: pass
-    return audio_data
-
-@handle_errors
-async def music_search(m):
-    if not Downloader: return
-    args = get_args(m)
-    if not args: return await bot.reply_to(m, "No song name provided.")
-
-    query = " ".join(args)
-    old = await bot.reply_to(m, "Looking for song...")
-    
-    client = InnerTube("WEB")
-    data = client.search(query=query, params="EgWKAQwI")
-    sections = data['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']
-
-    for section in sections:
-        items = section.get('itemSectionRenderer', {}).get('contents', [])
-        for item in items:
-            video = item.get('videoRenderer')
-            if not video: continue
-            
-            url = f"https://www.youtube.com/watch?v={video['videoId']}"
-            title = video.get("title", {}).get("runs", [{}])[0].get("text")
-            artist = video.get("ownerText", {}).get("runs", [{}])[0].get("text")
-            cover = video.get("thumbnail", {}).get("thumbnails", [{}])[-1].get("url")
-            
-            await fetch_music(m, url, old, f"{artist} - {title}", title, artist, cover)
-            return
-
-async def fetch_music(m, yt_url, status_msg, caption, title, artist, cover):
-    cover_path = None
-    try:
-        if cover:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(cover) as resp:
-                    if resp.status == 200:
-                        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
-                            f.write(await resp.read())
-                            cover_path = f.name
-
-        await bot.edit_message_text("Fetching from YT...", m.chat.id, status_msg.id)
-        song_data = await download_yt_audio(m, yt_url)
-
-        if song_data:
-            await bot.delete_message(m.chat.id, status_msg.id)
-            await bot.send_chat_action(m.chat.id, "upload_voice")
-            
-            processed = await embed_metadata(song_data, title, artist)
-            thumb = open(cover_path, 'rb') if cover_path else None
-            
-            audio_arg = open(processed, 'rb') if isinstance(processed, str) else processed
-            await bot.send_audio(m.chat.id, audio=audio_arg, caption=caption, thumbnail=thumb, reply_to_message_id=m.message_id)
-            if isinstance(processed, str): os.unlink(processed)
-            if thumb: thumb.close()
-        else:
-            await bot.edit_message_text("Failed to download.", m.chat.id, status_msg.id)
-
-    finally:
-        if cover_path: os.unlink(cover_path)
