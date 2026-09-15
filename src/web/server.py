@@ -74,6 +74,29 @@ def authed(fn):
     return wrapper
 
 
+_panel_user_name_cache: dict = {}
+
+
+async def panel_user_name(uid) -> str:
+    uid = str(uid)
+    cached = _panel_user_name_cache.get(uid)
+    if cached:
+        return cached
+    name = ""
+    try:
+        user = await bot.get_chat(int(uid))
+        name = " ".join(
+            p for p in (getattr(user, "first_name", None), getattr(user, "last_name", None)) if p
+        ).strip()
+        username = getattr(user, "username", None)
+        if username:
+            name = f"{name} (@{username})" if name else f"@{username}"
+    except Exception:
+        pass
+    _panel_user_name_cache[uid] = name or None
+    return name
+
+
 def csrf(fn):
     @functools.wraps(fn)
     async def wrapper(request):
@@ -84,6 +107,7 @@ def csrf(fn):
         log_event(
             "panel_action",
             user_id=request["user"]["uid"],
+            user_name=await panel_user_name(request["user"]["uid"]),
             detail=request.path,
         )
         return await fn(request)
