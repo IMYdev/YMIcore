@@ -12,11 +12,11 @@ from info import (
     TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
 )
 from web.auth import (
-    COOKIE_NAME, SESSION_TTL, USE_WIDGET,
-    activate_token, can_manage_group, delete_token, establish_session,
-    get_bot_username, is_owner, issue_admin_token, list_tokens, lookup_token,
+    COOKIE_NAME, SESSION_TTL,
+    activate_token, can_manage_group, delete_token,
+    is_owner, issue_admin_token, list_tokens, lookup_token,
     make_session, read_session, revoke_token, token_digest, valid_login_link,
-    verify_csrf, verify_tg_widget,
+    verify_csrf,
 )
 from web.groups import (
     ban_group, banned_groups, group_title, list_groups, record_group, unban_group,
@@ -162,17 +162,7 @@ async def index(request):
 
 
 async def render_login(request, error=None):
-    ctx = {"error": error, "use_widget": False}
-    if USE_WIDGET:
-        try:
-            ctx.update(
-                use_widget=True,
-                tg_bot_username=await get_bot_username(),
-                widget_auth_url=f"{WEB_URL}/auth/telegram",
-            )
-        except Exception:
-            ctx["use_widget"] = False
-    return render(request, "login.html", **ctx)
+    return render(request, "login.html", error=error)
 
 
 async def auth_token(request):
@@ -182,17 +172,6 @@ async def auth_token(request):
     if record is None:
         return await render_login(request, error="Invalid or revoked token. Send /panel again.")
     cookie, _ = make_session(record["uid"], token_digest(token))
-    resp = web.HTTPFound("/panel")
-    set_cookie(resp, cookie)
-    return resp
-
-
-async def auth_telegram(request):
-    params = {k: v for k, v in request.query.items()}
-    uid = verify_tg_widget(params)
-    if uid is None:
-        return await render_login(request, error="Telegram sign-in failed.")
-    cookie, _ = establish_session(uid)
     resp = web.HTTPFound("/panel")
     set_cookie(resp, cookie)
     return resp
@@ -677,7 +656,6 @@ def create_app() -> web.Application:
     app.add_routes([
         web.get("/", index),
         web.post("/auth/token", auth_token),
-        web.get("/auth/telegram", auth_telegram),
         web.post("/auth/logout", logout),
         web.get("/tokens", admin_tokens),
         web.post("/tokens/create", admin_tokens_create),

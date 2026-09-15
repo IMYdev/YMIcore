@@ -6,14 +6,12 @@ import secrets
 import time
 from urllib.parse import urlsplit, parse_qs
 
-from info import WEB_BIND, WEB_PORT, WEB_URL, WEB_SECRET, TOKEN, BOT_OWNER, bot
+from info import BOT_OWNER, WEB_SECRET
 from core.imysdb import IMYDB
 from core.utils import is_user_admin
 
 COOKIE_NAME = "ymicore_panel"
 SESSION_TTL = 60 * 60 * 24 * 7
-PANEL_BASE = WEB_URL or f"http://{WEB_BIND}:{WEB_PORT}"
-USE_WIDGET = bool(WEB_URL and WEB_URL.startswith("https"))
 
 
 def _b64(data: bytes) -> str:
@@ -168,18 +166,6 @@ def _prune_legacy_tokens() -> None:
             db.delete(f"tokens.{digest}")
 
 
-def establish_session(uid):
-    """Bind a session to an active token, creating one if the user has none."""
-    digest = None
-    for record in list_tokens():
-        if record["uid"] == int(uid) and record["active"]:
-            digest = record["digest"]
-            break
-    if digest is None:
-        digest = record_token(secrets.token_urlsafe(32), uid, "telegram-widget")
-    return make_session(uid, digest)
-
-
 # --------------------------------------------------------------------------
 # Sessions
 # --------------------------------------------------------------------------
@@ -232,21 +218,3 @@ def valid_login_link(token: str) -> str:
         params = parse_qs(parsed.query)
         return params.get("t", [""])[0]
     return token
-
-
-def verify_tg_widget(params: dict) -> int | None:
-    allowed = ("auth_date", "first_name", "id", "last_name", "username")
-    data_check_string = "\n".join(
-        f"{k}={params[k]}" for k in sorted(k for k in allowed if k in params)
-    )
-    secret = hmac.new(b"WebAppData", TOKEN.encode(), hashlib.sha256).digest()
-    digest = hmac.new(secret, data_check_string.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(digest, params.get("hash", "")):
-        return None
-    if int(params.get("auth_date", 0)) < int(time.time()) - 300:
-        return None
-    return int(params.get("id", 0))
-
-
-async def get_bot_username() -> str:
-    return (await bot.get_me()).username

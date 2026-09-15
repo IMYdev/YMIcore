@@ -39,28 +39,6 @@ def test_is_owner():
     assert not auth.is_owner("123")
 
 
-def test_tg_widget_known_vector():
-    params = {
-        "auth_date": "2147483647",
-        "first_name": "Bob",
-        "id": "12345",
-        "username": "bob",
-        "hash": "d465d5eb99360ca3d13510d71c3301ded60aafdcb0b8e8696bff233ba6414c55",
-    }
-    assert auth.verify_tg_widget(params) == 12345
-
-
-def test_tg_widget_bad_hash():
-    params = {
-        "auth_date": "2147483647",
-        "first_name": "Bob",
-        "id": "12345",
-        "username": "bob",
-        "hash": "0000",
-    }
-    assert auth.verify_tg_widget(params) is None
-
-
 # --------------------------------------------------------------------------
 # Persistent admin tokens (file-backed)
 # --------------------------------------------------------------------------
@@ -133,13 +111,3 @@ def test_ensure_owner_token_idempotent(tmp_path, monkeypatch):
     assert auth.lookup_token(token)["uid"] == int(os.environ["OWNER"])
     _, created_again = auth.ensure_owner_token()
     assert not created_again
-
-
-def test_establish_session_reuses_then_mints(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    token, digest = auth.issue_admin_token(7)
-    cookie, _ = auth.establish_session(7)
-    assert auth.read_session(cookie)["tk"] == digest
-    cookie2, _ = auth.establish_session(8)
-    assert auth.read_session(cookie2) is not None
-    assert auth.read_session(cookie2)["tk"] != digest

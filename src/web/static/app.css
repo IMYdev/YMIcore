@@ -90,11 +90,6 @@
   min-height: 0;
 }
 
-.tgme_widget {
-  display: flex;
-  justify-content: center;
-}
-
 /* ------------------------------------------------------------------
    Toggle rows (module/command switches)
    ------------------------------------------------------------------ */

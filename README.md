@@ -52,7 +52,7 @@ Optional web panel settings:
 ```
 WEB_BIND=127.0.0.1   # panel bind address
 WEB_PORT=8080        # panel port
-WEB_URL=https://your.host  # public panel URL (needed for the Telegram sign-in widget)
+WEB_URL=https://your.host  # public panel URL (used in /panel login links)
 WEB_SECRET=random_secret   # optional; a fresh random secret is generated per boot if unset
 ```
 

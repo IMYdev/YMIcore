@@ -29,14 +29,6 @@
       </div>
       <button class="lecp-btn lecp-btn--primary" type="submit" data-submitting>Open panel</button>
     </form>
-
-    {% if use_widget %}
-    <div class="lecp-mt-6">
-      <p class="lecp-caption lecp-mb-3">or sign in with Telegram:</p>
-      <script async src="https://telegram.org/js/telegram-widget.js?22"></script>
-      <div class="tgme_widget" data-telegram-login="{{ tg_bot_username }}" data-size="large" data-auth-url="{{ widget_auth_url }}"></div>
-    </div>
-    {% endif %}
   </div>
 </main>
 <script src="/static/app.js"></script>
