@@ -20,7 +20,7 @@ It's also a ready-to-use general group management bot.
 - Pin important messages.
 - Clean up chats by deleting batches of messages at once.
 - Toggle and control various bot modules for extra features or disabling unwanted ones.
-- Grab media content from Instagram and YouTube links.
+- Grab media content from Instagram, Facebook, and Twitter/X links.
 - Ability to add spoilers to media and text.
 - Block sticker sets that are unwanted in the group chat.
 

@@ -88,7 +88,7 @@ async def reply_message(m):
     record_group(m.chat.id, getattr(m.chat, "title", None))
     await reply_to_filter(m)
     await get_notes(m)
-    supported_platforms = ["instagram.com", "youtube.com", "youtu.be", "facebook.com", "twitter.com", "x.com"]
+    supported_platforms = ["instagram.com", "facebook.com", "twitter.com", "x.com"]
     if m.text and any(platform in m.text for platform in supported_platforms):
         if await is_module_enabled_in_group('autodl', m.chat.id):
             await extract_supported_url(m)

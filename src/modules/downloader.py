@@ -22,10 +22,7 @@ async def extract_supported_url(m):
 
     url = match.group(0)
 
-    if "youtube.com" in url or "youtu.be" in url:
-        await download_yt_video(m, url)
-
-    elif "instagram.com" in url:
+    if "instagram.com" in url:
         await instagram_dl(m, url.split("?", 1)[0])
 
     elif "facebook.com" in url:
@@ -226,18 +223,3 @@ async def twitter_dl(m, url):
             await bot.send_photo(m.chat.id, photo=fix_url)
         else:
             raise e
-
-@handle_errors
-async def download_yt_video(m, link):
-    opts = ytdl_opts.copy()
-    opts["format"] = "18"
-    with YoutubeDL(params=opts) as ydl:
-        info = ydl.extract_info(link, download=False)
-        file_size = info.get("filesize") or info.get("filesize_approx")
-        if file_size and file_size > 52428800: return
-        vid_cap = f"{info.get('title')}\n{hlink('Source', link, escape=False)}"
-        url = info.get("url")
-    
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            await bot.send_video(m.chat.id, video=await response.read(), caption=vid_cap, parse_mode="HTML")
