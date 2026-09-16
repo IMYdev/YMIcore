@@ -5,28 +5,8 @@
 }
 
 /* ------------------------------------------------------------------
-   Layout shell
+   Layout shell (uses LECP .lecp-shell / .lecp-rail)
    ------------------------------------------------------------------ */
-
-.layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  min-height: 100vh;
-}
-
-.nav-panel {
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  gap: var(--lecp-space-6);
-  padding: var(--lecp-space-5);
-  border-right: 1px solid var(--lecp-line);
-  box-sizing: border-box;
-  overflow-y: auto;
-}
 
 .brand {
   font-size: var(--lecp-type-title);
@@ -187,22 +167,37 @@
    ------------------------------------------------------------------ */
 
 @media (max-width: 719px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .nav-panel {
-    position: static;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--lecp-line);
-  }
-
-  .nav-footer {
-    margin-top: 0;
-  }
-
+  /* LECP collapses the rail and turns .lecp-nav into a fixed bottom
+     tab bar; clear the page's bottom edge so content is not hidden
+     behind it. */
   .page {
-    padding-top: var(--lecp-space-6);
+    padding-bottom: calc(var(--lecp-space-7) + var(--lecp-space-5));
+  }
+
+  /* In-page tab rows must not become a fixed bottom bar — that slot
+     is reserved for the rail nav. Keep them as a wrapping row. */
+  .lecp-nav--tabs {
+    position: static;
+    z-index: auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--lecp-space-2);
+    padding: 0;
+    background: none;
+    border-top: 0;
+    overflow-x: auto;
+  }
+
+  .lecp-nav--tabs .lecp-nav-item {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--lecp-space-2);
+    padding: var(--lecp-space-2) var(--lecp-space-4);
+    text-align: left;
+  }
+
+  .lecp-nav--tabs .lecp-nav-item-label {
+    display: inline;
   }
 }

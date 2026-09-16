@@ -46,20 +46,20 @@
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <input type="hidden" name="digest" value="{{ t.digest }}">
           <input type="hidden" name="action" value="revoke">
-          <button class="lecp-btn lecp-btn--sm lecp-btn--ghost" type="submit">Revoke</button>
+          <button class="lecp-btn lecp-btn--xs lecp-btn--ghost" type="submit">Revoke</button>
         </form>
         {% else %}
         <form method="post" action="/tokens/status">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <input type="hidden" name="digest" value="{{ t.digest }}">
           <input type="hidden" name="action" value="activate">
-          <button class="lecp-btn lecp-btn--sm lecp-btn--ghost" type="submit">Activate</button>
+          <button class="lecp-btn lecp-btn--xs lecp-btn--ghost" type="submit">Activate</button>
         </form>
         {% endif %}
         <form method="post" action="/tokens/delete">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <input type="hidden" name="digest" value="{{ t.digest }}">
-          <button class="lecp-btn lecp-btn--sm lecp-btn--danger" type="submit" data-confirm="Permanently delete this token?">Delete</button>
+          <button class="lecp-btn lecp-btn--xs lecp-btn--danger" type="submit" data-confirm="Permanently delete this token?">Delete</button>
         </form>
       </div>
     </div>

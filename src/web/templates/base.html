@@ -12,8 +12,8 @@
 </head>
 <body>
 <a class="lecp-skip-link" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="nav-panel" aria-label="Primary">
+<div class="lecp-shell">
+  <aside class="lecp-rail" aria-label="Primary">
     <a class="brand" href="/panel">YMI<span class="brand-dot">.</span></a>
     <nav class="lecp-nav" aria-label="Panel">
       <a class="lecp-nav-item {{ 'is-active' if active == 'dashboard' }}" href="/panel">
@@ -49,10 +49,12 @@
       </form>
     </div>
   </aside>
-  <div class="page">
-    <main id="main" class="lecp-container page-main">
-      {% block content %}{% endblock %}
-    </main>
+  <div class="lecp-shell-content">
+    <div class="page">
+      <main id="main" class="lecp-container page-main">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
   </div>
 </div>
 {% if saved %}
