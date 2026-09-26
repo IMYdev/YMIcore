@@ -9,6 +9,7 @@ from modules.member import (
 from module_manager import send_module_keyboard
 from modules.greetings import (set_greeting, set_goodbye, set_captcha, captcha_toggle)
 from modules.blocklist import (block_set, unblock_set, get_blacklist)
+from modules.broadcast import (broadcast_command, broadcast_delete, broadcast_list, subscribe, unsubscribe)
 from web.panel import panel_command
 
 COMMANDS = {
@@ -41,7 +42,12 @@ COMMANDS = {
     "unblockset": unblock_set,
     "setcaptcha": set_captcha,
 "captcha": captcha_toggle,
-    "panel": panel_command
+    "panel": panel_command,
+    "broadcast": broadcast_command,
+    "bcast_list": broadcast_list,
+    "bcast_delete": broadcast_delete,
+    "sub": subscribe,
+    "unsub": unsubscribe,
 }
 
 async def handle_command(message):

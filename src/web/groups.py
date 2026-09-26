@@ -12,11 +12,13 @@ def _banned_db() -> IMYDB:
     return IMYDB(BANNED_PATH)
 
 
-def record_group(chat_id, title) -> None:
+def record_group(chat_id, title, chat_type=None) -> None:
     db = _db()
     gid = str(chat_id)
     if db.get(f"groups.{gid}.title") != title:
         db.set(f"groups.{gid}.title", title or f"Group {gid.lstrip('-')}")
+    if chat_type and db.get(f"groups.{gid}.type") != chat_type:
+        db.set(f"groups.{gid}.type", chat_type)
 
 
 def group_title(gid) -> str:

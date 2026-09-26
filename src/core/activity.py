@@ -14,6 +14,7 @@ EVENT_TYPES = (
     "captcha_pass",
     "captcha_fail",
     "panel_action",
+    "broadcast",
 )
 
 _last_pruned = None
