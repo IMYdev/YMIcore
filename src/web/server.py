@@ -23,7 +23,10 @@ from web.groups import (
 )
 from web import settings_registry as registry
 from web.media import is_file_field, relay_to_telegram
+from core import broadcast
 from core.activity import log_event, read_events, stats as activity_stats
+from core.formatting import markdown_to_html
+from core.users import audience_counts, normalise_segment
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -297,6 +300,7 @@ _EVENT_LABELS = [
     ("Captcha passes", "captcha_pass"),
     ("Captcha failures", "captcha_fail"),
     ("Panel actions", "panel_action"),
+    ("Broadcasts", "broadcast"),
 ]
 
 
@@ -365,6 +369,132 @@ async def unban_group_route(request):
     gid = request["form"].get("gid", "").strip().lower()
     unban_group(gid)
     raise web.HTTPFound(saved_url("/banned"))
+
+
+# --------------------------------------------------------------------------
+# Broadcasts (owner)
+# --------------------------------------------------------------------------
+
+def _broadcast_context(**overrides) -> dict:
+    ctx = {
+        "active": "broadcast",
+        "pending": None,
+        "pending_html": "",
+        "token": "",
+        "draft": {},
+        "counts": {segment: audience_counts(segment) for segment in ("both", "users", "groups")},
+        "history": broadcast.list_broadcasts(limit=20),
+        "running": broadcast.active_broadcast(),
+        "ttl_minutes": broadcast.PENDING_TTL // 60,
+        "retention_days": broadcast.RETENTION_DAYS,
+        "errors": {},
+        "saved": False,
+    }
+    ctx.update(overrides)
+    return ctx
+
+
+@authed
+@owner_only
+async def broadcast_page(request):
+    token = request.query.get("preview", "").strip()
+    pending = broadcast.get_pending(token) if token else None
+    ctx = _broadcast_context(
+        pending=pending, token=token if pending else "",
+        pending_html=markdown_to_html((pending or {}).get("text") or ""),
+        saved="saved" in request.query,
+    )
+    return render(request, "broadcast.html", **ctx)
+
+
+@authed
+@owner_only
+@csrf
+async def broadcast_preview(request):
+    form = request["form"]
+    text = form.get("text", "").strip()
+    segment = normalise_segment(form.get("segment", "both"))
+    label = form.get("button_text", "").strip()
+    url = form.get("button_url", "").strip()
+    draft = {"text": form.get("text", ""), "segment": segment,
+             "button_text": label, "button_url": url}
+
+    error = None
+    media = None
+    upload = form.get("media")
+    if is_file_field(upload):
+        media = await relay_to_telegram(upload, request["user"]["uid"])
+        if media is None:
+            error = "That upload could not be sent to Telegram. Try a different file."
+
+    button = None
+    if label or url:
+        if not label:
+            error = error or "Give the button a label."
+        elif not re.fullmatch(r"https?://\S+", url):
+            error = error or "Button URL must start with http:// or https://"
+        else:
+            button = {"text": label, "url": url}
+
+    if not error and not text and not media:
+        error = "Write a message or attach a file."
+    if not error and not audience_counts(segment)["total"]:
+        error = "Nobody to broadcast to yet."
+
+    if error:
+        return render(request, "broadcast.html",
+                      **_broadcast_context(errors={"form": error}, draft=draft))
+
+    token = broadcast.stage_pending(
+        text, media=media, segment=segment, button=button,
+        preview=form.get("preview") == "on",
+    )
+    raise web.HTTPFound(f"/broadcast?preview={token}")
+
+
+@authed
+@owner_only
+@csrf
+async def broadcast_send(request):
+    token = request["form"].get("token", "").strip()
+    pending = broadcast.get_pending(token)
+    if pending is None:
+        return render(request, "broadcast.html",
+                      **_broadcast_context(errors={"form": "That preview has expired."}))
+    if broadcast.is_running():
+        return render(request, "broadcast.html",
+                      **_broadcast_context(errors={"form": "A broadcast is already running."}))
+
+    record = broadcast.create_broadcast(
+        pending.get("text"), media=pending.get("media"), segment=pending.get("segment"),
+        button=pending.get("button"), preview=pending.get("preview", True),
+    )
+    broadcast.clear_pending(token)
+
+    owner = int(request["user"]["uid"])
+    status = await bot.send_message(owner, f"Broadcast #{record['id']} starting…")
+    broadcast.start_delivery(record["id"], owner, status.message_id, owner_id=owner)
+    raise web.HTTPFound(saved_url("/broadcast"))
+
+
+@authed
+@owner_only
+@csrf
+async def broadcast_cancel(request):
+    broadcast.clear_pending(request["form"].get("token", "").strip())
+    raise web.HTTPFound("/broadcast")
+
+
+@authed
+@owner_only
+@csrf
+async def broadcast_delete(request):
+    broadcast_id = request["form"].get("id", "").strip()
+    if not broadcast_id.isdigit() or broadcast.get_broadcast(int(broadcast_id)) is None:
+        return render(request, "broadcast.html",
+                      **_broadcast_context(errors={"form": "Unknown broadcast."}))
+    await broadcast.recall(int(broadcast_id))
+    raise web.HTTPFound(saved_url("/broadcast"))
 
 
 # --------------------------------------------------------------------------
@@ -667,6 +797,11 @@ def create_app() -> web.Application:
         web.get("/banned", banned_groups_page),
         web.post("/banned/ban", ban_group_route),
         web.post("/banned/unban", unban_group_route),
+        web.get("/broadcast", broadcast_page),
+        web.post("/broadcast/preview", broadcast_preview),
+        web.post("/broadcast/send", broadcast_send),
+        web.post("/broadcast/cancel", broadcast_cancel),
+        web.post("/broadcast/delete", broadcast_delete),
         web.get("/groups/{gid}", lambda r: web.HTTPFound(f"/groups/{r.match_info['gid']}/modules")),
         web.get("/groups/{gid}/modules", group_modules),
         web.post("/groups/{gid}/modules", group_modules_save),

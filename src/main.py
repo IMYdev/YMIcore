@@ -5,6 +5,7 @@ from info import (bot, BOT_OWNER)
 from core.imysdb import IMYDB
 from core.utils import handle_errors
 from core.activity import (log_event, user_label, chat_label)
+from core.users import record_user
 from modules.downloader import extract_supported_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
@@ -13,8 +14,17 @@ from module_manager import (create_command_list_keyboard, modules, create_module
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block
+from modules.broadcast import handle_broadcast_callback
 from web.groups import record_group
 from web.server import start_web_server
+
+
+def track_sender(m):
+    """Remember the chat and, for private chats, the user behind it."""
+    record_group(m.chat.id, getattr(m.chat, "title", None), getattr(m.chat, "type", None))
+    if getattr(m.chat, "type", None) == 'private':
+        record_user(getattr(m.from_user, "id", None),
+                    user_label(m.from_user), getattr(m.from_user, "username", None))
 
 async def is_module_enabled_in_group(command, chat_id):
     db = IMYDB('runtime/modules/module_controller.json')
@@ -26,7 +36,7 @@ async def is_module_enabled_in_group(command, chat_id):
 @bot.message_handler(commands=list(COMMANDS.keys()))
 @handle_errors
 async def cmd_handler(m):
-    record_group(m.chat.id, getattr(m.chat, "title", None))
+    track_sender(m)
 
     db = IMYDB('runtime/banned/groups.json')
     banned_groups = db.get("groups.group_ids", [])
@@ -85,7 +95,7 @@ async def chat_m(m: types.ChatMemberUpdated):
 
 @bot.message_handler()
 async def reply_message(m):
-    record_group(m.chat.id, getattr(m.chat, "title", None))
+    track_sender(m)
     await reply_to_filter(m)
     await get_notes(m)
     supported_platforms = ["instagram.com", "facebook.com", "twitter.com", "x.com"]
@@ -141,6 +151,10 @@ async def handle_back_to_modules_callback(call):
     group_id = call.data.split(":")[1]
     keyboard = create_module_list_keyboard(group_id)
     await bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("bc_"))
+async def broadcast_callback(call):
+    await handle_broadcast_callback(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("v_cap:"))
 async def verify_captcha(call):

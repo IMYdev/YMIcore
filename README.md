@@ -23,6 +23,7 @@ It's also a ready-to-use general group management bot.
 - Grab media content from Instagram, Facebook, and Twitter/X links.
 - Ability to add spoilers to media and text.
 - Block sticker sets that are unwanted in the group chat.
+- Send an update or news broadcast to everyone who has interacted with the bot, from Telegram (`/broadcast`) or the web panel. (Must be owner of bot instance)
 
 ## Quick Start
 

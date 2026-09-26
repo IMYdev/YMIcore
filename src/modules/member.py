@@ -55,6 +55,11 @@ help_categories = {
     - `/setcaptcha`: Set captcha question.
     - `/captcha`: Toggle captcha feature.
     - `/panel`: Open the settings web panel.
+    - `/broadcast [users|groups] <message>`: Send an update to everyone (owner).
+    - `/bcast_list`: List recent broadcasts (owner).
+    - `/bcast_delete <id>`: Delete a broadcast from every chat (owner).
+    - `/unsub`: Stop receiving broadcasts.
+    - `/sub`: Resume receiving broadcasts.
     """
 }
 

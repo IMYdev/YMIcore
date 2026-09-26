@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="lecp-eyebrow">Owner</p>
+<h1 class="lecp-title">Broadcast</h1>
+<p class="lecp-body lecp-mt-3">Share an update with everyone who has interacted with the bot. Only people who have
+talked to the bot before are ever contacted.</p>
+
+{% if errors.form %}<p class="lecp-field-error-text lecp-mb-5" role="alert">⚠ {{ errors.form }}</p>{% endif %}
+
+{% if running %}
+<div class="lecp-tile lecp-tile--s lecp-mt-5" role="status">
+  <h3 class="lecp-tile-label">Broadcast #{{ running.id }} running</h3>
+  <span class="lecp-body">{{ running.done }}/{{ running.total }} chats &middot; {{ running.sent }} sent &middot;
+    {{ running.failed }} failed &middot; {{ running.dead }} unreachable</span>
+  <span class="lecp-caption">Progress also updates in your private chat with the bot.</span>
+</div>
+{% endif %}
+
+{% if pending %}
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title">Confirm</h2>
+  <p class="lecp-body lecp-mt-3">This is exactly what recipients receive. It expires in
+    {{ ttl_minutes }} minutes.</p>
+
+  <div class="lecp-tile lecp-tile--s lecp-mt-4">
+    <span class="lecp-meta">Audience &middot; {{ pending.segment }}</span>
+    <h3 class="lecp-tile-label">
+      {{ counts[pending.segment].users }} users &middot; {{ counts[pending.segment].groups }} groups
+    </h3>
+    {% if pending.media %}
+    <span class="lecp-caption">Includes a {{ pending.media.type }}.</span>
+    {% endif %}
+    {% if pending.button %}
+    <span class="lecp-caption">Button: {{ pending.button.text }} &rarr; {{ pending.button.url }}</span>
+    {% endif %}
+    {% if not pending.preview %}
+    <span class="lecp-caption">Link previews are disabled.</span>
+    {% endif %}
+  </div>
+
+    <div class="lecp-field lecp-mt-5">
+      <span class="lecp-label">Message</span>
+      <div class="lecp-input" id="markdown-preview">{{ pending_html | safe }}</div>
+    </div>
+
+  <div class="lecp-flex lecp-gap-4 lecp-mt-5">
+    <form method="post" action="/broadcast/send" data-submitting>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <button class="lecp-btn lecp-btn--primary" type="submit">Send now</button>
+    </form>
+    <form method="post" action="/broadcast/cancel" data-submitting>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <button class="lecp-btn lecp-btn--ghost" type="submit">Cancel</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title">Compose</h2>
+  <form method="post" action="/broadcast/preview" class="lecp-grid lecp-mt-4" data-submitting
+        enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+
+    <div class="lecp-field lecp-col-12">
+      <label class="lecp-label" for="text">Message</label>
+      <textarea class="lecp-input" id="text" name="text" rows="6"
+                placeholder="Bold with **bold**, links with [text](https://example.com)">{{ draft.text or '' }}</textarea>
+    </div>
+
+    <div class="lecp-field lecp-col-12 lecp-col-s-4">
+      <label class="lecp-label" for="media">Attachment <span class="lecp-caption">(optional)</span></label>
+      <input class="lecp-input" id="media" name="media" type="file">
+    </div>
+
+    <div class="lecp-field lecp-col-12 lecp-col-s-4">
+      <label class="lecp-label" for="segment">Audience</label>
+      <select class="lecp-input" id="segment" name="segment">
+        <option value="both" {{ 'selected' if draft.segment in (None, '', 'both') }}>
+          Users and groups ({{ counts.both.total }})
+        </option>
+        <option value="users" {{ 'selected' if draft.segment == 'users' }}>
+          Users only ({{ counts.users.total }})
+        </option>
+        <option value="groups" {{ 'selected' if draft.segment == 'groups' }}>
+          Groups only ({{ counts.groups.total }})
+        </option>
+      </select>
+    </div>
+
+    <div class="lecp-field lecp-col-12 lecp-col-s-4">
+      <label class="lecp-label" for="button_text">Button <span class="lecp-caption">(optional)</span></label>
+      <input class="lecp-input" id="button_text" name="button_text" type="text"
+             placeholder="Read more" value="{{ draft.button_text or '' }}">
+      <input class="lecp-input lecp-mt-2" id="button_url" name="button_url" type="url"
+             placeholder="https://example.com" value="{{ draft.button_url or '' }}">
+    </div>
+
+    <div class="lecp-field lecp-col-12 lecp-col-s-8">
+      <label class="lecp-flex lecp-items-center lecp-gap-3" for="preview">
+        <input id="preview" type="checkbox" name="preview" value="on" checked>
+        <span class="lecp-caption">Show link previews</span>
+      </label>
+    </div>
+
+    <div class="lecp-field lecp-col-12 lecp-col-s-4">
+      <label class="lecp-label">&nbsp;</label>
+      <button class="lecp-btn lecp-btn--primary" type="submit">Preview</button>
+    </div>
+  </form>
+</section>
+
+<section class="lecp-mt-7">
+  <h2 class="lecp-section-title">Recent broadcasts</h2>
+  <p class="lecp-body lecp-mt-3">Kept for {{ retention_days }} days. Deleting removes the message from every chat it reached.</p>
+
+  <div class="list-rows lecp-mt-5">
+    {% for record in history %}
+    <div class="list-row">
+      <div class="lecp-flex-grow">
+        <span class="lecp-meta">#{{ record.id }} &middot; {{ record.created_at | ts }} &middot; {{ record.segment }}</span>
+        <h3 class="lecp-tile-label">{{ record.sent }} sent &middot; {{ record.failed }} failed
+          &middot; {{ record.dead }} unreachable</h3>
+        <span class="lecp-caption">{{ record.text | truncate(90) }}</span>
+        {% if record.recalled %}
+        <span class="lecp-badge lecp-mt-2">recalled</span>
+        {% endif %}
+      </div>
+      {% if record.deliveries %}
+      <form method="post" action="/broadcast/delete" data-submitting>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="id" value="{{ record.id }}">
+        <button class="lecp-btn lecp-btn--danger lecp-btn--sm" type="submit"
+                data-confirm="Delete broadcast #{{ record.id }} from {{ record.deliveries | length }} chats?">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="lecp-caption">No broadcasts sent yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
