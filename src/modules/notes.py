@@ -128,4 +128,4 @@ async def devgroup_command(message):
         return await bot.reply_to(message, "Only the group owner can toggle developer mode.")
     enabled = args[0] == "on"
     set_developer_group(chat_id, enabled)
-    await bot.reply_to(message, f"Developer mode {'enabled' if enabled else 'disabled'}.")
+    await bot.reply_to(message, f"Developer group mode {'enabled' if enabled else 'disabled'}.")
