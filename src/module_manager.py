@@ -10,7 +10,7 @@ modules = {
     'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge'],
     'notes' : ['notes', 'add', 'remove'],
     'filters': ['filter', 'filist', 'stop'],
-    'greetings': ['greeting', 'goodbye', 'setcaptcha', 'captcha'],
+    'greetings': ['greeting', 'goodbye', 'setcaptcha', 'captcha', 'addcaptcha', 'delcaptcha', 'captchalist', 'captchatries'],
     'downloader': ['autodl'],
     'general': ['start', 'info', 'wallpaper', 'help', 'modules', 'id', 'spoiler', 'blockset', 'blocklist', 'unblockset'],
 }

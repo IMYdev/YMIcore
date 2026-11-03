@@ -79,23 +79,22 @@
       <input type="checkbox" name="enabled" {{ 'checked' if captcha.enabled }}>
       <span class="toggle-label">Require captcha for new members</span>
     </label>
+    <p class="lecp-caption">Verification happens in a private chat with the bot. Time limit: 3 minutes. 3 kicks = ban.</p>
     <div class="lecp-grid lecp-mt-5">
+      {% for i in [1,2,3] %}
       <div class="lecp-field lecp-col-12 lecp-col-s-6">
-        <label class="lecp-label" for="question">Question</label>
-        <input class="lecp-input" id="question" name="question" type="text" value="{{ captcha.question }}" placeholder="Are you human?">
+        <span class="lecp-label">Question {{ i }}</span>
+        <input class="lecp-input" name="q{{ i }}_question" type="text" value="{{ captcha.slots[i-1].q if captcha.slots else '' }}" placeholder="Question {{ i }}">
+        <label class="lecp-label lecp-mt-3" for="q{{ i }}_options">Options (one per line)</label>
+        <textarea class="lecp-textarea" name="q{{ i }}_options" id="q{{ i }}_options" style="min-height:60px">{{ captcha.slots[i-1].opts if captcha.slots else '' }}</textarea>
+        <label class="lecp-label lecp-mt-3" for="q{{ i }}_answer">Correct answer</label>
+        <input class="lecp-input" name="q{{ i }}_answer" id="q{{ i }}_answer" type="text" value="{{ captcha.slots[i-1].ans if captcha.slots else '' }}" placeholder="Correct answer">
       </div>
-      <div class="lecp-field lecp-col-12 lecp-col-s-6">
-        <label class="lecp-label" for="answer">Correct answer</label>
-        <input class="lecp-input" id="answer" name="answer" type="text" value="{{ captcha.answer }}" placeholder="Yes">
-      </div>
-      <div class="lecp-field lecp-col-12 lecp-col-s-6">
-        <label class="lecp-label" for="options">Options (one per line)</label>
-        <textarea class="lecp-textarea" id="options" name="options" style="min-height:90px">{{ captcha.options|join('\n') }}</textarea>
-      </div>
-      <div class="lecp-field lecp-col-12 lecp-col-s-6">
-        <label class="lecp-label" for="tries">Max attempts</label>
-        <input class="lecp-input" id="tries" name="tries" type="number" min="1" value="{{ captcha.tries }}">
-      </div>
+      {% endfor %}
+    </div>
+    <div class="lecp-field lecp-col-12 lecp-col-s-6">
+      <label class="lecp-label" for="tries">Max attempts</label>
+      <input class="lecp-input" id="tries" name="tries" type="number" min="1" value="{{ captcha.tries }}">
     </div>
     <button class="lecp-btn lecp-btn--primary" type="submit">Save captcha</button>
   </form>

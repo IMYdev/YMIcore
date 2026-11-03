@@ -9,13 +9,14 @@ def test_validate_message_template():
 
 
 def test_validate_captcha():
-    options = ["Yes", "No"]
-    assert registry.validate_captcha("Human?", options, "Yes", "3") is None
-    assert registry.validate_captcha("", options, "Yes", "3") is not None
-    assert registry.validate_captcha("Human?", ["Only"], "Only", "3") is not None
-    assert registry.validate_captcha("Human?", options, "Maybe", "3") is not None
-    assert registry.validate_captcha("Human?", options, "Yes", "abc") is not None
-    assert registry.validate_captcha("Human?", options, "Yes", "0") is not None
+    q1 = [{"q":"Human?","opts":["Yes","No"],"ans":"Yes"}]
+    assert registry.validate_captcha(q1, "3") is None
+    assert registry.validate_captcha([], "3") is not None
+    assert registry.validate_captcha([{"q":"x","opts":["a"],"ans":"a"}], "3") is not None
+    assert registry.validate_captcha([{"q":"x","opts":["Yes","No"],"ans":"Maybe"}], "3") is not None
+    assert registry.validate_captcha(q1, "abc") is not None
+    assert registry.validate_captcha(q1, "0") is not None
+    assert registry.validate_captcha(q1 + [{"q":"Q","opts":["A","B"],"ans":"A"}] * 3, "3") is not None
 
 
 def test_validate_named_text():
@@ -119,10 +120,11 @@ def test_greetings_set_media(tmp_path, monkeypatch):
 def test_captcha_save(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     gid = "-100666"
-    registry.save_captcha(gid, "Human?", ["Yes", "No"], "Yes", 2)
+    q = [{"q":"Human?","opts":["Yes","No"],"ans":"Yes"}]
+    registry.save_captcha(gid, q, 2)
     registry.set_captcha_enabled(gid, True)
     data = registry.read_greetings(gid)
-    assert data["captcha_q"] == "Human?"
-    assert data["captcha_opts"] == ["Yes", "No"]
+    assert data.get("captcha_questions") == q
     assert data["captcha_max_tries"] == 2
     assert data["captcha_enabled"] is True
+    assert "captcha_q" not in data or data.get("captcha_q") is None

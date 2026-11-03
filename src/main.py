@@ -158,52 +158,15 @@ async def broadcast_callback(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("v_cap:"))
 async def verify_captcha(call):
-    _, answer, user_id = call.data.split(":")
-    if str(call.from_user.id) != user_id:
-        return await bot.answer_callback_query(call.id, "This isn't your captcha!", show_alert=True)
+    from modules.captcha import handle_captcha_callback
+    await handle_captcha_callback(call)
 
-    chat_id_str = str(call.message.chat.id).lstrip('-')
-    db = IMYDB(f'runtime/greetings/{chat_id_str}_greetings.json')
-
-    max_tries = db.get('captcha_max_tries', 1)
-    user_attempts = db.get('user_attempts', {})
-    current_count = user_attempts.get(user_id, 0)
-
-    if answer == db.get('captcha_ans'):
-        await bot.restrict_chat_member(call.message.chat.id, int(user_id), 
-            permissions=ChatPermissions(can_send_messages=True, can_send_polls=True, 
-                                        can_send_other_messages=True, can_add_web_page_previews=True))
-        await bot.delete_message(call.message.chat.id, call.message.message_id)
-        await bot.answer_callback_query(call.id, "Correct! Welcome.")
-        log_event(
-            "captcha_pass",
-            chat_id=call.message.chat.id, chat_name=chat_label(call.message.chat),
-            user_id=call.from_user.id, user_name=user_label(call.from_user),
-            detail=answer,
-        )
-        await send_standard_greeting(call.message.chat.id, call.from_user, db)
-    else:
-        current_count += 1
-        if current_count >= max_tries:
-            await bot.answer_callback_query(call.id, "Too many failed attempts! You have been removed.", show_alert=True)
-            await bot.ban_chat_member(call.message.chat.id, int(user_id))
-            await bot.unban_chat_member(call.message.chat.id, int(user_id))
-            await bot.delete_message(call.message.chat.id, call.message.message_id)
-        else:
-            user_attempts[user_id] = current_count
-            db.set('user_attempts', user_attempts)
-            await bot.answer_callback_query(call.id, f"Wrong! {max_tries - current_count} attempts left.", show_alert=True)
-        log_event(
-            "captcha_fail",
-            chat_id=call.message.chat.id, chat_name=chat_label(call.message.chat),
-            user_id=call.from_user.id, user_name=user_label(call.from_user),
-            detail=f"attempt {current_count}/{max_tries}",
-        )
 
 async def main():
     print("Bot started...")
+    from modules.captcha import captcha_sweeper
     await asyncio.gather(
-        _run_polling(), start_web_server(),
+        _run_polling(), start_web_server(), captcha_sweeper(),
     )
 
 

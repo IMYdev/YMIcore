@@ -301,6 +301,9 @@ _EVENT_LABELS = [
     ("Farewells", "farewell"),
     ("Captcha passes", "captcha_pass"),
     ("Captcha failures", "captcha_fail"),
+    ("Captcha kicks", "captcha_kick"),
+    ("Captcha bans", "captcha_ban"),
+    ("Captcha timeouts", "captcha_timeout"),
     ("Panel actions", "panel_action"),
     ("Broadcasts", "broadcast"),
 ]
@@ -551,11 +554,10 @@ def _greetings_page(request, gid, data, errors, saved=False, captcha=None, greet
         "greeting": (data.get("greeting_media_type"), data.get("greeting_media_id")),
         "goodbye": (data.get("goodbye_media_type"), data.get("goodbye_media_id")),
     }
+    questions = registry.read_captcha_questions(gid) if hasattr(registry, 'read_captcha_questions') else []
     captcha = captcha or {
         "enabled": data.get("captcha_enabled", False),
-        "question": data.get("captcha_q", ""),
-        "options": data.get("captcha_opts", []),
-        "answer": data.get("captcha_ans", ""),
+        "questions": questions,
         "tries": data.get("captcha_max_tries", 1),
     }
     return render(
@@ -574,23 +576,36 @@ async def group_greetings_save(request):
     action = form.get("action", "")
 
     if action == "captcha":
-        question = form.get("question", "").strip()
-        options = [o.strip() for o in form.get("options", "").splitlines() if o.strip()]
-        answer = form.get("answer", "").strip()
+        questions = []
+        errors_local = {}
+        for i in range(1, 4):
+            q = form.get(f"q{i}_question", "").strip()
+            opts_text = form.get(f"q{i}_options", "")
+            opts = [o.strip() for o in opts_text.splitlines() if o.strip()]
+            ans = form.get(f"q{i}_answer", "").strip()
+            if q or opts or ans:
+                if not q or len(opts) < 2 or not ans or ans not in opts:
+                    errors_local[f"q{i}"] = "Invalid question."
+                else:
+                    questions.append({"q": q, "opts": opts, "ans": ans})
         tries = form.get("tries", "1").strip()
-        error = registry.validate_captcha(question, options, answer, tries)
-        if error:
+        enabled = "enabled" in form
+        error = registry.validate_captcha(questions, tries)
+        if error or errors_local:
             captcha = {
-                "enabled": "enabled" in form,
-                "question": question,
-                "options": options,
-                "answer": answer,
+                "enabled": enabled,
+                "questions": questions,
                 "tries": tries,
+                "slots": [{
+                    "q": form.get(f"q{i}_question", ""),
+                    "opts": form.get(f"q{i}_options", ""),
+                    "ans": form.get(f"q{i}_answer", ""),
+                } for i in range(1,4)],
             }
             data = registry.read_greetings(gid)
-            return _greetings_page(request, gid, data, errors={"captcha": error}, captcha=captcha)
-        registry.save_captcha(gid, question, options, answer, int(tries))
-        registry.set_captcha_enabled(gid, "enabled" in form)
+            return _greetings_page(request, gid, data, errors={"captcha": error or list(errors_local.values())[0] if errors_local else None}, captcha=captcha)
+        registry.save_captcha(gid, questions, int(tries))
+        registry.set_captcha_enabled(gid, enabled)
         raise web.HTTPFound(saved_url(f"/groups/{gid}/greetings"))
 
     if action == "clear_greeting_media":
