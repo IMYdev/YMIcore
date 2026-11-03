@@ -11,6 +11,7 @@ from info import (
     BOT_OWNER, Downloader, ERROR_LOG_CHAT_ID, Logs, bot,
     TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
 )
+from core.utils import is_user_owner
 from web.auth import (
     COOKIE_NAME, SESSION_TTL,
     activate_token, can_manage_group, delete_token,
@@ -19,7 +20,8 @@ from web.auth import (
     verify_csrf,
 )
 from web.groups import (
-    ban_group, banned_groups, group_title, list_groups, record_group, unban_group,
+    ban_group, banned_groups, group_title, list_groups, record_group,
+    unban_group, is_developer_group, set_developer_group,
 )
 from web import settings_registry as registry
 from web.media import is_file_field, relay_to_telegram
@@ -299,6 +301,9 @@ _EVENT_LABELS = [
     ("Farewells", "farewell"),
     ("Captcha passes", "captcha_pass"),
     ("Captcha failures", "captcha_fail"),
+    ("Captcha kicks", "captcha_kick"),
+    ("Captcha bans", "captcha_ban"),
+    ("Captcha timeouts", "captcha_timeout"),
     ("Panel actions", "panel_action"),
     ("Broadcasts", "broadcast"),
 ]
@@ -549,11 +554,10 @@ def _greetings_page(request, gid, data, errors, saved=False, captcha=None, greet
         "greeting": (data.get("greeting_media_type"), data.get("greeting_media_id")),
         "goodbye": (data.get("goodbye_media_type"), data.get("goodbye_media_id")),
     }
+    questions = registry.read_captcha_questions(gid) if hasattr(registry, 'read_captcha_questions') else []
     captcha = captcha or {
         "enabled": data.get("captcha_enabled", False),
-        "question": data.get("captcha_q", ""),
-        "options": data.get("captcha_opts", []),
-        "answer": data.get("captcha_ans", ""),
+        "questions": questions,
         "tries": data.get("captcha_max_tries", 1),
     }
     return render(
@@ -572,23 +576,36 @@ async def group_greetings_save(request):
     action = form.get("action", "")
 
     if action == "captcha":
-        question = form.get("question", "").strip()
-        options = [o.strip() for o in form.get("options", "").splitlines() if o.strip()]
-        answer = form.get("answer", "").strip()
+        questions = []
+        errors_local = {}
+        for i in range(1, 4):
+            q = form.get(f"q{i}_question", "").strip()
+            opts_text = form.get(f"q{i}_options", "")
+            opts = [o.strip() for o in opts_text.splitlines() if o.strip()]
+            ans = form.get(f"q{i}_answer", "").strip()
+            if q or opts or ans:
+                if not q or len(opts) < 2 or not ans or ans not in opts:
+                    errors_local[f"q{i}"] = "Invalid question."
+                else:
+                    questions.append({"q": q, "opts": opts, "ans": ans})
         tries = form.get("tries", "1").strip()
-        error = registry.validate_captcha(question, options, answer, tries)
-        if error:
+        enabled = "enabled" in form
+        error = registry.validate_captcha(questions, tries)
+        if error or errors_local:
             captcha = {
-                "enabled": "enabled" in form,
-                "question": question,
-                "options": options,
-                "answer": answer,
+                "enabled": enabled,
+                "questions": questions,
                 "tries": tries,
+                "slots": [{
+                    "q": form.get(f"q{i}_question", ""),
+                    "opts": form.get(f"q{i}_options", ""),
+                    "ans": form.get(f"q{i}_answer", ""),
+                } for i in range(1,4)],
             }
             data = registry.read_greetings(gid)
-            return _greetings_page(request, gid, data, errors={"captcha": error}, captcha=captcha)
-        registry.save_captcha(gid, question, options, answer, int(tries))
-        registry.set_captcha_enabled(gid, "enabled" in form)
+            return _greetings_page(request, gid, data, errors={"captcha": error or list(errors_local.values())[0] if errors_local else None}, captcha=captcha)
+        registry.save_captcha(gid, questions, int(tries))
+        registry.set_captcha_enabled(gid, enabled)
         raise web.HTTPFound(saved_url(f"/groups/{gid}/greetings"))
 
     if action == "clear_greeting_media":
@@ -695,6 +712,8 @@ async def group_notes(request):
         request, "group_notes.html",
         gid=gid, title=group_title(gid), group_tab="notes",
         notes=notes.items(), errors={}, saved="saved" in request.query,
+        developer=is_developer_group(gid),
+        group_owner=await is_user_owner(int(gid), request["user"]["uid"]),
     )
 
 
@@ -737,6 +756,19 @@ async def group_notes_delete(request):
     gid = await ensure_group_access(request)
     note_id = request["form"].get("note_id", "")
     registry.delete_note(gid, note_id)
+    raise web.HTTPFound(saved_url(f"/groups/{gid}/notes"))
+
+
+@authed
+@csrf
+async def group_notes_toggle_developer(request):
+    gid = await ensure_group_access(request)
+    form = request["form"]
+    enabled = form.get("developer") == "on"
+    # shortcut: checkbox shown to all users; owner-only validated at POST
+    if not await is_user_owner(int(gid), request["user"]["uid"]):
+        raise web.HTTPForbidden(text="Only the group owner can toggle developer mode.")
+    set_developer_group(gid, enabled)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/notes"))
 
 
@@ -813,6 +845,7 @@ def create_app() -> web.Application:
         web.get("/groups/{gid}/notes", group_notes),
         web.post("/groups/{gid}/notes/add", group_notes_add),
         web.post("/groups/{gid}/notes/delete", group_notes_delete),
+         web.post("/groups/{gid}/developer/toggle", group_notes_toggle_developer),
         web.get("/groups/{gid}/stickers", group_stickers),
         web.post("/groups/{gid}/stickers/add", group_stickers_add),
         web.post("/groups/{gid}/stickers/delete", group_stickers_delete),

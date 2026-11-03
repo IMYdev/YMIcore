@@ -1,13 +1,14 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import (handle_errors, is_user_admin, get_args)
+from core.utils import (handle_errors, is_user_admin, is_user_owner, get_args)
 from core.activity import (log_event, user_label, chat_label)
 from core.formatting import markdown_to_html
 from telebot.formatting import (format_text, hbold, hitalic, hcode)
+from web.groups import set_developer_group, is_developer_group
 
 @handle_errors
 async def set_note(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not (await is_user_admin(m.chat.id, m.from_user.id) or is_developer_group(m.chat.id)):
         return await bot.reply_to(m, "Admin only")
     
     args = get_args(m)
@@ -96,9 +97,9 @@ async def notes_list(m):
 
 @handle_errors
 async def remove_note(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not (await is_user_admin(m.chat.id, m.from_user.id) or is_developer_group(m.chat.id)):
         return await bot.reply_to(m, "Admin only")
-
+    
     args = get_args(m)
     if not args:
         return await bot.reply_to(m, "Command error: Note ID required for removal.")
@@ -116,3 +117,15 @@ async def remove_note(m):
         await bot.send_message(m.chat.id, f"Note ID {note_key} removed.")
     else:
         await bot.send_message(m.chat.id, f"No note matching ID {note_key} found.")
+
+
+async def devgroup_command(message):
+    args = get_args(message)
+    if not args or args[0] not in ("on", "off"):
+        return await bot.reply_to(message, "Usage: /devgroup on|off")
+    chat_id = message.chat.id
+    if not await is_user_owner(chat_id, message.from_user.id):
+        return await bot.reply_to(message, "Only the group owner can toggle developer mode.")
+    enabled = args[0] == "on"
+    set_developer_group(chat_id, enabled)
+    await bot.reply_to(message, f"Developer group mode {'enabled' if enabled else 'disabled'}.")

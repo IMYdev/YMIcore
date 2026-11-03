@@ -32,13 +32,18 @@ def validate_message_template(text) -> str | None:
     return None
 
 
-def validate_captcha(question, options, answer, tries) -> str | None:
-    if not question.strip():
-        return "Question is required."
-    if len(options) < 2:
-        return "Provide at least two options."
-    if not answer.strip() or answer not in options:
-        return "Correct answer must be one of the options."
+def validate_captcha(questions, tries) -> str | None:
+    from modules.captcha import validate_question
+    if not questions or len(questions) < 1:
+        return "At least one question required."
+    if len(questions) > 3:
+        return "Maximum of 3 questions."
+    for item in questions:
+        if not isinstance(item, dict) or 'q' not in item or 'opts' not in item or 'ans' not in item:
+            return "Each question must have q, opts, ans."
+        err = validate_question(item.get('q'), item.get('opts'), item.get('ans'))
+        if err:
+            return err
     try:
         tries_value = int(tries)
     except (TypeError, ValueError):
@@ -46,6 +51,22 @@ def validate_captcha(question, options, answer, tries) -> str | None:
     if tries_value < 1:
         return "Max tries must be at least 1."
     return None
+
+
+def save_captcha(gid, questions, tries) -> None:
+    db = _db("greetings", gid)
+    db.set('captcha_questions', questions)
+    db.set('captcha_max_tries', int(tries))
+    for k in ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempts'):
+        try:
+            db.delete(k)
+        except Exception:
+            pass
+
+
+def read_captcha_questions(gid):
+    from modules.captcha import get_captcha_questions
+    return get_captcha_questions(_db("greetings", gid))
 
 
 def validate_named_text(name, body) -> str | None:
@@ -108,12 +129,6 @@ def set_greeting_media(gid, event, media_type, media_id) -> None:
     db.set(f"{event}_media_id", media_id)
 
 
-def save_captcha(gid, question, options, answer, tries) -> None:
-    db = _db("greetings", gid)
-    db.set("captcha_q", question)
-    db.set("captcha_opts", options)
-    db.set("captcha_ans", answer)
-    db.set("captcha_max_tries", int(tries))
 
 
 def set_captcha_enabled(gid, enabled) -> None:

@@ -13,6 +13,9 @@ EVENT_TYPES = (
     "farewell",
     "captcha_pass",
     "captcha_fail",
+    "captcha_kick",
+    "captcha_ban",
+    "captcha_timeout",
     "panel_action",
     "broadcast",
 )

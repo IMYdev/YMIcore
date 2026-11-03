@@ -2,12 +2,12 @@ from modules.wallpapers import wallpaper
 from modules.anime import (anime, search)
 from modules.purge import purge
 from modules.filters import (set_filter, get_filters, remove_filter)
-from modules.notes import (set_note, notes_list, remove_note)
+from modules.notes import (set_note, notes_list, remove_note, devgroup_command)
 from modules.member import (
     user_info, start, promote, demote, pin,
     ban, unban, help_command, group_id, spoiler)
 from module_manager import send_module_keyboard
-from modules.greetings import (set_greeting, set_goodbye, set_captcha, captcha_toggle)
+from modules.greetings import (set_greeting, set_goodbye, captcha_toggle, set_captcha, add_captcha, del_captcha, captcha_list, captcha_tries)
 from modules.blocklist import (block_set, unblock_set, get_blacklist)
 from modules.broadcast import (broadcast_command, broadcast_delete, broadcast_list, subscribe, unsubscribe)
 from web.panel import panel_command
@@ -42,7 +42,12 @@ COMMANDS = {
     "unblockset": unblock_set,
     "setcaptcha": set_captcha,
 "captcha": captcha_toggle,
+    "captchalist": captcha_list,
+    "captchatries": captcha_tries,
+    "addcaptcha": add_captcha,
+    "delcaptcha": del_captcha,
     "panel": panel_command,
+    "devgroup": devgroup_command,
     "broadcast": broadcast_command,
     "bcast_list": broadcast_list,
     "bcast_delete": broadcast_delete,

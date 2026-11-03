@@ -3,7 +3,7 @@ from telebot.util import user_link
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from telebot.formatting import hbold, hcode, format_text, hspoiler
 from telebot.util import user_link
-from core.utils import (handle_errors, is_user_admin, get_target_user)
+from core.utils import (handle_errors, is_user_admin, get_target_user, get_args)
 
 demoting_params = {
     'can_change_info': False, 'can_post_messages': False, 'can_edit_messages': False,
@@ -52,7 +52,11 @@ help_categories = {
     - `/modules`: Manage modules.
     - `/blockset`: Blacklist sticker set.
     - `/blocklist`: List blacklisted sets.
-    - `/setcaptcha`: Set captcha question.
+    - `/setcaptcha`: Replace captcha question (one question per set).
+    - `/addcaptcha`: Add a captcha question.
+    - `/delcaptcha <n>`: Remove a captcha question.
+    - `/captchalist`: List captcha questions and settings.
+    - `/captchatries <n>`: Set max wrong attempts.
     - `/captcha`: Toggle captcha feature.
     - `/panel`: Open the settings web panel.
     - `/broadcast [users|groups] <message>`: Send an update to everyone (owner).
@@ -136,6 +140,8 @@ async def unban(m):
         return await bot.reply_to(m, "Reply to a user or provide their ID to unban.")
 
     await bot.unban_chat_member(m.chat.id, target_user.id)
+    from modules.captcha import reset_kicks
+    reset_kicks(m.chat.id, target_user.id)
     await bot.reply_to(m, f"Unbanned {target_user.first_name}.")
 
 @handle_errors
@@ -189,6 +195,10 @@ async def help_command(m):
 
 @handle_errors
 async def start(m):
+    if m.chat.type == "private" and get_args(m) and get_args(m)[0].startswith("cap_"):
+        from modules.captcha import handle_start_payload
+        await handle_start_payload(m)
+        return
     await bot.reply_to(m, "Hello! I am YMIcore bot. Use /help to see what I can do.")
 
 @handle_errors

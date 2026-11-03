@@ -85,6 +85,15 @@ async def is_user_admin(chat_id, user_id):
         return False
 
 
+async def is_user_owner(chat_id, user_id):
+    """Check if a user is the creator (owner) of a chat."""
+    try:
+        member = await bot.get_chat_member(chat_id, user_id)
+        return member.status == 'creator'
+    except Exception:
+        return False
+
+
 def get_args(m):
     """Extract arguments from a command message."""
     text = m.text or m.caption
