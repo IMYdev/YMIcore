@@ -11,6 +11,7 @@ from info import (
     BOT_OWNER, Downloader, ERROR_LOG_CHAT_ID, Logs, bot,
     TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
 )
+from core.utils import is_user_owner
 from web.auth import (
     COOKIE_NAME, SESSION_TTL,
     activate_token, can_manage_group, delete_token,
@@ -19,7 +20,8 @@ from web.auth import (
     verify_csrf,
 )
 from web.groups import (
-    ban_group, banned_groups, group_title, list_groups, record_group, unban_group,
+    ban_group, banned_groups, group_title, list_groups, record_group,
+    unban_group, is_developer_group, set_developer_group,
 )
 from web import settings_registry as registry
 from web.media import is_file_field, relay_to_telegram
@@ -695,6 +697,8 @@ async def group_notes(request):
         request, "group_notes.html",
         gid=gid, title=group_title(gid), group_tab="notes",
         notes=notes.items(), errors={}, saved="saved" in request.query,
+        developer=is_developer_group(gid),
+        group_owner=await is_user_owner(int(gid), request["user"]["uid"]),
     )
 
 
@@ -737,6 +741,19 @@ async def group_notes_delete(request):
     gid = await ensure_group_access(request)
     note_id = request["form"].get("note_id", "")
     registry.delete_note(gid, note_id)
+    raise web.HTTPFound(saved_url(f"/groups/{gid}/notes"))
+
+
+@authed
+@csrf
+async def group_notes_toggle_developer(request):
+    gid = await ensure_group_access(request)
+    form = request["form"]
+    enabled = form.get("developer") == "on"
+    # shortcut: checkbox shown to all users; owner-only validated at POST
+    if not await is_user_owner(int(gid), request["user"]["uid"]):
+        raise web.HTTPForbidden(text="Only the group owner can toggle developer mode.")
+    set_developer_group(gid, enabled)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/notes"))
 
 
@@ -813,6 +830,7 @@ def create_app() -> web.Application:
         web.get("/groups/{gid}/notes", group_notes),
         web.post("/groups/{gid}/notes/add", group_notes_add),
         web.post("/groups/{gid}/notes/delete", group_notes_delete),
+         web.post("/groups/{gid}/developer/toggle", group_notes_toggle_developer),
         web.get("/groups/{gid}/stickers", group_stickers),
         web.post("/groups/{gid}/stickers/add", group_stickers_add),
         web.post("/groups/{gid}/stickers/delete", group_stickers_delete),

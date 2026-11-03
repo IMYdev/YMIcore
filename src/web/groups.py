@@ -59,3 +59,15 @@ def unban_group(gid) -> bool:
     banned = [g for g in banned if g != gid]
     db.set("groups.group_ids", banned)
     return True
+
+
+def is_developer_group(gid) -> bool:
+    """Return True if group is marked as developer group."""
+    gid = str(gid)
+    return bool(_db().get(f"groups.{gid}.developer", False))
+
+
+def set_developer_group(gid, enabled: bool) -> None:
+    """Enable or disable developer mode for a group."""
+    gid = str(gid)
+    _db().set(f"groups.{gid}.developer", bool(enabled))
