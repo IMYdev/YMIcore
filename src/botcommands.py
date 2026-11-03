@@ -2,7 +2,7 @@ from modules.wallpapers import wallpaper
 from modules.anime import (anime, search)
 from modules.purge import purge
 from modules.filters import (set_filter, get_filters, remove_filter)
-from modules.notes import (set_note, notes_list, remove_note)
+from modules.notes import (set_note, notes_list, remove_note, devgroup_command)
 from modules.member import (
     user_info, start, promote, demote, pin,
     ban, unban, help_command, group_id, spoiler)
@@ -43,6 +43,7 @@ COMMANDS = {
     "setcaptcha": set_captcha,
 "captcha": captcha_toggle,
     "panel": panel_command,
+    "devgroup": devgroup_command,
     "broadcast": broadcast_command,
     "bcast_list": broadcast_list,
     "bcast_delete": broadcast_delete,
