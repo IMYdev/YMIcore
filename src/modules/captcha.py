@@ -9,6 +9,7 @@ CAPTCHA_TIMEOUT = 180
 MAX_QUESTIONS = 3
 MAX_KICKS = 3
 SWEEP_INTERVAL = 10
+JOIN_MSG_TTL = 600
 
 SILENT_EXITS = set()
 
@@ -87,6 +88,7 @@ def create_session(chat_id, user_id, name, now):
         "tries": 0,
         "group_msg_id": None,
         "pm_msg_id": None,
+        "join_msg_id": None,
         "started": False,
         "name": name,
     }
@@ -118,6 +120,30 @@ def delete_session(chat_id, user_id):
 def list_sessions():
     db = IMYDB('runtime/captcha/pending.json')
     return list((db.get('sessions') or {}).values())
+
+def remember_join_msg(chat_id, user_id, message_id, now):
+    db = IMYDB('runtime/captcha/join_msgs.json')
+    msgs = db.get('msgs') or {}
+    msgs[session_key(chat_id, user_id)] = {"message_id": message_id, "ts": now}
+    msgs = {k: v for k, v in msgs.items() if now - v.get("ts", 0) <= JOIN_MSG_TTL}
+    db.set('msgs', msgs)
+
+def pop_join_msg(chat_id, user_id):
+    db = IMYDB('runtime/captcha/join_msgs.json')
+    msgs = db.get('msgs') or {}
+    entry = msgs.pop(session_key(chat_id, user_id), None)
+    if entry is None:
+        return None
+    db.set('msgs', msgs)
+    return entry.get("message_id")
+
+def attach_join_msg_to_session(chat_id, user_id, message_id):
+    session = get_session(chat_id, user_id)
+    if session is None:
+        return False
+    session["join_msg_id"] = message_id
+    save_session(chat_id, user_id, session)
+    return True
 
 def is_expired(session, now):
     return now >= session.get("deadline", 0)
@@ -176,11 +202,26 @@ async def _bot_username():
             _BOT_USERNAME = "bot"
     return _BOT_USERNAME
 
+async def handle_join_service_message(m):
+    members = m.new_chat_members or []
+    if len(members) != 1:
+        return
+    user = members[0]
+    if getattr(user, "is_bot", False):
+        return
+    chat_id = m.chat.id
+    user_id = user.id
+    if not attach_join_msg_to_session(chat_id, user_id, m.message_id):
+        remember_join_msg(chat_id, user_id, m.message_id, time.time())
+
 async def start_verification(chat, user, db):
     perms = ChatPermissions(
         can_send_messages=False, can_send_media_messages=False,
         can_send_polls=False, can_send_other_messages=False,
         can_add_web_page_previews=False,
+        can_send_audios=False, can_send_documents=False,
+        can_send_photos=False, can_send_videos=False,
+        can_send_video_notes=False, can_send_voice_notes=False,
     )
     try:
         await bot.restrict_chat_member(chat.id, user.id, permissions=perms)
@@ -196,6 +237,10 @@ async def start_verification(chat, user, db):
         return
     now = time.time()
     session = create_session(chat.id, user.id, getattr(user, 'first_name', 'User') or 'User', now)
+    join_msg_id = pop_join_msg(chat.id, user.id)
+    if join_msg_id is not None:
+        session["join_msg_id"] = join_msg_id
+        save_session(chat.id, user.id, session)
     # group prompt with URL button
     username = await _bot_username()
     url = f"https://t.me/{username}?start=cap_{chat.id}"
@@ -297,7 +342,7 @@ async def handle_captcha_callback(call):
             return await bot.answer_callback_query(call.id, "This verification is no longer active.", show_alert=True)
         now = time.time()
         if is_expired(session, now):
-            await punish(session, "timeout")
+            await punish_locked(session, "timeout")
             return await bot.answer_callback_query(call.id, "Time's up.", show_alert=True)
         if session.get("q_index") != q_index:
             return await bot.answer_callback_query(call.id, "That question is no longer active.", show_alert=True)
@@ -328,7 +373,7 @@ async def handle_captcha_callback(call):
             log_event("captcha_fail", chat_id=chat_id, user_id=call.from_user.id, detail=f"q{q_index+1} attempt {session['tries']}/{max_tries}")
             if result == "kick":
                 await bot.answer_callback_query(call.id, "Too many wrong answers.", show_alert=True)
-                await punish(session, "max_tries")
+                await punish_locked(session, "max_tries")
             else:
                 await bot.answer_callback_query(call.id, f"Wrong! {max_tries - session['tries']} attempts left.", show_alert=True)
                 await _send_question_pm(chat_id, call.from_user.id, session)
@@ -338,8 +383,8 @@ async def finish_success(session, user):
     user_id = session.get("user_id")
     # lock not strictly needed here because caller usually holds it or session is being finalized
     delete_session(chat_id, user_id)
+    pop_join_msg(chat_id, user_id)
     reset_kicks(chat_id, user_id)
-    SILENT_EXITS.add(session_key(chat_id, user_id))
     # unmute with group default permissions
     try:
         chat = await bot.get_chat(chat_id)
@@ -349,6 +394,9 @@ async def finish_success(session, user):
                 can_send_messages=True, can_send_media_messages=True,
                 can_send_polls=True, can_send_other_messages=True,
                 can_add_web_page_previews=True,
+                can_send_audios=True, can_send_documents=True,
+                can_send_photos=True, can_send_videos=True,
+                can_send_video_notes=True, can_send_voice_notes=True,
             )
         await bot.restrict_chat_member(chat_id, user_id, permissions=perms)
     except Exception as e:
@@ -382,64 +430,78 @@ async def finish_success(session, user):
     log_event("captcha_pass", chat_id=chat_id, user_id=user_id, detail="pm")
 
 async def punish(session, reason):
-    chat_id = session.get("chat_id")
-    user_id = session.get("user_id")
-    key = session_key(chat_id, user_id)
-    # take lock for this session to prevent double punishment
+    """Entry point for callers that do not hold the lock."""
+    key = session_key(session.get("chat_id"), session.get("user_id"))
     lock = _get_lock(key)
     async with lock:
-        # delete session first
-        delete_session(chat_id, user_id)
-        SILENT_EXITS.add(key)
-        count = increment_kicks(chat_id, user_id)
-        action = decide_punishment(count)
-        # execute
-        try:
-            if action == "kick":
-                await bot.ban_chat_member(chat_id, user_id)
-                await bot.unban_chat_member(chat_id, user_id, only_if_banned=True)
-            elif action == "ban":
-                await bot.ban_chat_member(chat_id, user_id)
-        except Exception:
-            pass
-        # delete messages
-        try:
-            if session.get("group_msg_id"):
-                await bot.delete_message(chat_id, session["group_msg_id"])
-        except Exception:
-            pass
-        try:
-            if session.get("pm_msg_id"):
-                await bot.delete_message(user_id, session["pm_msg_id"])
-        except Exception:
-            pass
-        # notify PM
-        try:
-            if action == "kick":
-                msg = f"You were removed because you {'didn\'t finish in time.' if reason=='timeout' else 'failed the captcha.'} Kicks: {count}/3. Another {3-count} and you'll be banned."
-            else:
-                msg = "You have been banned from this group after 3 failed verifications."
-            await bot.send_message(user_id, msg)
-        except Exception:
-            pass
-        # group notice + schedule delete
-        try:
-            name = session.get("name", "User")
-            if action == "ban":
-                txt = f"{name} was banned: 3 failed verifications."
-            else:
-                txt = f"{name} was removed: {reason}."
-            gm = await bot.send_message(chat_id, txt)
-            # shortcut: schedule deletion without extra state tracking
-            async def _del():
-                await asyncio.sleep(30)
-                try:
-                    await bot.delete_message(chat_id, gm.message_id)
-                except Exception:
-                    pass
-            asyncio.create_task(_del())
-        except Exception:
-            pass
+        await punish_locked(session, reason)
+
+async def punish_locked(session, reason):
+    """Caller MUST already hold the session lock; asyncio.Lock is not re-entrant."""
+    chat_id = session.get("chat_id")
+    user_id = session.get("user_id")
+    fresh = get_session(chat_id, user_id)
+    if fresh is None:
+        return
+    key = session_key(chat_id, user_id)
+    # re-read so a stale sweeper snapshot can't kick a user who already verified
+    join_msg_id = fresh.get("join_msg_id")
+    # delete session first
+    delete_session(chat_id, user_id)
+    SILENT_EXITS.add(key)
+    count = increment_kicks(chat_id, user_id)
+    action = decide_punishment(count)
+    # execute
+    try:
+        if action == "kick":
+            await bot.ban_chat_member(chat_id, user_id)
+            await bot.unban_chat_member(chat_id, user_id, only_if_banned=True)
+        elif action == "ban":
+            await bot.ban_chat_member(chat_id, user_id)
+    except Exception:
+        pass
+    # delete messages
+    try:
+        if session.get("group_msg_id"):
+            await bot.delete_message(chat_id, session["group_msg_id"])
+    except Exception:
+        pass
+    try:
+        if session.get("pm_msg_id"):
+            await bot.delete_message(user_id, session["pm_msg_id"])
+    except Exception:
+        pass
+    try:
+        if join_msg_id is not None:
+            await bot.delete_message(chat_id, join_msg_id)
+    except Exception:
+        pass
+    # notify PM
+    try:
+        if action == "kick":
+            msg = f"You were removed because you {'didn\'t finish in time.' if reason=='timeout' else 'failed the captcha.'} Kicks: {count}/3. Another {3-count} and you'll be banned."
+        else:
+            msg = "You have been banned from this group after 3 failed verifications."
+        await bot.send_message(user_id, msg)
+    except Exception:
+        pass
+    # group notice + schedule delete
+    try:
+        name = session.get("name", "User")
+        if action == "ban":
+            txt = f"{name} was banned: 3 failed verifications."
+        else:
+            txt = f"{name} was removed: {reason}."
+        gm = await bot.send_message(chat_id, txt)
+        async def _del():
+            await asyncio.sleep(30)
+            try:
+                await bot.delete_message(chat_id, gm.message_id)
+            except Exception:
+                pass
+        asyncio.create_task(_del())
+    except Exception:
+        pass
     # log events
     if reason == "timeout":
         log_event("captcha_timeout", chat_id=chat_id, user_id=user_id, detail=f"kicks={count}")
@@ -456,7 +518,7 @@ async def captcha_sweeper():
             for sess in list_sessions():
                 if is_expired(sess, now):
                     try:
-                        await punish(sess, "timeout")
+                        await asyncio.wait_for(punish(sess, "timeout"), timeout=30)
                     except Exception:
                         pass
         except Exception:

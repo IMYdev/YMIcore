@@ -93,6 +93,12 @@ async def chat_m(m: types.ChatMemberUpdated):
     await hello(m)
     await bye(m)
 
+@bot.message_handler(content_types=['new_chat_members'])
+@handle_errors
+async def join_service_message(m):
+    from modules.captcha import handle_join_service_message
+    await handle_join_service_message(m)
+
 @bot.message_handler()
 async def reply_message(m):
     track_sender(m)
