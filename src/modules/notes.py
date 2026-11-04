@@ -9,7 +9,7 @@ from web.groups import set_developer_group, is_developer_group
 @handle_errors
 async def set_note(m):
     if not (await is_user_admin(m.chat.id, m.from_user.id) or is_developer_group(m.chat.id)):
-        return await bot.reply_to(m, "Admin only")
+        return await bot.reply_to(m, "Admins only")
     
     args = get_args(m)
     if not args:
@@ -98,7 +98,7 @@ async def notes_list(m):
 @handle_errors
 async def remove_note(m):
     if not (await is_user_admin(m.chat.id, m.from_user.id) or is_developer_group(m.chat.id)):
-        return await bot.reply_to(m, "Admin only")
+        return await bot.reply_to(m, "Admins only")
     
     args = get_args(m)
     if not args:
