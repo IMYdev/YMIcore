@@ -3,7 +3,7 @@ from telebot.util import user_link
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from telebot.formatting import hbold, hcode, format_text, hspoiler
 from telebot.util import user_link
-from core.utils import (handle_errors, is_user_admin, get_target_user, get_args)
+from core.utils import (handle_errors, is_user_admin, get_target_user, get_args, is_bot_owner)
 
 demoting_params = {
     'can_change_info': False, 'can_post_messages': False, 'can_edit_messages': False,

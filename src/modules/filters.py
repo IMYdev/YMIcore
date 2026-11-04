@@ -1,6 +1,6 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import (handle_errors, is_user_admin)
+from core.utils import (handle_errors, is_user_admin, is_bot_owner)
 from core.activity import (log_event, user_label, chat_label)
 
 @handle_errors

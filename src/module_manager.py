@@ -1,7 +1,7 @@
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import is_user_admin
+from core.utils import (is_user_admin, is_bot_owner)
 
 db = IMYDB('runtime/modules/module_controller.json')
 
