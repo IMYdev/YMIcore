@@ -86,7 +86,7 @@ async def is_user_admin(chat_id, user_id):
 
 async def is_bot_owner(user_id):
     """Check if a user is the instance owner."""
-    if user_id == BOT_OWNER:
+    if user_id == int(BOT_OWNER):
         return True
     return False
 
