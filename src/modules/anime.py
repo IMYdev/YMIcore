@@ -1,7 +1,7 @@
 import aiohttp
 import urllib.parse
 from info import bot
-from core.utils import handle_errors
+from core.utils import handle_errors, topic_kwargs
 from telebot.formatting import (hlink, hbold, hcode, format_text)
 
 @handle_errors
@@ -31,7 +31,8 @@ async def anime(m):
                     photo=image_url,
                     caption=caption,
                     reply_to_message_id=m.message_id,
-                    parse_mode="HTML"
+                    parse_mode="HTML",
+                    **topic_kwargs(m)
                 )
     except:
         pass
@@ -63,7 +64,7 @@ async def search(m):
         image = m.reply_to_message.photo[-1].file_id  # Get the highest resolution photo
         url = await bot.get_file_url(image)
         api_url = f"https://api.trace.moe/search?url={urllib.parse.quote_plus(url)}"
-        wait_message = await bot.send_message(m.chat.id, "Searching...")
+        wait_message = await bot.send_message(m.chat.id, "Searching...", **topic_kwargs(m))
 
         async with aiohttp.ClientSession() as session:
             async with session.get(api_url) as response:
@@ -82,7 +83,7 @@ async def search(m):
         video = first_match.get('video')
 
         await bot.delete_message(m.chat.id, wait_message.message_id)
-        await bot.send_chat_action(m.chat.id, "upload_video")
-        await bot.send_video(chat_id=m.chat.id, video=video, caption=f"Title: {title}\nEpisode: {episode}", reply_to_message_id=m.message_id)
+        await bot.send_chat_action(m.chat.id, "upload_video", **topic_kwargs(m))
+        await bot.send_video(chat_id=m.chat.id, video=video, caption=f"Title: {title}\nEpisode: {episode}", reply_to_message_id=m.message_id, **topic_kwargs(m))
     else:
         await bot.reply_to(m, "Reply with a photo to search.")

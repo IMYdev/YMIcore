@@ -5,7 +5,7 @@ from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup)
 from core import broadcast
 from core.activity import log_event, user_label
 from core.formatting import markdown_to_html
-from core.utils import handle_errors, get_media_info
+from core.utils import handle_errors, get_media_info, topic_kwargs
 from core.users import audience_counts, record_user, set_opt_out
 from web.auth import is_owner
 
@@ -78,17 +78,17 @@ async def _show_preview(m, pending, token):
 
     if sender is None and not body:
         return await bot.send_message(m.chat.id, format_text(*header), parse_mode="HTML",
-                                      reply_markup=_preview_markup(token))
+                                      reply_markup=_preview_markup(token), **topic_kwargs(m))
 
     if sender is not None:
         if button:
             header.append(f"{hitalic('Button:')} {hcode(button['url'])}")
         caption = format_text(*header, "", body) if body else format_text(*header)
-        sent = await sender(m.chat.id, media["file_id"], caption=caption, parse_mode="HTML")
+        sent = await sender(m.chat.id, media["file_id"], caption=caption, parse_mode="HTML", **topic_kwargs(m))
     else:
         extra = {} if pending.get("preview", True) else {"disable_web_page_preview": True}
         sent = await bot.send_message(m.chat.id, format_text(*header, "", body),
-                                      parse_mode="HTML", reply_markup=_link_markup(button), **extra)
+                                      parse_mode="HTML", reply_markup=_link_markup(button), **extra, **topic_kwargs(m))
 
     return await bot.edit_message_reply_markup(sent.chat.id, sent.message_id,
                                                reply_markup=_preview_markup(token))
@@ -122,7 +122,7 @@ async def broadcast_command(m):
         text = source.caption or ""
 
     if not text.strip() and not media:
-        return await bot.send_message(m.chat.id, BROADCAST_HELP, parse_mode="HTML")
+        return await bot.send_message(m.chat.id, BROADCAST_HELP, parse_mode="HTML", **topic_kwargs(m))
 
     if not audience_counts(segment)["total"]:
         return await bot.reply_to(m, "Nobody to broadcast to yet.")
@@ -158,7 +158,7 @@ async def broadcast_list(m):
             f"{record.get('dead', 0)} unreachable"
         )
     await bot.send_message(
-        m.chat.id, format_text(hbold("Recent broadcasts"), *lines), parse_mode="HTML",
+        m.chat.id, format_text(hbold("Recent broadcasts"), *lines), parse_mode="HTML", **topic_kwargs(m),
     )
 
 

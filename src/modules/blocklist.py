@@ -1,6 +1,6 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import (handle_errors, is_user_admin, get_args, is_bot_owner)
+from core.utils import (handle_errors, is_user_admin, get_args, is_bot_owner, topic_kwargs)
 
 @handle_errors
 async def sticker_block(m):
@@ -48,9 +48,9 @@ async def get_blacklist(m):
 
     if stickers:
         output = '\n'.join([f"`{name}`" for name in stickers])
-        await bot.send_message(m.chat.id, f"Banned sticker sets:\n{output}", parse_mode="Markdown")
+        await bot.send_message(m.chat.id, f"Banned sticker sets:\n{output}", parse_mode="Markdown", **topic_kwargs(m))
     else:
-        await bot.send_message(m.chat.id, "No sticker sets are currently banned.")
+        await bot.send_message(m.chat.id, "No sticker sets are currently banned.", **topic_kwargs(m))
 
 @handle_errors
 async def unblock_set(m):
@@ -69,6 +69,6 @@ async def unblock_set(m):
     if set_name in stickers:
         stickers.remove(set_name)
         db.set('stickers', stickers)
-        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` unblocked.")
+        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` unblocked.", **topic_kwargs(m))
     else:
-        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` is not blocked.")
+        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` is not blocked.", **topic_kwargs(m))

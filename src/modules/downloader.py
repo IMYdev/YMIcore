@@ -5,7 +5,7 @@ import re
 import asyncio
 from urllib.parse import urlparse, unquote
 import html
-from core.utils import handle_errors
+from core.utils import handle_errors, topic_kwargs
 import aiohttp
 from yt_dlp import YoutubeDL
 from telebot.types import InputMediaPhoto, InputMediaVideo
@@ -159,9 +159,9 @@ async def instagram_dl_og(m, url):
         if not media_url:
             return False
         if attachments[0].get("type") == "video":
-            await bot.send_video(m.chat.id, video=media_url, caption=caption, parse_mode="HTML")
+            await bot.send_video(m.chat.id, video=media_url, caption=caption, parse_mode="HTML", **topic_kwargs(m))
         else:
-            await bot.send_photo(m.chat.id, photo=media_url, caption=caption, parse_mode="HTML")
+            await bot.send_photo(m.chat.id, photo=media_url, caption=caption, parse_mode="HTML", **topic_kwargs(m))
         return True
 
     media_list = []
@@ -180,13 +180,13 @@ async def instagram_dl_og(m, url):
     if len(media_list) == 1:
         media = media_list[0]
         if isinstance(media, InputMediaVideo):
-            await bot.send_video(m.chat.id, video=media.media, caption=caption, parse_mode="HTML")
+            await bot.send_video(m.chat.id, video=media.media, caption=caption, parse_mode="HTML", **topic_kwargs(m))
         else:
-            await bot.send_photo(m.chat.id, photo=media.media, caption=caption, parse_mode="HTML")
+            await bot.send_photo(m.chat.id, photo=media.media, caption=caption, parse_mode="HTML", **topic_kwargs(m))
         return True
 
     for chunk in [media_list[i:i + 10] for i in range(0, len(media_list), 10)]:
-        await bot.send_media_group(m.chat.id, chunk)
+        await bot.send_media_group(m.chat.id, chunk, **topic_kwargs(m))
     return True
 
 async def instagram_dl_ytdlp(m, url):
@@ -196,7 +196,7 @@ async def instagram_dl_ytdlp(m, url):
     if not dl_url:
         raise Exception("Could not extract media from reel.")
     caption = get_shared_caption(m, info, url)
-    await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML")
+    await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML", **topic_kwargs(m))
 
 @handle_errors
 async def facebook_dl(m, url):
@@ -204,7 +204,7 @@ async def facebook_dl(m, url):
         info = ydl.extract_info(url, download=False)
     link = info.get('formats')[1].get('url')
     caption = get_shared_caption(m, info, url)
-    await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
+    await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML", **topic_kwargs(m))
 
 @handle_errors
 async def twitter_dl(m, url):
@@ -214,12 +214,12 @@ async def twitter_dl(m, url):
         link = next((f['url'] for f in info.get('formats', []) if f.get('ext') == 'mp4' and f.get('protocol') == 'https'), None)
         caption = get_shared_caption(m, info, url)
         if link:
-            await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML")
+            await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML", **topic_kwargs(m))
         else:
             raise Exception("No video")
     except Exception as e:
         if "No video" in str(e):
             fix_url = url.replace("x.com", "d.fixupx.com") if "x.com" in url else url.replace("twitter.com", "d.fxtwitter.com")
-            await bot.send_photo(m.chat.id, photo=fix_url)
+            await bot.send_photo(m.chat.id, photo=fix_url, **topic_kwargs(m))
         else:
             raise e

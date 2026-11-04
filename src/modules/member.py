@@ -3,7 +3,7 @@ from telebot.util import user_link
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from telebot.formatting import hbold, hcode, format_text, hspoiler
 from telebot.util import user_link
-from core.utils import (handle_errors, is_user_admin, get_target_user, get_args, is_bot_owner)
+from core.utils import (handle_errors, is_user_admin, get_target_user, get_args, is_bot_owner, topic_kwargs)
 
 demoting_params = {
     'can_change_info': False, 'can_post_messages': False, 'can_edit_messages': False,
@@ -170,7 +170,7 @@ async def user_info(m):
     try:
         photos = await bot.get_user_profile_photos(target.id, limit=1)
         if photos.total_count > 0:
-            await bot.send_photo(m.chat.id, photos.photos[0][-1].file_id, caption=info, parse_mode="HTML")
+            await bot.send_photo(m.chat.id, photos.photos[0][-1].file_id, caption=info, parse_mode="HTML", **topic_kwargs(m))
         else:
             await bot.reply_to(m, info, parse_mode="HTML")
     except Exception:
@@ -207,4 +207,4 @@ async def spoiler(m):
         return await bot.reply_to(m, "Reply to a text message to make it a spoiler.")
     
     await bot.delete_message(m.chat.id, m.message_id)
-    await bot.send_message(m.chat.id, hspoiler(m.reply_to_message.text), parse_mode="HTML")
+    await bot.send_message(m.chat.id, hspoiler(m.reply_to_message.text), parse_mode="HTML", **topic_kwargs(m))

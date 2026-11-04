@@ -1,7 +1,7 @@
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import (is_user_admin, is_bot_owner)
+from core.utils import (is_user_admin, is_bot_owner, topic_kwargs)
 
 db = IMYDB('runtime/modules/module_controller.json')
 
@@ -60,7 +60,7 @@ async def send_module_keyboard(m):
         return
     group_id = str(m.chat.id)
     keyboard = create_module_list_keyboard(group_id)
-    await bot.send_message(m.chat.id, "Select a module to manage:", reply_markup=keyboard)
+    await bot.send_message(m.chat.id, "Select a module to manage:", reply_markup=keyboard, **topic_kwargs(m))
 
 async def toggle_module_or_command(call):
     if not await is_user_admin(call.message.chat.id, call.from_user.id):

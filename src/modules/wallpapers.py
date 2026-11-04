@@ -1,7 +1,7 @@
 import random
 import aiohttp
 from info import bot
-from core.utils import handle_errors
+from core.utils import handle_errors, topic_kwargs
 from telebot.formatting import (hlink, hbold, format_text)
 
 @handle_errors
@@ -31,5 +31,6 @@ async def wallpaper(m):
                 photo=image_url, 
                 caption=caption, 
                 reply_to_message_id=m.message_id, 
-                parse_mode="HTML"
+                parse_mode="HTML",
+                **topic_kwargs(m)
             )

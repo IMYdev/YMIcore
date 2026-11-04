@@ -1,6 +1,6 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import (handle_errors, is_user_admin, is_user_owner, get_args)
+from core.utils import (handle_errors, is_user_admin, is_user_owner, get_args, topic_kwargs)
 from core.activity import (log_event, user_label, chat_label)
 from core.formatting import markdown_to_html
 from telebot.formatting import (format_text, hbold, hitalic, hcode)
@@ -54,21 +54,21 @@ async def get_notes(m):
         note = notes[note_id]
         t, d = note['reply']['type'], note['reply']['data']
         caption = note['reply'].get('text')
-        if t == "text": await bot.send_message(m.chat.id, markdown_to_html(d), parse_mode="HTML")
-        elif t == "sticker": await bot.send_sticker(m.chat.id, d)
+        if t == "text": await bot.send_message(m.chat.id, markdown_to_html(d), parse_mode="HTML", **topic_kwargs(m))
+        elif t == "sticker": await bot.send_sticker(m.chat.id, d, **topic_kwargs(m))
         elif t == "photo":
-            if caption: await bot.send_photo(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
-            else: await bot.send_photo(m.chat.id, d)
+            if caption: await bot.send_photo(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            else: await bot.send_photo(m.chat.id, d, **topic_kwargs(m))
         elif t == "document":
-            if caption: await bot.send_document(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
-            else: await bot.send_document(m.chat.id, d)
+            if caption: await bot.send_document(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            else: await bot.send_document(m.chat.id, d, **topic_kwargs(m))
         elif t == "video":
-            if caption: await bot.send_video(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
-            else: await bot.send_video(m.chat.id, d)
+            if caption: await bot.send_video(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            else: await bot.send_video(m.chat.id, d, **topic_kwargs(m))
         elif t == "audio":
-            if caption: await bot.send_audio(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML")
-            else: await bot.send_audio(m.chat.id, d)
-        else: await bot.send_message(m.chat.id, "Note is unreadable.")
+            if caption: await bot.send_audio(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            else: await bot.send_audio(m.chat.id, d, **topic_kwargs(m))
+        else: await bot.send_message(m.chat.id, "Note is unreadable.", **topic_kwargs(m))
         log_event(
             "note_fetch",
             chat_id=m.chat.id, chat_name=chat_label(m.chat),
@@ -76,7 +76,7 @@ async def get_notes(m):
             detail=note.get("name") or f"#{note_id}",
         )
     else:
-        await bot.send_message(m.chat.id, f"No note with ID {note_id}.")
+        await bot.send_message(m.chat.id, f"No note with ID {note_id}.", **topic_kwargs(m))
 
 @handle_errors
 async def notes_list(m):
@@ -85,7 +85,7 @@ async def notes_list(m):
     notes = db.get('notes', {})
 
     if not notes:
-        return await bot.send_message(m.chat.id, "Catalog empty. No notes registered.")
+        return await bot.send_message(m.chat.id, "Catalog empty. No notes registered.", **topic_kwargs(m))
 
     formatted_notes = '\n'.join([f"{hcode(str(nid))}. {n['name']}" for nid, n in notes.items()])
     formatted_reply = format_text(
@@ -93,7 +93,7 @@ async def notes_list(m):
         formatted_notes,
         hbold("Retrieve notes via #note_number")
     )
-    await bot.send_message(m.chat.id, formatted_reply, parse_mode="HTML")
+    await bot.send_message(m.chat.id, formatted_reply, parse_mode="HTML", **topic_kwargs(m))
 
 @handle_errors
 async def remove_note(m):
@@ -114,9 +114,9 @@ async def remove_note(m):
         # Renumber remaining notes strictly
         notes = {str(i+1): v for i, (k, v) in enumerate(notes.items())}
         db.set('notes', notes)
-        await bot.send_message(m.chat.id, f"Note ID {note_key} removed.")
+        await bot.send_message(m.chat.id, f"Note ID {note_key} removed.", **topic_kwargs(m))
     else:
-        await bot.send_message(m.chat.id, f"No note matching ID {note_key} found.")
+        await bot.send_message(m.chat.id, f"No note matching ID {note_key} found.", **topic_kwargs(m))
 
 
 async def devgroup_command(message):

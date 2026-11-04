@@ -145,3 +145,9 @@ def get_media_info(m):
     elif m.animation:
         return "animation", m.animation.file_id
     return None, None
+
+def topic_kwargs(message):
+    """Return the topic ID for an outgoing message."""
+    thread_id = getattr(message, "message_thread_id", None)
+
+    return {"message_thread_id": thread_id} if thread_id is not None else {}

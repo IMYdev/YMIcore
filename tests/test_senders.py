@@ -3,9 +3,11 @@ import asyncio
 from core.imysdb import IMYDB
 
 
-def make_msg(text, chat_id):
+def make_msg(text, chat_id, thread_id=None):
     chat = type("Chat", (), {"id": chat_id, "title": "T", "username": None, "first_name": None})()
-    return type("Msg", (), {"text": text, "chat": chat, "from_user": None})()
+    return type("Msg", (), {
+        "text": text, "chat": chat, "from_user": None, "message_thread_id": thread_id,
+    })()
 
 
 def test_get_notes_forwards_markdown_caption(tmp_path, monkeypatch):
@@ -44,6 +46,24 @@ def test_get_notes_media_without_caption(tmp_path, monkeypatch):
     asyncio.run(get_notes(make_msg("#1", 100)))
     assert "caption" not in captured
     assert "parse_mode" not in captured
+
+
+def test_get_notes_replies_in_same_topic(tmp_path, monkeypatch):
+    from info import bot
+    from modules.notes import get_notes
+
+    monkeypatch.chdir(tmp_path)
+    IMYDB("runtime/notes/100_notes.json").set("notes", {
+        "1": {"name": "hi", "reply": {"type": "text", "data": "hello"}}
+    })
+    captured = {}
+
+    async def fake_send_message(chat_id, text, **kw):
+        captured.update(kw)
+
+    monkeypatch.setattr(bot, "send_message", fake_send_message)
+    asyncio.run(get_notes(make_msg("#1", 100, thread_id=7)))
+    assert captured["message_thread_id"] == 7
 
 
 def test_reply_to_filter_forwards_caption(tmp_path, monkeypatch):

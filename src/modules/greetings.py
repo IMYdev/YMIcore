@@ -1,7 +1,7 @@
 from info import bot
 from modules.captcha import (validate_question, add_question, remove_question, get_captcha_questions)
 from core.imysdb import IMYDB
-from core.utils import (handle_errors, is_user_admin, get_media_info, get_args, is_bot_owner)
+from core.utils import (handle_errors, is_user_admin, get_media_info, get_args, is_bot_owner, topic_kwargs)
 from core.activity import (log_event, user_label)
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from telebot.formatting import (hbold, hitalic)
@@ -186,13 +186,13 @@ async def bye(m):
     m_type, m_id = greetings.get('goodbye_media_type'), greetings.get('goodbye_media_id')
     if m_type and m_id:
         if m_type == 'sticker':
-            await bot.send_sticker(m.chat.id, m_id)
-            await bot.send_message(m.chat.id, personalized)
+            await bot.send_sticker(m.chat.id, m_id, **topic_kwargs(m))
+            await bot.send_message(m.chat.id, personalized, **topic_kwargs(m))
         else:
             send_func = getattr(bot, f"send_{m_type}")
-            await send_func(m.chat.id, m_id, caption=personalized)
+            await send_func(m.chat.id, m_id, caption=personalized, **topic_kwargs(m))
     else:
-        await bot.send_message(m.chat.id, personalized)
+        await bot.send_message(m.chat.id, personalized, **topic_kwargs(m))
     log_event(
         "farewell",
         chat_id=m.chat.id,

@@ -1,6 +1,6 @@
 from info import bot
 from core.imysdb import IMYDB
-from core.utils import (handle_errors, is_user_admin, is_bot_owner)
+from core.utils import (handle_errors, is_user_admin, is_bot_owner, topic_kwargs)
 from core.activity import (log_event, user_label, chat_label)
 
 @handle_errors
@@ -49,20 +49,20 @@ async def reply_to_filter(m):
         if keyword in words:
             t, d = reply_with["type"], reply_with["data"]
             caption = reply_with.get("text")
-            if t == "text": await bot.send_message(m.chat.id, d)
-            elif t == "sticker": await bot.send_sticker(m.chat.id, d)
+            if t == "text": await bot.send_message(m.chat.id, d, **topic_kwargs(m))
+            elif t == "sticker": await bot.send_sticker(m.chat.id, d, **topic_kwargs(m))
             elif t == "photo":
-                if caption: await bot.send_photo(m.chat.id, d, caption=caption)
-                else: await bot.send_photo(m.chat.id, d)
+                if caption: await bot.send_photo(m.chat.id, d, caption=caption, **topic_kwargs(m))
+                else: await bot.send_photo(m.chat.id, d, **topic_kwargs(m))
             elif t == "document":
-                if caption: await bot.send_document(m.chat.id, d, caption=caption)
-                else: await bot.send_document(m.chat.id, d)
+                if caption: await bot.send_document(m.chat.id, d, caption=caption, **topic_kwargs(m))
+                else: await bot.send_document(m.chat.id, d, **topic_kwargs(m))
             elif t == "audio":
-                if caption: await bot.send_audio(m.chat.id, d, caption=caption)
-                else: await bot.send_audio(m.chat.id, d)
+                if caption: await bot.send_audio(m.chat.id, d, caption=caption, **topic_kwargs(m))
+                else: await bot.send_audio(m.chat.id, d, **topic_kwargs(m))
             elif t == "video":
-                if caption: await bot.send_video(m.chat.id, d, caption=caption)
-                else: await bot.send_video(m.chat.id, d)
+                if caption: await bot.send_video(m.chat.id, d, caption=caption, **topic_kwargs(m))
+                else: await bot.send_video(m.chat.id, d, **topic_kwargs(m))
             log_event(
                 "filter_trigger",
                 chat_id=m.chat.id, chat_name=chat_label(m.chat),
@@ -78,9 +78,9 @@ async def get_filters(m):
     filters = db.get('filters', {})
     if filters:
         output = '\n'.join([f"`{key}`" for key in filters])
-        await bot.send_message(m.chat.id, f"Filters:\n{output}", parse_mode="Markdown")
+        await bot.send_message(m.chat.id, f"Filters:\n{output}", parse_mode="Markdown", **topic_kwargs(m))
     else:
-        await bot.send_message(m.chat.id, "No filters set.")
+        await bot.send_message(m.chat.id, "No filters set.", **topic_kwargs(m))
 
 @handle_errors
 async def remove_filter(m):
@@ -99,6 +99,6 @@ async def remove_filter(m):
     if keyword in filters:
         del filters[keyword]
         db.set('filters', filters)
-        await bot.send_message(m.chat.id, f'Filter "{keyword}" removed.')
+        await bot.send_message(m.chat.id, f'Filter "{keyword}" removed.', **topic_kwargs(m))
     else:
-        await bot.send_message(m.chat.id, f'Filter "{keyword}" not found.')
+        await bot.send_message(m.chat.id, f'Filter "{keyword}" not found.', **topic_kwargs(m))

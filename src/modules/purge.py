@@ -1,7 +1,7 @@
 from info import bot
 from time import perf_counter
 import asyncio
-from core.utils import (handle_errors, is_user_admin, is_bot_owner)
+from core.utils import (handle_errors, is_user_admin, is_bot_owner, topic_kwargs)
 
 def chunk_list(lst, chunk_size=100):
     for i in range(0, len(lst), chunk_size):
@@ -26,4 +26,4 @@ async def purge(m):
     await asyncio.gather(*tasks, return_exceptions=True)
 
     time_taken = perf_counter() - start_time
-    await bot.send_message(m.chat.id, f"Messages purged in {round(time_taken, 2)}s.")
+    await bot.send_message(m.chat.id, f"Messages purged in {round(time_taken, 2)}s.", **topic_kwargs(m))
