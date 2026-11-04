@@ -9,7 +9,7 @@ def chunk_list(lst, chunk_size=100):
 
 @handle_errors
 async def purge(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
 
     if not m.reply_to_message:

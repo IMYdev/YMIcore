@@ -19,7 +19,7 @@ async def sticker_block(m):
 
 @handle_errors
 async def block_set(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         return await bot.reply_to(m, "Admin only.")
 
     if not m.reply_to_message or not m.reply_to_message.sticker:
@@ -54,7 +54,7 @@ async def get_blacklist(m):
 
 @handle_errors
 async def unblock_set(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         return await bot.reply_to(m, "Admin only.")
 
     args = get_args(m)

@@ -1,7 +1,7 @@
 from info import bot
 from modules.captcha import (validate_question, add_question, remove_question, get_captcha_questions)
 from core.imysdb import IMYDB
-from core.utils import (handle_errors, is_user_admin, get_media_info, get_args)
+from core.utils import (handle_errors, is_user_admin, get_media_info, get_args, is_bot_owner)
 from core.activity import (log_event, user_label)
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from telebot.formatting import (hbold, hitalic)
@@ -14,7 +14,7 @@ def validate_template(template):
 
 @handle_errors
 async def set_captcha(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
     
     args = get_args(m)
@@ -51,7 +51,7 @@ async def set_captcha(m):
 
 @handle_errors
 async def captcha_toggle(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id): return
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id): return
     chat_id = str(m.chat.id).lstrip('-')
     db = IMYDB(f'runtime/greetings/{chat_id}_greetings.json')
     current = db.get('captcha_enabled', False)
@@ -122,7 +122,7 @@ async def send_standard_greeting(chat_id, user, db):
     )
 
 async def _set_event_msg(m, event_type):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
     
     chat_id = str(m.chat.id).lstrip('-')
@@ -202,7 +202,8 @@ async def bye(m):
 
 @handle_errors
 async def add_captcha(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id): return await bot.reply_to(m, "Admins only.")
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
+        return await bot.reply_to(m, "Admins only.")
     args = get_args(m)
     if not args or '|' not in " ".join(args):
         return await bot.reply_to(m, "Usage: /addcaptcha Question | Opt1 | Opt2 | ... | Correct")
@@ -224,7 +225,8 @@ async def add_captcha(m):
 
 @handle_errors
 async def del_captcha(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id): return await bot.reply_to(m, "Admins only.")
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
+        return await bot.reply_to(m, "Admins only.")
     args = get_args(m)
     if not args:
         return await bot.reply_to(m, "Usage: /delcaptcha <number>")
@@ -240,7 +242,7 @@ async def del_captcha(m):
 
 @handle_errors
 async def captcha_list(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id): return await bot.reply_to(m, "Admins only.")
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id): return await bot.reply_to(m, "Admins only.")
     chat_id = str(m.chat.id).lstrip('-')
     db = IMYDB(f'runtime/greetings/{chat_id}_greetings.json')
     questions = get_captcha_questions(db)
@@ -255,7 +257,7 @@ async def captcha_list(m):
 
 @handle_errors
 async def captcha_tries(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id): return await bot.reply_to(m, "Admins only.")
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id): return await bot.reply_to(m, "Admins only.")
     args = get_args(m)
     if not args:
         return await bot.reply_to(m, "Usage: /captchatries <n>")

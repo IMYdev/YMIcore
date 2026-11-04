@@ -55,7 +55,7 @@ def create_command_list_keyboard(module_name, group_id):
     return keyboard
 
 async def send_module_keyboard(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         await bot.reply_to(m, "Admin only.")
         return
     group_id = str(m.chat.id)

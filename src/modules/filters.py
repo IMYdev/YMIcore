@@ -5,7 +5,7 @@ from core.activity import (log_event, user_label, chat_label)
 
 @handle_errors
 async def set_filter(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         return await bot.reply_to(m, "Admin only.")
     
     parts = m.text.lower().split(maxsplit=1)
@@ -84,7 +84,7 @@ async def get_filters(m):
 
 @handle_errors
 async def remove_filter(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id):
+    if not await is_user_admin(m.chat.id, m.from_user.id) or not await is_bot_owner(m.from_user.id):
         return await bot.reply_to(m, "Admin only.")
         
     parts = m.text.split(maxsplit=1)

@@ -2,7 +2,7 @@ import functools
 import traceback
 from telebot.formatting import (hbold, hcode, format_text, escape_html)
 from datetime import datetime
-from info import Logs, ERROR_LOG_CHAT_ID, bot
+from info import (Logs, ERROR_LOG_CHAT_ID, bot, BOT_OWNER)
 
 
 async def log_error(bot, error, context_msg=None):
@@ -84,6 +84,11 @@ async def is_user_admin(chat_id, user_id):
     except Exception:
         return False
 
+async def is_bot_owner(user_id):
+    """Check if a user is the instance owner."""
+    if user_id == BOT_OWNER:
+        return True
+    return False
 
 async def is_user_owner(chat_id, user_id):
     """Check if a user is the creator (owner) of a chat."""
