@@ -21,7 +21,8 @@ from web.server import start_web_server
 
 def track_sender(m):
     """Remember the chat and, for private chats, the user behind it."""
-    record_group(m.chat.id, getattr(m.chat, "title", None), getattr(m.chat, "type", None))
+    if getattr(m.chat, "type", None) != 'private':
+        record_group(m.chat.id, getattr(m.chat, "title", None), getattr(m.chat, "type", None))
     if getattr(m.chat, "type", None) == 'private':
         record_user(getattr(m.from_user, "id", None),
                     user_label(m.from_user), getattr(m.from_user, "username", None))

@@ -27,7 +27,11 @@ def group_title(gid) -> str:
 
 def list_groups() -> list:
     groups = _db().get("groups", {})
-    result = [{"gid": gid, "title": info.get("title", gid)} for gid, info in groups.items()]
+    result = [
+        {"gid": gid, "title": info.get("title", gid)}
+        for gid, info in groups.items()
+        if info.get("type") != "private"
+    ]
     result.sort(key=lambda g: g["title"].lower())
     return result
 
