@@ -67,6 +67,26 @@
   </div>
 </section>
 
+<aside class="lecp-mt-7">
+  <h3 class="lecp-section-title lecp-mb-3">Current Captcha Settings</h3>
+  {% if captcha.enabled %}<span class="lecp-badge lecp-badge--success">Enabled</span>{% else %}<span class="lecp-badge lecp-badge--error">Disabled</span>{% endif %}
+  <p class="lecp-caption lecp-mt-2">Max attempts: {{ captcha.tries }} | Timeout: 3 minutes</p>
+
+  {% if captcha.questions %}
+    <ul class="lecp-grid lecp-mt-5">
+      {% for q in captcha.questions %}
+      <li class="lecp-tile lecp-col-12 lecp-col-s-4">
+        <strong>{{ loop.index }}. {{ q.q }}</strong><br>
+        <span class="lecp-caption">Options: {{ q.opts|join(", ") }}</span><br>
+        <span class="lecp-caption">Correct: <strong>{{ q.ans }}</strong></span>
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="lecp-caption lecp-mt-4">No questions configured.</p>
+  {% endif %}
+</aside>
+
 <section class="lecp-mt-7">
   <div class="lecp-flex lecp-items-center lecp-justify-between">
     <h2 class="lecp-section-title">Captcha</h2>
