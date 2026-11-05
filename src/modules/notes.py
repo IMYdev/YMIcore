@@ -4,7 +4,13 @@ from core.utils import (handle_errors, is_user_admin, is_user_owner, get_args, t
 from core.activity import (log_event, user_label, chat_label)
 from core.formatting import markdown_to_html
 from telebot.formatting import (format_text, hbold, hitalic, hcode)
+from telebot.types import MessageEntity
 from web.groups import set_developer_group, is_developer_group
+
+
+def _entities(items):
+    # custom_emoji often can't be re-sent by the bot; its text fallback is enough.
+    return [e for e in (MessageEntity.to_list_of_dicts(items) or []) if e["type"] != "custom_emoji"]
 
 @handle_errors
 async def set_note(m):
@@ -25,6 +31,8 @@ async def set_note(m):
     msg = m.reply_to_message
     reply_with = {}
     caption = getattr(msg, "caption", None) or ""
+    entities = _entities(getattr(msg, "entities", None))
+    caption_entities = _entities(getattr(msg, "caption_entities", None))
     if msg.text: reply_with = {"type": "text", "data": msg.text}
     elif msg.sticker: reply_with = {"type": "sticker", "data": msg.sticker.file_id}
     elif msg.photo: reply_with = {"type": "photo", "data": msg.photo[-1].file_id, "text": caption}
@@ -32,6 +40,11 @@ async def set_note(m):
     elif msg.video: reply_with = {"type": "video", "data": msg.video.file_id, "text": caption}
     elif msg.audio: reply_with = {"type": "audio", "data": msg.audio.file_id, "text": caption}
     else: reply_with = {"type": "unknown", "data": None}
+
+    if reply_with["type"] == "text" and entities:
+        reply_with["entities"] = entities
+    elif caption_entities:
+        reply_with["caption_entities"] = caption_entities
 
     notes = db.get('notes', {})
     next_id = max(map(int, notes.keys()), default=0) + 1
@@ -54,19 +67,27 @@ async def get_notes(m):
         note = notes[note_id]
         t, d = note['reply']['type'], note['reply']['data']
         caption = note['reply'].get('text')
-        if t == "text": await bot.send_message(m.chat.id, markdown_to_html(d), parse_mode="HTML", **topic_kwargs(m))
+        entities = note['reply'].get('entities')
+        caption_entities = note['reply'].get('caption_entities')
+        if t == "text":
+            if entities: await bot.send_message(m.chat.id, d, entities=entities, **topic_kwargs(m))
+            else: await bot.send_message(m.chat.id, markdown_to_html(d), parse_mode="HTML", **topic_kwargs(m))
         elif t == "sticker": await bot.send_sticker(m.chat.id, d, **topic_kwargs(m))
         elif t == "photo":
-            if caption: await bot.send_photo(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            if caption_entities: await bot.send_photo(m.chat.id, d, caption=caption, caption_entities=caption_entities, **topic_kwargs(m))
+            elif caption: await bot.send_photo(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
             else: await bot.send_photo(m.chat.id, d, **topic_kwargs(m))
         elif t == "document":
-            if caption: await bot.send_document(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            if caption_entities: await bot.send_document(m.chat.id, d, caption=caption, caption_entities=caption_entities, **topic_kwargs(m))
+            elif caption: await bot.send_document(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
             else: await bot.send_document(m.chat.id, d, **topic_kwargs(m))
         elif t == "video":
-            if caption: await bot.send_video(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            if caption_entities: await bot.send_video(m.chat.id, d, caption=caption, caption_entities=caption_entities, **topic_kwargs(m))
+            elif caption: await bot.send_video(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
             else: await bot.send_video(m.chat.id, d, **topic_kwargs(m))
         elif t == "audio":
-            if caption: await bot.send_audio(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
+            if caption_entities: await bot.send_audio(m.chat.id, d, caption=caption, caption_entities=caption_entities, **topic_kwargs(m))
+            elif caption: await bot.send_audio(m.chat.id, d, caption=markdown_to_html(caption), parse_mode="HTML", **topic_kwargs(m))
             else: await bot.send_audio(m.chat.id, d, **topic_kwargs(m))
         else: await bot.send_message(m.chat.id, "Note is unreadable.", **topic_kwargs(m))
         log_event(
