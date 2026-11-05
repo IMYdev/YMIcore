@@ -28,6 +28,7 @@ help_categories = {
     *General Commands:*
     - `/info`: Displays user information.
     - `/start`: Starts the bot.
+    - `/id`: Shows chat ID.
     - `/wallpaper`: Sends a wallpaper.
     - `/animewall`: Sends an anime wallpaper.
     - `/sauce`: Reverse search anime from image.
@@ -38,7 +39,7 @@ help_categories = {
     *Admin Commands:*
     - `/purge`: Delete messages.
     - `/filter [keyword]`: Set automatic response.
-    - `/filters`: List active filters.
+    - `/filist`: List active filters.
     - `/stop [keyword]`: Remove filter.
     - `/add [note]`: Save a note.
     - `/remove [note_ID]`: Delete a note.
@@ -52,6 +53,7 @@ help_categories = {
     - `/modules`: Manage modules.
     - `/blockset`: Blacklist sticker set.
     - `/blocklist`: List blacklisted sets.
+    - `/unblockset`: Remove sticker set from blacklist.
     - `/setcaptcha`: Replace captcha question (one question per set).
     - `/addcaptcha`: Add a captcha question.
     - `/delcaptcha <n>`: Remove a captcha question.
@@ -59,6 +61,7 @@ help_categories = {
     - `/captchatries <n>`: Set max wrong attempts.
     - `/captcha`: Toggle captcha feature.
     - `/panel`: Open the settings web panel.
+    - `/devgroup`: Developer group commands.
     - `/broadcast [users|groups] <message>`: Send an update to everyone (owner).
     - `/bcast_list`: List recent broadcasts (owner).
     - `/bcast_delete <id>`: Delete a broadcast from every chat (owner).
