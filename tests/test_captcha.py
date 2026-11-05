@@ -10,6 +10,7 @@ from modules.captcha import (
     get_kicks, increment_kicks, reset_kicks, decide_punishment, MAX_KICKS,
     remember_join_msg, pop_join_msg, attach_join_msg_to_session,
     punish, punish_locked, finish_success, handle_captcha_callback, SILENT_EXITS,
+    handle_join_service_message,
 )
 from core.imysdb import IMYDB
 
@@ -150,6 +151,14 @@ class TestJoinMsgs:
         assert pop_join_msg(-100, 2) == 222
         assert pop_join_msg(-200, 1) == 333
 
+    def test_handler_remembers_even_with_session(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        create_session(-100, 1, "U", 100)
+        msg = Obj(chat=Obj(id=-100), message_id=555,
+                  new_chat_members=[Obj(id=1, is_bot=False)])
+        asyncio.run(handle_join_service_message(msg))
+        assert pop_join_msg(-100, 1) == 555
+
 
 class FakeBot:
     def __init__(self):
@@ -274,6 +283,18 @@ class TestPunish:
         assert fake.called("ban_chat_member")
         assert fake.called("unban_chat_member") == []
         assert get_kicks(-104, 1) == MAX_KICKS
+
+    def test_punish_deletes_join_msg_from_store(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        SILENT_EXITS.clear()
+        fake = FakeBot()
+        monkeypatch.setattr(captcha, "bot", fake)
+        session = make_session(-106, 1, join_msg_id=None)
+        remember_join_msg(-106, 1, 888, time.time())
+
+        asyncio.run(asyncio.wait_for(punish(session, "timeout"), 3))
+
+        assert (-106, 888) in fake.called("delete_message")
 
     def test_success_leaves_the_notice(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

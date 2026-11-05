@@ -211,8 +211,9 @@ async def handle_join_service_message(m):
         return
     chat_id = m.chat.id
     user_id = user.id
-    if not attach_join_msg_to_session(chat_id, user_id, m.message_id):
-        remember_join_msg(chat_id, user_id, m.message_id, time.time())
+    attach_join_msg_to_session(chat_id, user_id, m.message_id)
+    # Always keep the id too: a concurrent start_verification may overwrite the session with a stale copy.
+    remember_join_msg(chat_id, user_id, m.message_id, time.time())
 
 async def start_verification(chat, user, db):
     perms = ChatPermissions(
@@ -445,7 +446,8 @@ async def punish_locked(session, reason):
         return
     key = session_key(chat_id, user_id)
     # re-read so a stale sweeper snapshot can't kick a user who already verified
-    join_msg_id = fresh.get("join_msg_id")
+    # join_msgs survives a stale session overwrite, so prefer it over the session copy
+    join_msg_id = pop_join_msg(chat_id, user_id) or fresh.get("join_msg_id")
     # delete session first
     delete_session(chat_id, user_id)
     SILENT_EXITS.add(key)
