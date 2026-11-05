@@ -20,7 +20,7 @@ It's also a ready-to-use general group management bot.
 - Pin important messages.
 - Clean up chats by deleting batches of messages at once.
 - Toggle and control various bot modules for extra features or disabling unwanted ones.
-- Grab media content from Instagram, Facebook, and Twitter/X links.
+- Grab media content from Instagram and Twitter/X links.
 - Ability to add spoilers to media and text.
 - Block sticker sets that are unwanted in the group chat.
 - Send an update or news broadcast to everyone who has interacted with the bot, from Telegram (`/broadcast`) or the web panel. (Must be owner of bot instance)

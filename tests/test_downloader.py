@@ -61,16 +61,17 @@ def test_extract_routes_instagram(monkeypatch):
     assert calls == ["https://www.instagram.com/reel/abc123/"]
 
 
-def test_extract_routes_facebook(monkeypatch):
+def test_extract_ignores_facebook_links(monkeypatch):
     calls = []
 
-    async def fake_fb(m, link):
-        calls.append(link)
+    for name in ("instagram_dl", "twitter_dl"):
 
-    monkeypatch.setattr(downloader, "facebook_dl", fake_fb)
-    url = "https://www.facebook.com/reel/123"
-    asyncio.run(downloader.extract_supported_url(make_msg(url)))
-    assert calls == [url]
+        async def fake_dl(m, link):
+            calls.append(link)
+
+        monkeypatch.setattr(downloader, name, fake_dl)
+    asyncio.run(downloader.extract_supported_url(make_msg("https://www.facebook.com/reel/123")))
+    assert calls == []
 
 
 def test_extract_routes_twitter_and_x(monkeypatch):
@@ -86,10 +87,28 @@ def test_extract_routes_twitter_and_x(monkeypatch):
         assert calls == [url]
 
 
+def test_extract_ignores_mirror_hosts(monkeypatch):
+    calls = []
+
+    async def fake_dl(m, link):
+        calls.append(link)
+
+    monkeypatch.setattr(downloader, "instagram_dl", fake_dl)
+    monkeypatch.setattr(downloader, "twitter_dl", fake_dl)
+    for url in (
+        "https://fxtwitter.com/user/status/123",
+        "https://fixupx.com/user/status/123",
+        "https://vxinstagram.com/reel/abc123/",
+        "https://kkinstagram.com/reel/abc123/",
+    ):
+        asyncio.run(downloader.extract_supported_url(make_msg(url)))
+    assert calls == []
+
+
 def test_extract_ignores_youtube_links(monkeypatch):
     calls = []
 
-    for name in ("instagram_dl", "facebook_dl", "twitter_dl"):
+    for name in ("instagram_dl", "twitter_dl"):
 
         async def fake_dl(m, link):
             calls.append(link)
@@ -98,6 +117,90 @@ def test_extract_ignores_youtube_links(monkeypatch):
     url = "https://youtu.be/ZwZcVy4tWws"
     asyncio.run(downloader.extract_supported_url(make_msg(url)))
     assert calls == []
+
+
+def test_instagram_dl_reports_failure(monkeypatch):
+    replies = []
+
+    async def fake_og(m, url):
+        return False
+
+    async def fake_vx(m, url):
+        return False
+
+    async def fake_reply(m, text, **kwargs):
+        replies.append(text)
+
+    monkeypatch.setattr(downloader, "instagram_dl_og", fake_og)
+    monkeypatch.setattr(downloader, "instagram_dl_vx", fake_vx)
+    monkeypatch.setattr(downloader.bot, "reply_to", fake_reply)
+    asyncio.run(downloader.instagram_dl(make_msg("x"), "https://www.instagram.com/reel/abc123/"))
+    assert replies == ["Couldn't download this Instagram media."]
+
+
+def test_instagram_dl_falls_back_to_vx(monkeypatch):
+    replies = []
+
+    async def fake_og(m, url):
+        return False
+
+    async def fake_vx(m, url):
+        return True
+
+    async def fake_reply(m, text, **kwargs):
+        replies.append(text)
+
+    monkeypatch.setattr(downloader, "instagram_dl_og", fake_og)
+    monkeypatch.setattr(downloader, "instagram_dl_vx", fake_vx)
+    monkeypatch.setattr(downloader.bot, "reply_to", fake_reply)
+    asyncio.run(downloader.instagram_dl(make_msg("x"), "https://www.instagram.com/reel/abc123/"))
+    assert replies == []
+
+
+def test_vx_media_parses_video():
+    page = '<meta property="og:video" content="https://vx/offload/x/0.mp4" /><meta property="og:description" content="hi &amp; bye" />'
+    assert downloader._vx_media(page) == ("https://vx/offload/x/0.mp4", "hi & bye")
+    assert downloader._vx_media("no media here") is None
+
+
+def test_instagram_dl_vx_sends_offload_when_page_fails(monkeypatch):
+    sent = []
+
+    class FailingSession:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            raise RuntimeError("network")
+
+        async def __aexit__(self, *args):
+            pass
+
+    async def fake_send(chat_id, video=None, caption=None, **kwargs):
+        sent.append((video, caption))
+
+    monkeypatch.setattr(downloader.aiohttp, "ClientSession", FailingSession)
+    monkeypatch.setattr(downloader.bot, "send_video", fake_send)
+    asyncio.run(downloader.instagram_dl_vx(make_msg("x"), "https://www.instagram.com/reel/abc123/"))
+    assert sent[0][0] == "https://vxinstagram.com/offload/abc123/0.mp4"
+    assert sent[0][1].startswith("Shared by")
+
+
+def test_tweet_video_url_from_videos():
+    data = {"tweet": {"media": {"videos": [{"type": "video", "url": "https://video.twimg.com/a.mp4"}]}}}
+    assert downloader._tweet_video_url(data) == "https://video.twimg.com/a.mp4"
+
+
+def test_tweet_video_url_from_all_skips_photos():
+    data = {"tweet": {"media": {"all": [
+        {"type": "photo", "url": "https://pbs.twimg.com/a.jpg"},
+        {"type": "video", "url": "https://video.twimg.com/b.mp4"},
+    ]}}}
+    assert downloader._tweet_video_url(data) == "https://video.twimg.com/b.mp4"
+
+
+def test_tweet_video_url_missing():
+    assert downloader._tweet_video_url({"tweet": {"text": "no media"}}) is None
 
 
 def test_caption_with_username():

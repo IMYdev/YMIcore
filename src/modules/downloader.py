@@ -7,9 +7,7 @@ from urllib.parse import urlparse, unquote
 import html
 from core.utils import handle_errors, topic_kwargs
 import aiohttp
-from yt_dlp import YoutubeDL
 from telebot.types import InputMediaPhoto, InputMediaVideo
-import os
 
 @handle_errors
 async def extract_supported_url(m):
@@ -22,35 +20,31 @@ async def extract_supported_url(m):
 
     url = match.group(0)
 
-    if "instagram.com" in url:
+    platform = supported_platform(url)
+    if platform == "instagram":
         await instagram_dl(m, url.split("?", 1)[0])
 
-    elif "facebook.com" in url:
-        await facebook_dl(m, url)
-
-    elif "twitter.com" in url or "x.com" in url:
+    elif platform == "twitter":
         await twitter_dl(m, url)
 
-class loggerOutputs:
-    def error(msg): pass
-    def warning(msg): pass
-    def debug(msg): pass
+def supported_platform(url):
+    host = (urlparse(url).hostname or "").lower()
+    if host == "instagram.com" or host.endswith(".instagram.com"):
+        return "instagram"
+    if host in ("twitter.com", "x.com") or host.endswith((".twitter.com", ".x.com")):
+        return "twitter"
+    return None
 
-ytdl_opts = {"quiet": True, "logger": loggerOutputs}
-if os.path.exists("cookies.txt"):
-    ytdl_opts["cookiefile"] = "cookies.txt"
-
-ig_opts = {
-    "format": "best[ext=mp4]/best", 
-    "quiet": True,
-    "logger": loggerOutputs
-}
+def is_download_url(text):
+    match = re.search(r'https?://\S+', text or "")
+    return bool(match and supported_platform(match.group(0)))
 
 def get_shared_caption(m, info, url):
     username = f"Shared by @{m.from_user.username}" if m.from_user.username else f"Shared by {user_link(m.from_user)}"
     description = info.get('description') or info.get('title', '')
     source = hlink('Source', url, escape=False)
-    caption = f"{hcite(description, expandable=True)}\n{username}\n{source}"
+    body = f"{hcite(description, expandable=True)}\n{username}" if description else username
+    caption = f"{body}\n{source}"
     return caption if len(caption) <= 1024 else f"{username}\n{source}"
 
 def _instagram_shortcode(url):
@@ -109,11 +103,8 @@ async def _fetch_og_items(shortcode, reel, start, end):
 
 @handle_errors
 async def instagram_dl(m, url):
-    route = _instagram_shortcode(url)
-    if route and await instagram_dl_og(m, url):
-        return
-    if route and route["reel"]:
-        await instagram_dl_ytdlp(m, url)
+    if _instagram_shortcode(url) and not await instagram_dl_og(m, url) and not await instagram_dl_vx(m, url):
+        await bot.reply_to(m, "Couldn't download this Instagram media.", **topic_kwargs(m))
 
 async def instagram_dl_og(m, url):
     route = _instagram_shortcode(url)
@@ -189,34 +180,61 @@ async def instagram_dl_og(m, url):
         await bot.send_media_group(m.chat.id, chunk, **topic_kwargs(m))
     return True
 
-async def instagram_dl_ytdlp(m, url):
-    with YoutubeDL(ig_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-    dl_url = info.get('url')
-    if not dl_url:
-        raise Exception("Could not extract media from reel.")
-    caption = get_shared_caption(m, info, url)
-    await bot.send_video(m.chat.id, dl_url, caption=caption, parse_mode="HTML", **topic_kwargs(m))
+def _vx_media(page):
+    video = re.search(r'<meta property="og:video" content="([^"]+)"', page)
+    if not video:
+        return None
+    description = re.search(r'<meta property="og:description" content="([^"]*)"', page)
+    return html.unescape(video.group(1)), html.unescape(description.group(1)) if description else ""
 
-@handle_errors
-async def facebook_dl(m, url):
-    with YoutubeDL(ytdl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-    link = info.get('formats')[1].get('url')
-    caption = get_shared_caption(m, info, url)
-    await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML", **topic_kwargs(m))
+async def instagram_dl_vx(m, url):
+    route = _instagram_shortcode(url)
+    if not route or not route["reel"]:
+        return False
+    video = f"https://vxinstagram.com/offload/{route['shortcode']}/0.mp4"
+    description = ""
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+            async with session.get(f"https://vxinstagram.com/reel/{route['shortcode']}/", headers={"User-Agent": "YMIcoreBot/1.0"}) as resp:
+                if resp.status == 200:
+                    media = _vx_media(await resp.text())
+                    if media:
+                        video, description = media
+    except Exception:
+        pass
+    caption = get_shared_caption(m, {"description": description}, url)
+    await bot.send_video(m.chat.id, video=video, caption=caption, parse_mode="HTML", **topic_kwargs(m))
+    return True
+
+def _tweet_video_url(data):
+    tweet = data.get("tweet") or data.get("status") or data
+    media = tweet.get("media") or {}
+    for item in media.get("videos") or []:
+        if item.get("url"):
+            return item["url"]
+    for item in media.get("all") or []:
+        if item.get("type") in ("video", "gif") and item.get("url"):
+            return item["url"]
+    return None
 
 @handle_errors
 async def twitter_dl(m, url):
+    status = re.search(r'/status/(\d+)', url)
+    if not status:
+        return
     try:
-        with YoutubeDL(ytdl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-        link = next((f['url'] for f in info.get('formats', []) if f.get('ext') == 'mp4' and f.get('protocol') == 'https'), None)
-        caption = get_shared_caption(m, info, url)
-        if link:
-            await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML", **topic_kwargs(m))
-        else:
+        api_url = f"https://api.fxtwitter.com/status/{status.group(1)}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url, headers={"User-Agent": "YMIcoreBot/1.0"}) as resp:
+                if resp.status != 200:
+                    raise Exception(f"FxTwitter returned {resp.status}")
+                data = await resp.json()
+        link = _tweet_video_url(data)
+        if not link:
             raise Exception("No video")
+        tweet = data.get("tweet") or data.get("status") or data
+        caption = get_shared_caption(m, {"description": tweet.get("text") or ""}, url)
+        await bot.send_video(m.chat.id, video=link, caption=caption, parse_mode="HTML", **topic_kwargs(m))
     except Exception as e:
         if "No video" in str(e):
             fix_url = url.replace("x.com", "d.fixupx.com") if "x.com" in url else url.replace("twitter.com", "d.fxtwitter.com")
