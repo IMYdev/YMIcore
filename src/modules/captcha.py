@@ -1,5 +1,7 @@
 import json, os, time, asyncio
-from core.db import IMYDB
+from core.storage import captcha_db, group_db
+from core.group_settings import drop_legacy_captcha, get_captcha_questions
+from core.validation import validate_question
 from info import bot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 from telebot.formatting import hbold
@@ -19,34 +21,6 @@ LOCKS = {}
 def session_key(chat_id, user_id):
     return f"{chat_id}:{user_id}"
 
-def get_captcha_questions(db):
-    q = db.get('captcha_questions')
-    if q and isinstance(q, list) and len(q) > 0:
-        return q
-    # lazy legacy migration
-    legacy_q = db.get('captcha_q')
-    if legacy_q is not None and legacy_q != '':
-        opts = db.get('captcha_opts', [])
-        ans = db.get('captcha_ans')
-        return [{"q": legacy_q, "opts": opts, "ans": ans}]
-    return []
-
-def validate_question(q, opts, ans):
-    if not isinstance(q, str) or q.strip() == '':
-        return "Question must be non-empty."
-    if not isinstance(opts, list) or len(opts) < 2:
-        return "At least 2 options required."
-    cleaned = [str(o).strip() for o in opts]
-    if len(cleaned) != len(set(cleaned)):
-        return "Options must be unique (case-sensitive after strip)."
-    if any(len(o) > 60 for o in cleaned):
-        return "Each option must be at most 60 characters."
-    if len(cleaned) > 8:
-        return "At most 8 options allowed."
-    if ans not in cleaned:
-        return "Correct answer must be one of the options."
-    return None
-
 def add_question(db, q, opts, ans):
     questions = get_captcha_questions(db) or []
     if len(questions) >= MAX_QUESTIONS:
@@ -57,11 +31,7 @@ def add_question(db, q, opts, ans):
     questions.append({"q": q.strip(), "opts": [str(o).strip() for o in opts], "ans": str(ans).strip()})
     db.set('captcha_questions', questions)
     # delete legacy keys when writing new format
-    for k in ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempts'):
-        try:
-            db.delete(k)
-        except Exception:
-            pass
+    drop_legacy_captcha(db)
     return None
 
 def remove_question(db, index):
@@ -70,11 +40,7 @@ def remove_question(db, index):
         return False
     questions.pop(index - 1)
     db.set('captcha_questions', questions)
-    for k in ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempts'):
-        try:
-            db.delete(k)
-        except Exception:
-            pass
+    drop_legacy_captcha(db)
     return True
 
 def create_session(chat_id, user_id, name, now):
@@ -92,25 +58,25 @@ def create_session(chat_id, user_id, name, now):
         "started": False,
         "name": name,
     }
-    db = IMYDB('runtime/captcha/pending.json')
+    db = captcha_db("pending")
     sessions = db.get('sessions') or {}
     sessions[key] = session
     db.set('sessions', sessions)
     return session
 
 def get_session(chat_id, user_id):
-    db = IMYDB('runtime/captcha/pending.json')
+    db = captcha_db("pending")
     sessions = db.get('sessions') or {}
     return sessions.get(session_key(chat_id, user_id))
 
 def save_session(chat_id, user_id, session):
-    db = IMYDB('runtime/captcha/pending.json')
+    db = captcha_db("pending")
     sessions = db.get('sessions') or {}
     sessions[session_key(chat_id, user_id)] = session
     db.set('sessions', sessions)
 
 def delete_session(chat_id, user_id):
-    db = IMYDB('runtime/captcha/pending.json')
+    db = captcha_db("pending")
     sessions = db.get('sessions') or {}
     key = session_key(chat_id, user_id)
     if key in sessions:
@@ -118,18 +84,18 @@ def delete_session(chat_id, user_id):
         db.set('sessions', sessions)
 
 def list_sessions():
-    db = IMYDB('runtime/captcha/pending.json')
+    db = captcha_db("pending")
     return list((db.get('sessions') or {}).values())
 
 def remember_join_msg(chat_id, user_id, message_id, now):
-    db = IMYDB('runtime/captcha/join_msgs.json')
+    db = captcha_db("join_msgs")
     msgs = db.get('msgs') or {}
     msgs[session_key(chat_id, user_id)] = {"message_id": message_id, "ts": now}
     msgs = {k: v for k, v in msgs.items() if now - v.get("ts", 0) <= JOIN_MSG_TTL}
     db.set('msgs', msgs)
 
 def pop_join_msg(chat_id, user_id):
-    db = IMYDB('runtime/captcha/join_msgs.json')
+    db = captcha_db("join_msgs")
     msgs = db.get('msgs') or {}
     entry = msgs.pop(session_key(chat_id, user_id), None)
     if entry is None:
@@ -161,12 +127,12 @@ def register_correct_answer(session, total_questions):
     return "next"
 
 def get_kicks(chat_id, user_id):
-    db = IMYDB('runtime/captcha/kicks.json')
+    db = captcha_db("kicks")
     kicks = db.get('kicks') or {}
     return kicks.get(session_key(chat_id, user_id), 0)
 
 def increment_kicks(chat_id, user_id):
-    db = IMYDB('runtime/captcha/kicks.json')
+    db = captcha_db("kicks")
     kicks = db.get('kicks') or {}
     key = session_key(chat_id, user_id)
     kicks[key] = kicks.get(key, 0) + 1
@@ -174,7 +140,7 @@ def increment_kicks(chat_id, user_id):
     return kicks[key]
 
 def reset_kicks(chat_id, user_id):
-    db = IMYDB('runtime/captcha/kicks.json')
+    db = captcha_db("kicks")
     kicks = db.get('kicks') or {}
     key = session_key(chat_id, user_id)
     if key in kicks:
@@ -262,7 +228,7 @@ async def start_verification(chat, user, db):
         pass
 
 async def _send_question_pm(chat_id, user_id, session):
-    db = IMYDB(f'runtime/greetings/{str(chat_id).lstrip("-")}_greetings.json')
+    db = group_db("greetings", chat_id)
     questions = get_captcha_questions(db)
     q_idx = session.get("q_index", 0)
     if not questions or q_idx >= len(questions):
@@ -347,7 +313,7 @@ async def handle_captcha_callback(call):
             return await bot.answer_callback_query(call.id, "Time's up.", show_alert=True)
         if session.get("q_index") != q_index:
             return await bot.answer_callback_query(call.id, "That question is no longer active.", show_alert=True)
-        db = IMYDB(f'runtime/greetings/{str(chat_id).lstrip("-")}_greetings.json')
+        db = group_db("greetings", chat_id)
         questions = get_captcha_questions(db)
         if not questions or q_index >= len(questions):
             # edited mid-session past end -> finish success
@@ -424,7 +390,7 @@ async def finish_success(session, user):
     try:
         if user:
             from modules.greetings import send_standard_greeting
-            db = IMYDB(f'runtime/greetings/{str(chat_id).lstrip("-")}_greetings.json')
+            db = group_db("greetings", chat_id)
             await send_standard_greeting(chat_id, user, db)
     except Exception:
         pass
