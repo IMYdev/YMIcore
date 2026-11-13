@@ -78,6 +78,16 @@ botcommands.py   # Command router.
 main.py          # Entry point (bot + web panel).
 requirements.txt # Project dependencies.
 ```
+
+### Where things live
+Each concern has exactly one home. `tests/test_structure.py` enforces this.
+
+- **Storage paths**: `core/storage.py`. Ask it for an `IMYDB` (`group_db`, `module_db`, `groups_db`, ...); never build a `runtime/...` path anywhere else.
+- **Per-group settings**: `core/group_settings.py`. Notes, filters, stickers, greetings and captcha reads/writes all go through it, for both the bot and the web panel.
+- **Stored replies**: `core/replies.py`. `build_reply` saves a replied-to message, `send_reply` sends it (markdown rendered to HTML).
+- **Groups and bans**: `core/groups.py`, including `ban_group_and_leave`.
+- **Module toggles**: `module_manager.py`. `is_command_enabled` / `set_command_enabled` are the only toggle functions; defaults live there too.
+- **Permissions**: `core/utils.py`: `is_privileged` for "owner or chat admin", `is_owner_id` for a synchronous instance owner check.
  
 ## Creating Your Own Bot
 1. **Add needed environment variables to `.env` or your environment.**

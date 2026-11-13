@@ -124,7 +124,7 @@ def test_set_note_stores_entities_without_custom_emoji(tmp_path, monkeypatch):
     async def fake_reply(m, text, **kwargs):
         return None
 
-    monkeypatch.setattr(notes, "is_user_admin", fake_admin)
+    monkeypatch.setattr(notes, "is_privileged", fake_admin)
     monkeypatch.setattr(notes.bot, "reply_to", fake_reply)
 
     command = make_msg("/add greet", 100)
