@@ -19,14 +19,14 @@ from web.auth import (
     make_session, read_session, revoke_token, token_digest, valid_login_link,
     verify_csrf,
 )
-from web.groups import (
-    ban_group, banned_groups, group_title, list_groups, record_group,
+from core.groups import (
+    ban_group_and_leave, banned_groups, group_title, list_groups,
     unban_group, is_developer_group, set_developer_group,
 )
-from web import settings_registry as registry
+from core import group_settings as registry
 from web.media import is_file_field, relay_to_telegram
 from core import broadcast
-from core.activity import log_event, read_events, stats as activity_stats
+from core.activity import EVENT_LABELS, full_name, log_event, read_events, stats as activity_stats
 from core.formatting import markdown_to_html
 from core.users import audience_counts, normalise_segment
 
@@ -90,9 +90,7 @@ async def panel_user_name(uid) -> str:
     name = ""
     try:
         user = await bot.get_chat(int(uid))
-        name = " ".join(
-            p for p in (getattr(user, "first_name", None), getattr(user, "last_name", None)) if p
-        ).strip()
+        name = full_name(user)
         username = getattr(user, "username", None)
         if username:
             name = f"{name} (@{username})" if name else f"@{username}"
@@ -145,6 +143,15 @@ async def accessible_groups(user_payload) -> list:
 def saved_url(path: str) -> str:
     sep = "&" if "?" in path else "?"
     return f"{path}{sep}saved=1"
+
+
+async def _upload_or_error(form, caption, failure):
+    """Relay the optional media upload; returns (relayed, error)."""
+    upload = form.get("media")
+    if not is_file_field(upload):
+        return None, None
+    relayed = await relay_to_telegram(upload, BOT_OWNER, caption=caption or None)
+    return relayed, (None if relayed else failure)
 
 
 # --------------------------------------------------------------------------
@@ -293,22 +300,6 @@ async def global_settings(request):
 # Statistics & activity (owner)
 # --------------------------------------------------------------------------
 
-_EVENT_LABELS = [
-    ("Commands", "command"),
-    ("Filter triggers", "filter_trigger"),
-    ("Note fetches", "note_fetch"),
-    ("Greetings", "greeting"),
-    ("Farewells", "farewell"),
-    ("Captcha passes", "captcha_pass"),
-    ("Captcha failures", "captcha_fail"),
-    ("Captcha kicks", "captcha_kick"),
-    ("Captcha bans", "captcha_ban"),
-    ("Captcha timeouts", "captcha_timeout"),
-    ("Panel actions", "panel_action"),
-    ("Broadcasts", "broadcast"),
-]
-
-
 @authed
 @owner_only
 async def statistics(request):
@@ -325,7 +316,7 @@ async def statistics(request):
     return render(
         request, "statistics.html",
         counts=counts, group_stats=group_stats,
-        event_labels=_EVENT_LABELS, events=events,
+        event_labels=list(EVENT_LABELS.items()), events=events,
         active="statistics",
     )
 
@@ -359,11 +350,7 @@ async def ban_group_route(request):
             banned=list(banned_groups()), active="banned",
             errors={"form": error}, saved=False,
         )
-    if ban_group(gid):
-        try:
-            await bot.leave_chat(int(gid))
-        except Exception:
-            pass
+    await ban_group_and_leave(gid)
     raise web.HTTPFound(saved_url("/banned"))
 
 
@@ -536,7 +523,7 @@ async def group_modules_save(request):
         raise web.HTTPBadRequest(text="Unknown module.")
     selected = set(form.getall("cmd", []))
     for command in registry.MODULE_MAP[module]:
-        registry.set_module_enabled(gid, command, command in selected)
+        registry.set_command_enabled(gid, command, command in selected)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/modules"))
 
 
@@ -669,16 +656,15 @@ async def group_filters_add(request):
     form = request["form"]
     keyword = form.get("keyword", "").strip().lower()
     body = form.get("body", "")
-    upload = form.get("media")
 
     relayed = None
     if not keyword:
         error = "Keyword is required."
-    elif is_file_field(upload):
-        relayed = await relay_to_telegram(upload, BOT_OWNER, caption=body or None)
-        error = None if relayed else "This file cannot be used as a filter."
     else:
-        error = registry.validate_named_text(keyword, body)
+        relayed, error = await _upload_or_error(
+            form, body, "This file cannot be used as a filter.")
+        if not relayed:
+            error = error or registry.validate_named_text(keyword, body)
 
     if error:
         return render(
@@ -724,16 +710,15 @@ async def group_notes_add(request):
     form = request["form"]
     name = form.get("name", "").strip()
     body = form.get("body", "")
-    upload = form.get("media")
 
     relayed = None
     if not name:
         error = "Note name is required."
-    elif is_file_field(upload):
-        relayed = await relay_to_telegram(upload, BOT_OWNER, caption=body or None)
-        error = None if relayed else "This file cannot be used as a note."
     else:
-        error = registry.validate_named_text(name, body)
+        relayed, error = await _upload_or_error(
+            form, body, "This file cannot be used as a note.")
+        if not relayed:
+            error = error or registry.validate_named_text(name, body)
 
     if error:
         return render(
