@@ -1,10 +1,8 @@
 import time
 
 from info import BOT_OWNER
-from core.db import IMYDB
-from web.groups import banned_groups
-
-PATH = "runtime/users/registry.json"
+from core.groups import banned_groups, registry_groups
+from core.storage import USERS_REGISTRY as PATH, users_db
 
 # The registry is rewritten as a whole on every save, so an already known user
 # is only written back when their name, username or last seen date changed.
@@ -15,8 +13,8 @@ SEGMENTS = ("both", "users", "groups")
 GROUP_TYPES = ("group", "supergroup", "channel")
 
 
-def _db() -> IMYDB:
-    return IMYDB(PATH)
+def _db():
+    return users_db()
 
 
 def record_user(user_id, name=None, username=None) -> None:
@@ -121,7 +119,7 @@ def group_ids() -> list:
     """Chats the bot manages, skipping banned ones and any private chat that
     was picked up by the group registry before chat types were recorded."""
     banned = {str(entry["gid"]) for entry in banned_groups()}
-    registry = IMYDB("runtime/groups/registry.json").get("groups", {})
+    registry = registry_groups()
     result = []
     for gid, info in registry.items():
         if str(gid) in banned:

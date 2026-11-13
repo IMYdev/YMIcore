@@ -1,15 +1,18 @@
-from core.db import IMYDB
-
-PATH = "runtime/groups/registry.json"
-BANNED_PATH = "runtime/banned/groups.json"
+from info import bot
+from core.storage import banned_db, groups_db
 
 
-def _db() -> IMYDB:
-    return IMYDB(PATH)
+def _db():
+    return groups_db()
 
 
-def _banned_db() -> IMYDB:
-    return IMYDB(BANNED_PATH)
+def _banned_db():
+    return banned_db()
+
+
+def registry_groups() -> dict:
+    """Raw {gid: {...}} map of every chat the bot has seen."""
+    return _db().get("groups", {})
 
 
 def record_group(chat_id, title, chat_type=None) -> None:
@@ -54,6 +57,17 @@ def ban_group(gid) -> bool:
     return True
 
 
+async def ban_group_and_leave(gid) -> bool:
+    """Ban a chat and make the bot leave it. Returns whether it was newly banned."""
+    added = ban_group(gid)
+    if added:
+        try:
+            await bot.leave_chat(int(gid))
+        except Exception:
+            pass
+    return added
+
+
 def unban_group(gid) -> bool:
     db = _banned_db()
     banned = db.get("groups.group_ids", [])
@@ -75,3 +89,10 @@ def set_developer_group(gid, enabled: bool) -> None:
     """Enable or disable developer mode for a group."""
     gid = str(gid)
     _db().set(f"groups.{gid}.developer", bool(enabled))
+
+
+__all__ = [
+    "ban_group", "ban_group_and_leave",
+    "banned_groups", "group_title", "is_developer_group", "list_groups",
+    "record_group", "registry_groups", "set_developer_group", "unban_group",
+]
