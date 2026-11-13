@@ -316,7 +316,7 @@ async def statistics(request):
     return render(
         request, "statistics.html",
         counts=counts, group_stats=group_stats,
-        event_labels=list(EVENT_LABELS.items()), events=events,
+        event_labels=[(label, key) for key, label in EVENT_LABELS.items()], events=events,
         active="statistics",
     )
 
