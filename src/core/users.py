@@ -1,7 +1,7 @@
 import time
 
 from info import BOT_OWNER
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from web.groups import banned_groups
 
 PATH = "runtime/users/registry.json"

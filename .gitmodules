@@ -1,3 +1,6 @@
 [submodule "src/web/static/vendor/lecp-css"]
 	path = src/web/static/vendor/lecp-css
 	url = https://github.com/IMYdev/LECP-CSS
+[submodule "src/core/imysdb"]
+	path = src/core/imysdb
+	url = https://github.com/IMYdev/IMY-sDB

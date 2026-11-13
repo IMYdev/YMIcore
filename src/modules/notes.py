@@ -1,5 +1,5 @@
 from info import bot
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from core.utils import (handle_errors, is_user_admin, is_user_owner, get_args, topic_kwargs)
 from core.activity import (log_event, user_label, chat_label)
 from core.formatting import markdown_to_html

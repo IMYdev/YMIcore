@@ -1,6 +1,6 @@
 from itertools import chain
 
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from modules.greetings import validate_template
 from module_manager import modules as MODULE_MAP, default_disabled
 

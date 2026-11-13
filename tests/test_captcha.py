@@ -12,7 +12,7 @@ from modules.captcha import (
     punish, punish_locked, finish_success, handle_captcha_callback, SILENT_EXITS,
     handle_join_service_message,
 )
-from core.imysdb import IMYDB
+from core.db import IMYDB
 
 def tmp_db(tmp_path, name):
     return IMYDB(str(tmp_path / name))

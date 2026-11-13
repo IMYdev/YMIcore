@@ -1,4 +1,4 @@
-from core.imysdb import IMYDB
+from core.db import IMYDB
 
 PATH = "runtime/groups/registry.json"
 BANNED_PATH = "runtime/banned/groups.json"

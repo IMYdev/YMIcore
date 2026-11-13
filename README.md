@@ -31,7 +31,7 @@ It's also a ready-to-use general group management bot.
 ```zsh
 git clone https://github.com/IMYdev/YMIcore
 cd "YMIcore"
-git submodule update --init   # pulls the LECP-CSS stylesheet for the web panel
+git submodule update --init   # pulls IMY-sDB and the LECP-CSS stylesheet
 ```
 
 ### 2. Install dependencies

@@ -2,7 +2,7 @@ import asyncio
 
 from telebot.types import MessageEntity
 
-from core.imysdb import IMYDB
+from core.db import IMYDB
 
 
 def make_msg(text, chat_id, thread_id=None):

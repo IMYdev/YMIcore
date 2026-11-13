@@ -1,5 +1,5 @@
 import json, os, time, asyncio
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from info import bot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 from telebot.formatting import hbold

@@ -3,7 +3,7 @@ import asyncio
 from telebot.formatting import hlink
 
 import modules.downloader as downloader
-from core.imysdb import IMYDB
+from core.db import IMYDB
 
 
 def make_user(username=None, uid=1, first_name="Rhys"):

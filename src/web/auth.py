@@ -7,7 +7,7 @@ import time
 from urllib.parse import urlsplit, parse_qs
 
 from info import BOT_OWNER, WEB_SECRET
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from core.utils import is_user_admin
 
 COOKIE_NAME = "ymicore_panel"

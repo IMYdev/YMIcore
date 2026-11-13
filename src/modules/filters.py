@@ -1,5 +1,5 @@
 from info import bot
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from core.utils import (handle_errors, is_user_admin, is_bot_owner, topic_kwargs)
 from core.activity import (log_event, user_label, chat_label)
 from telebot.types import MessageEntity

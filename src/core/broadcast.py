@@ -10,7 +10,7 @@ from telebot.util import smart_split
 
 from core.activity import log_event
 from core.formatting import markdown_to_html
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from core.users import broadcast_targets, mark_dead, normalise_segment
 
 PENDING_PATH = "runtime/broadcasts/pending.json"

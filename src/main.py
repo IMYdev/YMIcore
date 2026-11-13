@@ -2,7 +2,7 @@ import asyncio
 from telebot import types
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from info import (bot, BOT_OWNER)
-from core.imysdb import IMYDB
+from core.db import IMYDB
 from core.utils import handle_errors
 from core.activity import (log_event, user_label, chat_label)
 from core.users import record_user
