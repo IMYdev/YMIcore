@@ -2,7 +2,6 @@ import asyncio
 from telebot import types
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from info import (bot, BOT_OWNER)
-from core.db import IMYDB
 from core.utils import handle_errors
 from core.activity import (log_event, user_label, chat_label)
 from core.users import record_user
@@ -10,12 +9,12 @@ from modules.downloader import extract_supported_url, is_download_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
-from module_manager import (create_command_list_keyboard, modules, create_module_list_keyboard, toggle_module_or_command, default_disabled)
+from module_manager import (create_command_list_keyboard, create_module_list_keyboard, toggle_module_or_command, is_command_enabled)
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block
 from modules.broadcast import handle_broadcast_callback
-from web.groups import record_group
+from core.groups import ban_group_and_leave, banned_groups, record_group
 from web.server import start_web_server
 
 
@@ -27,22 +26,12 @@ def track_sender(m):
         record_user(getattr(m.from_user, "id", None),
                     user_label(m.from_user), getattr(m.from_user, "username", None))
 
-async def is_module_enabled_in_group(command, chat_id):
-    db = IMYDB('runtime/modules/module_controller.json')
-    group_id = str(chat_id)
-    default_state = default_disabled.get(command, True)
-    current_permission = db.get(f"groups.{group_id}.{command}_enabled", default_state)
-    return current_permission
-
 @bot.message_handler(commands=list(COMMANDS.keys()))
 @handle_errors
 async def cmd_handler(m):
     track_sender(m)
 
-    db = IMYDB('runtime/banned/groups.json')
-    banned_groups = db.get("groups.group_ids", [])
-
-    if str(m.chat.id) in map(str, banned_groups):
+    if str(m.chat.id) in {entry["gid"] for entry in banned_groups()}:
         await bot.leave_chat(m.chat.id)
         return
 
@@ -57,10 +46,8 @@ async def cmd_handler(m):
             except ValueError:
                 pass
 
-        banned_groups.append(str(chat_id))
-        db.set('groups.group_ids', list(set(banned_groups)))
+        await ban_group_and_leave(chat_id)
         await bot.reply_to(m, f"Leaving and banning group: {chat_id}")
-        await bot.leave_chat(chat_id)
         return
 
     if m.chat.type == 'private':
@@ -77,7 +64,7 @@ async def cmd_handler(m):
             if m.text.split('@')[1].split()[0].lower() != bot_username.lower():
                 return
 
-        if not await is_module_enabled_in_group(command, m.chat.id):
+        if not is_command_enabled(m.chat.id, command):
             await bot.reply_to(m, f"The {command} command is disabled in this group.")
             return
 
@@ -106,7 +93,7 @@ async def reply_message(m):
     await reply_to_filter(m)
     await get_notes(m)
     if is_download_url(m.text):
-        if await is_module_enabled_in_group('autodl', m.chat.id):
+        if is_command_enabled(m.chat.id, 'autodl'):
             await extract_supported_url(m)
 
 @bot.message_handler(content_types=['sticker'])
