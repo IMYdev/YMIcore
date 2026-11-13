@@ -1,6 +1,7 @@
 import functools
 import traceback
 from telebot.formatting import (hbold, hcode, format_text, escape_html)
+from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup)
 from datetime import datetime
 from info import (Logs, ERROR_LOG_CHAT_ID, bot, BOT_OWNER)
 
@@ -86,9 +87,24 @@ async def is_user_admin(chat_id, user_id):
 
 async def is_bot_owner(user_id):
     """Check if a user is the instance owner."""
-    if user_id == int(BOT_OWNER):
+    return is_owner_id(user_id)
+
+
+def is_owner_id(user_id) -> bool:
+    """Synchronous owner check, for code that cannot await."""
+    return bool(BOT_OWNER) and str(user_id) == str(BOT_OWNER)
+
+
+async def is_privileged(chat_id, user_id, *, allow_devgroup=False) -> bool:
+    """Owner, chat admin, or (optionally) a developer-group member."""
+    if await is_bot_owner(user_id):
         return True
-    return False
+    if allow_devgroup:
+        from core.groups import is_developer_group
+        if is_developer_group(chat_id):
+            return True
+    return await is_user_admin(chat_id, user_id)
+
 
 async def is_user_owner(chat_id, user_id):
     """Check if a user is the creator (owner) of a chat."""
@@ -151,3 +167,18 @@ def topic_kwargs(message):
     thread_id = getattr(message, "message_thread_id", None)
 
     return {"message_thread_id": thread_id} if thread_id is not None else {}
+
+
+def chunk_list(items, chunk_size=100):
+    """Yield consecutive slices of at most chunk_size items."""
+    for i in range(0, len(items), chunk_size):
+        yield items[i:i + chunk_size]
+
+
+def link_markup(button, row_width=1):
+    """Inline keyboard holding a single URL button, or None."""
+    if not button:
+        return None
+    markup = InlineKeyboardMarkup(row_width=row_width)
+    markup.add(InlineKeyboardButton(button["text"], url=button["url"]))
+    return markup

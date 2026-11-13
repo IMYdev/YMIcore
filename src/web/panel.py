@@ -1,12 +1,12 @@
 from info import WEB_URL, WEB_BIND, WEB_PORT, bot
-from core.utils import handle_errors, is_user_admin
-from web.auth import is_owner, rotate_admin_token
+from core.utils import handle_errors, is_privileged
+from web.auth import rotate_admin_token
 
 
 @handle_errors
 async def panel_command(m):
     user_id = m.from_user.id
-    if not (is_owner(user_id) or await is_user_admin(m.chat.id, user_id)):
+    if not await is_privileged(m.chat.id, user_id):
         return await bot.reply_to(m, "Admins only.")
     base = WEB_URL or f"http://{WEB_BIND}:{WEB_PORT}"
     token, _ = rotate_admin_token(user_id, "panel")
