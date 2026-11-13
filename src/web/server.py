@@ -534,7 +534,7 @@ async def group_modules_save(request):
     module = form.get("module")
     if module not in registry.MODULE_MAP:
         raise web.HTTPBadRequest(text="Unknown module.")
-    selected = set(form.getall("cmd"))
+    selected = set(form.getall("cmd", []))
     for command in registry.MODULE_MAP[module]:
         registry.set_module_enabled(gid, command, command in selected)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/modules"))
