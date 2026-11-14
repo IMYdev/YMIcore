@@ -8,7 +8,7 @@ from info import bot
 from core import broadcast
 from core import users
 from modules import broadcast as mod
-from web.groups import ban_group, record_group
+from core.groups import ban_group, record_group
 
 OWNER = 999
 

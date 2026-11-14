@@ -1,9 +1,8 @@
 from info import bot
-from telebot.util import user_link
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from telebot.formatting import hbold, hcode, format_text, hspoiler
 from telebot.util import user_link
-from core.utils import (handle_errors, is_user_admin, get_target_user, get_args, is_bot_owner, topic_kwargs)
+from core.utils import (handle_errors, is_privileged, get_target_user, get_args, topic_kwargs)
 
 demoting_params = {
     'can_change_info': False, 'can_post_messages': False, 'can_edit_messages': False,
@@ -72,7 +71,7 @@ help_categories = {
 
 @handle_errors
 async def promote(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id) and not await is_bot_owner(m.from_user.id):
+    if not await is_privileged(m.chat.id, m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
     
     target_user = await get_target_user(m)
@@ -99,7 +98,7 @@ async def promote(m):
 
 @handle_errors
 async def demote(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id) and not await is_bot_owner(m.from_user.id):
+    if not await is_privileged(m.chat.id, m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
     
     target_user = await get_target_user(m)
@@ -123,7 +122,7 @@ async def demote(m):
 
 @handle_errors
 async def ban(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id) and not await is_bot_owner(m.from_user.id):
+    if not await is_privileged(m.chat.id, m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
     
     target_user = await get_target_user(m)
@@ -135,7 +134,7 @@ async def ban(m):
 
 @handle_errors
 async def unban(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id) and not await is_bot_owner(m.from_user.id):
+    if not await is_privileged(m.chat.id, m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
     
     target_user = await get_target_user(m)
@@ -149,7 +148,7 @@ async def unban(m):
 
 @handle_errors
 async def pin(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id) and not await is_bot_owner(m.from_user.id):
+    if not await is_privileged(m.chat.id, m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
     
     if not m.reply_to_message:

@@ -229,16 +229,16 @@ def test_caption_long_trims_to_user_and_source():
 
 
 def test_module_enabled_default(tmp_path, monkeypatch):
-    from main import is_module_enabled_in_group
+    from module_manager import is_command_enabled
 
     monkeypatch.chdir(tmp_path)
-    assert asyncio.run(is_module_enabled_in_group("autodl", 100)) is True
+    assert is_command_enabled(100, "autodl") is True
 
 
 def test_module_disabled_per_group(tmp_path, monkeypatch):
-    from main import is_module_enabled_in_group
+    from module_manager import is_command_enabled
 
     monkeypatch.chdir(tmp_path)
     IMYDB("runtime/modules/module_controller.json").set("groups.100.autodl_enabled", False)
-    assert asyncio.run(is_module_enabled_in_group("autodl", 100)) is False
-    assert asyncio.run(is_module_enabled_in_group("autodl", 101)) is True
+    assert is_command_enabled(100, "autodl") is False
+    assert is_command_enabled(101, "autodl") is True

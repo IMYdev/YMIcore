@@ -5,9 +5,8 @@ from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup)
 from core import broadcast
 from core.activity import log_event, user_label
 from core.formatting import markdown_to_html
-from core.utils import handle_errors, get_media_info, topic_kwargs
+from core.utils import handle_errors, get_media_info, is_owner_id, link_markup, topic_kwargs
 from core.users import audience_counts, record_user, set_opt_out
-from web.auth import is_owner
 
 SEGMENT_FLAGS = ("users", "groups")
 
@@ -54,14 +53,6 @@ def _preview_markup(token) -> InlineKeyboardMarkup:
     return markup
 
 
-def _link_markup(button):
-    if not button:
-        return None
-    markup = InlineKeyboardMarkup(row_width=1)
-    markup.add(InlineKeyboardButton(button["text"], url=button["url"]))
-    return markup
-
-
 async def _show_preview(m, pending, token):
     """Show the owner what the recipients will actually receive."""
     counts = audience_counts(pending.get("segment"))
@@ -88,7 +79,7 @@ async def _show_preview(m, pending, token):
     else:
         extra = {} if pending.get("preview", True) else {"disable_web_page_preview": True}
         sent = await bot.send_message(m.chat.id, format_text(*header, "", body),
-                                      parse_mode="HTML", reply_markup=_link_markup(button), **extra, **topic_kwargs(m))
+                                      parse_mode="HTML", reply_markup=link_markup(button), **extra, **topic_kwargs(m))
 
     return await bot.edit_message_reply_markup(sent.chat.id, sent.message_id,
                                                reply_markup=_preview_markup(token))
@@ -96,7 +87,7 @@ async def _show_preview(m, pending, token):
 
 @handle_errors
 async def broadcast_command(m):
-    if not is_owner(m.from_user.id):
+    if not is_owner_id(m.from_user.id):
         return await bot.reply_to(m, "Owner only.")
 
     if m.chat.type != "private":
@@ -139,7 +130,7 @@ async def broadcast_command(m):
 
 @handle_errors
 async def broadcast_list(m):
-    if not is_owner(m.from_user.id):
+    if not is_owner_id(m.from_user.id):
         return await bot.reply_to(m, "Owner only.")
 
     records = broadcast.list_broadcasts(limit=15)
@@ -164,7 +155,7 @@ async def broadcast_list(m):
 
 @handle_errors
 async def broadcast_delete(m):
-    if not is_owner(m.from_user.id):
+    if not is_owner_id(m.from_user.id):
         return await bot.reply_to(m, "Owner only.")
 
     args = m.text.split(maxsplit=1)
@@ -207,7 +198,7 @@ async def subscribe(m):
 async def handle_broadcast_callback(call):
     """Confirm or discard a staged broadcast from its inline buttons."""
     action, _, token = call.data.partition(":")
-    if not is_owner(call.from_user.id):
+    if not is_owner_id(call.from_user.id):
         return await bot.answer_callback_query(call.id, "Owner only.", show_alert=True)
 
     pending = broadcast.get_pending(token)

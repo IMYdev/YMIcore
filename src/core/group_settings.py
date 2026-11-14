@@ -1,23 +1,30 @@
-from itertools import chain
+"""Per-group settings shared by bot commands and the web panel.
 
-from core.db import IMYDB
-from modules.greetings import validate_template
-from module_manager import modules as MODULE_MAP, default_disabled
+Every read/write of a group's notes, filters, stickers, greetings and captcha
+settings goes through this module so the bot and the panel can never drift
+into two different storage formats.
+"""
 
-GROUP_FILES = {
-    "greetings": "runtime/greetings/{key}_greetings.json",
-    "filters": "runtime/filters/{key}_filters",
-    "notes": "runtime/notes/{key}_notes.json",
-    "stickers": "runtime/banned/{key}_stickers.json",
-}
+from core.storage import group_db
+from core.validation import validate_question, validate_template
+from module_manager import (
+    modules as MODULE_MAP, is_command_enabled, module_stats, read_module_states,
+    set_command_enabled,
+)
+
+CAPTCHA_LEGACY_KEYS = ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempts')
 
 
-def group_key(chat_id) -> str:
-    return str(chat_id).lstrip("-")
+def _db(section, chat_id):
+    return group_db(section, chat_id)
 
 
-def _db(section, chat_id) -> IMYDB:
-    return IMYDB(GROUP_FILES[section].format(key=group_key(chat_id)))
+def drop_legacy_captcha(db) -> None:
+    for key in CAPTCHA_LEGACY_KEYS:
+        try:
+            db.delete(key)
+        except Exception:
+            pass
 
 
 # --------------------------------------------------------------------------
@@ -33,7 +40,6 @@ def validate_message_template(text) -> str | None:
 
 
 def validate_captcha(questions, tries) -> str | None:
-    from modules.captcha import validate_question
     if not questions or len(questions) < 1:
         return "At least one question required."
     if len(questions) > 3:
@@ -53,22 +59,6 @@ def validate_captcha(questions, tries) -> str | None:
     return None
 
 
-def save_captcha(gid, questions, tries) -> None:
-    db = _db("greetings", gid)
-    db.set('captcha_questions', questions)
-    db.set('captcha_max_tries', int(tries))
-    for k in ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempts'):
-        try:
-            db.delete(k)
-        except Exception:
-            pass
-
-
-def read_captcha_questions(gid):
-    from modules.captcha import get_captcha_questions
-    return get_captcha_questions(_db("greetings", gid))
-
-
 def validate_named_text(name, body) -> str | None:
     if not name.strip():
         return "Name/keyword is required."
@@ -78,31 +68,39 @@ def validate_named_text(name, body) -> str | None:
 
 
 # --------------------------------------------------------------------------
-# Modules & commands
+# Captcha questions
 # --------------------------------------------------------------------------
 
-def read_module_states(gid) -> dict:
-    db = IMYDB("runtime/modules/module_controller.json")
-    saved = db.get(f"groups.{gid}", {})
-    states = {}
-    for command in chain(*MODULE_MAP.values()):
-        states[command] = saved.get(f"{command}_enabled", default_disabled.get(command, True))
-    return states
+def get_captcha_questions(db):
+    questions = db.get('captcha_questions')
+    if questions and isinstance(questions, list) and len(questions) > 0:
+        return questions
+    # lazy legacy migration
+    legacy_q = db.get('captcha_q')
+    if legacy_q is not None and legacy_q != '':
+        opts = db.get('captcha_opts', [])
+        ans = db.get('captcha_ans')
+        return [{"q": legacy_q, "opts": opts, "ans": ans}]
+    return []
 
 
-def set_module_enabled(gid, command, enabled) -> None:
-    db = IMYDB("runtime/modules/module_controller.json")
-    db.set(f"groups.{gid}.{command}_enabled", bool(enabled))
+def read_captcha_questions(gid):
+    return get_captcha_questions(_db("greetings", gid))
 
 
-def module_stats(gid):
-    states = read_module_states(gid)
-    enabled = sum(1 for v in states.values() if v)
-    return enabled, len(states)
+def save_captcha(gid, questions, tries) -> None:
+    db = _db("greetings", gid)
+    db.set('captcha_questions', questions)
+    db.set('captcha_max_tries', int(tries))
+    drop_legacy_captcha(db)
+
+
+def set_captcha_enabled(gid, enabled) -> None:
+    _db("greetings", gid).set("captcha_enabled", bool(enabled))
 
 
 # --------------------------------------------------------------------------
-# Greetings & captcha
+# Greetings & farewells
 # --------------------------------------------------------------------------
 
 def read_greetings(gid) -> dict:
@@ -129,13 +127,6 @@ def set_greeting_media(gid, event, media_type, media_id) -> None:
     db.set(f"{event}_media_id", media_id)
 
 
-
-
-def set_captcha_enabled(gid, enabled) -> None:
-    db = _db("greetings", gid)
-    db.set("captcha_enabled", bool(enabled))
-
-
 # --------------------------------------------------------------------------
 # Filters
 # --------------------------------------------------------------------------
@@ -144,15 +135,16 @@ def read_filters(gid) -> dict:
     return _db("filters", gid).get("filters", {})
 
 
-def add_filter(gid, keyword, body, media_type=None, media_id=None) -> None:
+def add_filter(gid, keyword, body=None, media_type=None, media_id=None, reply=None) -> None:
     db = _db("filters", gid)
     filters = db.get("filters", {})
-    if media_type and media_id:
-        reply = {"type": media_type, "data": media_id}
-        if body:
-            reply["text"] = body
-    else:
-        reply = {"type": "text", "data": body}
+    if reply is None:
+        if media_type and media_id:
+            reply = {"type": media_type, "data": media_id}
+            if body:
+                reply["text"] = body
+        else:
+            reply = {"type": "text", "data": body}
     filters[keyword] = reply
     db.set("filters", filters)
 
@@ -173,18 +165,20 @@ def read_notes(gid) -> dict:
     return _db("notes", gid).get("notes", {})
 
 
-def add_note(gid, name, body, media_type=None, media_id=None) -> None:
+def add_note(gid, name, body=None, media_type=None, media_id=None, reply=None) -> str:
     db = _db("notes", gid)
     notes = db.get("notes", {})
     next_id = max(map(int, notes.keys()), default=0) + 1
-    if media_type and media_id:
-        reply = {"type": media_type, "data": media_id}
-        if body:
-            reply["text"] = body
-    else:
-        reply = {"type": "text", "data": body}
+    if reply is None:
+        if media_type and media_id:
+            reply = {"type": media_type, "data": media_id}
+            if body:
+                reply["text"] = body
+        else:
+            reply = {"type": "text", "data": body}
     notes[str(next_id)] = {"name": name, "reply": reply}
     db.set("notes", notes)
+    return str(next_id)
 
 
 def delete_note(gid, note_id) -> None:
@@ -220,3 +214,14 @@ def delete_sticker(gid, set_name) -> None:
     if set_name in stickers:
         stickers.remove(set_name)
         db.set("stickers", stickers)
+
+
+__all__ = [
+    "MODULE_MAP", "add_filter", "add_note", "add_sticker", "clear_greeting_media",
+    "delete_filter", "delete_note", "delete_sticker", "drop_legacy_captcha", "get_captcha_questions",
+    "is_command_enabled", "module_stats", "read_captcha_questions", "read_filters",
+    "read_greetings", "read_module_states", "read_notes", "read_stickers",
+    "save_captcha", "save_greeting_messages", "set_captcha_enabled",
+    "set_command_enabled", "set_greeting_media", "validate_captcha",
+    "validate_message_template", "validate_named_text",
+]

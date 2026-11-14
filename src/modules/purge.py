@@ -1,15 +1,11 @@
 from info import bot
 from time import perf_counter
 import asyncio
-from core.utils import (handle_errors, is_user_admin, is_bot_owner, topic_kwargs)
-
-def chunk_list(lst, chunk_size=100):
-    for i in range(0, len(lst), chunk_size):
-        yield lst[i:i + chunk_size]
+from core.utils import (handle_errors, chunk_list, is_privileged, topic_kwargs)
 
 @handle_errors
 async def purge(m):
-    if not await is_user_admin(m.chat.id, m.from_user.id) and not await is_bot_owner(m.from_user.id):
+    if not await is_privileged(m.chat.id, m.from_user.id):
         return await bot.reply_to(m, "Admins only.")
 
     if not m.reply_to_message:
@@ -18,7 +14,7 @@ async def purge(m):
     start_time = perf_counter()
     start_id = m.reply_to_message.message_id
     end_id = m.message_id
-    
+
     message_ids = list(range(start_id, end_id + 1))
     chunks = list(chunk_list(message_ids))
 

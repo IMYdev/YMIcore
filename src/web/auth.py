@@ -7,8 +7,8 @@ import time
 from urllib.parse import urlsplit, parse_qs
 
 from info import BOT_OWNER, WEB_SECRET
-from core.db import IMYDB
-from core.utils import is_user_admin
+from core.storage import group_key, web_db
+from core.utils import is_owner_id, is_user_admin
 
 COOKIE_NAME = "ymicore_panel"
 SESSION_TTL = 60 * 60 * 24 * 7
@@ -57,7 +57,7 @@ def verify_csrf(payload: dict, given: str) -> bool:
 
 
 def token_path():
-    return IMYDB("runtime/web/tokens.json")
+    return web_db()
 
 
 # --------------------------------------------------------------------------
@@ -186,9 +186,7 @@ def read_session(cookie: str) -> dict | None:
 
 
 def is_owner(user_id) -> bool:
-    if not BOT_OWNER:
-        return False
-    return str(user_id) == str(BOT_OWNER)
+    return is_owner_id(user_id)
 
 
 _admin_cache: dict = {}
@@ -197,7 +195,7 @@ _admin_cache: dict = {}
 async def can_manage_group(user_id, group_id) -> bool:
     if is_owner(user_id):
         return True
-    key = (str(group_id).lstrip("-"), str(user_id))
+    key = (group_key(group_id), str(user_id))
     now = time.monotonic()
     cached = _admin_cache.get(key)
     if cached and cached[0] > now:

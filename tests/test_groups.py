@@ -1,4 +1,4 @@
-from web.groups import (
+from core.groups import (
     ban_group, banned_groups, record_group, unban_group,
     is_developer_group, set_developer_group,
 )

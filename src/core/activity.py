@@ -5,20 +5,23 @@ from datetime import date, datetime, timedelta
 ACTIVITY_DIR = "runtime/activity"
 RETENTION_DAYS = 7
 
-EVENT_TYPES = (
-    "command",
-    "filter_trigger",
-    "note_fetch",
-    "greeting",
-    "farewell",
-    "captcha_pass",
-    "captcha_fail",
-    "captcha_kick",
-    "captcha_ban",
-    "captcha_timeout",
-    "panel_action",
-    "broadcast",
-)
+EVENT_LABELS = {
+    "command": "Commands",
+    "filter_trigger": "Filter triggers",
+    "note_fetch": "Note fetches",
+    "greeting": "Greetings",
+    "farewell": "Farewells",
+    "captcha_pass": "Captcha passes",
+    "captcha_fail": "Captcha failures",
+    "captcha_kick": "Captcha kicks",
+    "captcha_ban": "Captcha bans",
+    "captcha_timeout": "Captcha timeouts",
+    "panel_action": "Panel actions",
+    "broadcast": "Broadcasts",
+}
+
+# One source for both the validation tuple and the statistics labels.
+EVENT_TYPES = tuple(EVENT_LABELS)
 
 _last_pruned = None
 
@@ -51,13 +54,20 @@ def prune() -> None:
                 pass
 
 
+def full_name(user) -> str:
+    """First and last name only; empty when the user has neither."""
+    if user is None:
+        return ""
+    return " ".join(
+        part for part in (getattr(user, "first_name", None), getattr(user, "last_name", None))
+        if part
+    )
+
+
 def user_label(user) -> str | None:
     if user is None:
         return None
-    name = " ".join(
-        p for p in (getattr(user, "first_name", None), getattr(user, "last_name", None)) if p
-    )
-    return name or getattr(user, "username", None)
+    return full_name(user) or getattr(user, "username", None)
 
 
 def chat_label(chat) -> str | None:

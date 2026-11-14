@@ -5,13 +5,13 @@ from datetime import date
 
 from info import bot
 from telebot.asyncio_helper import ApiTelegramException
-from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup)
 from telebot.util import smart_split
 
 from core.activity import log_event
 from core.formatting import markdown_to_html
-from core.db import IMYDB
+from core.storage import BROADCAST_PENDING as PENDING_PATH, BROADCAST_REGISTRY as REGISTRY_PATH, broadcast_db
 from core.users import broadcast_targets, mark_dead, normalise_segment
+from core.utils import chunk_list, link_markup
 
 PENDING_PATH = "runtime/broadcasts/pending.json"
 REGISTRY_PATH = "runtime/broadcasts/registry.json"
@@ -47,21 +47,16 @@ _active: dict = {}
 _last_pruned = None
 
 
-def chunk_list(items, chunk_size=BATCH_SIZE):
-    for i in range(0, len(items), chunk_size):
-        yield items[i:i + chunk_size]
-
-
 # --------------------------------------------------------------------------
 # Storage
 # --------------------------------------------------------------------------
 
-def _registry() -> IMYDB:
-    return IMYDB(REGISTRY_PATH)
+def _registry():
+    return broadcast_db("registry")
 
 
-def _pending_db() -> IMYDB:
-    return IMYDB(PENDING_PATH)
+def _pending_db():
+    return broadcast_db("pending")
 
 
 def prune() -> None:
@@ -194,14 +189,6 @@ def active_broadcast() -> dict:
     return {k: v for k, v in _active.items() if k != "task"}
 
 
-def _build_markup(button) -> InlineKeyboardMarkup | None:
-    if not button:
-        return None
-    markup = InlineKeyboardMarkup(row_width=1)
-    markup.add(InlineKeyboardButton(button["text"], url=button["url"]))
-    return markup
-
-
 def _parts(record, limit) -> list:
     """Split the raw text, then render each part, so escaping cannot push a
     part past the limit and tags are never split across messages."""
@@ -213,7 +200,7 @@ def _parts(record, limit) -> list:
 
 async def _send_one(chat_id, record):
     common = {"disable_notification": True}
-    markup = _build_markup(record.get("button"))
+    markup = link_markup(record.get("button"))
     if markup:
         common["reply_markup"] = markup
 
@@ -313,7 +300,7 @@ async def _deliver(broadcast_id, status_chat_id, status_message_id):
     try:
         sent = failed = dead = 0
         deliveries = {}
-        for batch in chunk_list(targets):
+        for batch in chunk_list(targets, BATCH_SIZE):
             results = await asyncio.gather(
                 *(_deliver_to(chat_id, record) for chat_id in batch),
                 return_exceptions=True,
@@ -382,7 +369,7 @@ async def recall(broadcast_id) -> dict:
 
     pairs = [(int(chat_id), message_id) for chat_id, message_id in (record.get("deliveries") or {}).items()]
     deleted = failed = 0
-    for batch in chunk_list(pairs):
+    for batch in chunk_list(pairs, BATCH_SIZE):
         results = await asyncio.gather(
             *(bot.delete_message(chat_id, message_id) for chat_id, message_id in batch),
             return_exceptions=True,

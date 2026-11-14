@@ -1,4 +1,4 @@
-from web import settings_registry as registry
+from core import group_settings as registry
 
 
 def test_validate_message_template():
@@ -89,7 +89,7 @@ def test_module_states_defaults(tmp_path, monkeypatch):
     gid = "-100444"
     states = registry.read_module_states(gid)
     assert states["ban"] is True
-    registry.set_module_enabled(gid, "ban", False)
+    registry.set_command_enabled(gid, "ban", False)
     assert registry.read_module_states(gid)["ban"] is False
     enabled, total = registry.module_stats(gid)
     assert enabled == total - 1
