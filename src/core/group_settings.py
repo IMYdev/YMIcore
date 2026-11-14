@@ -14,6 +14,9 @@ from module_manager import (
 
 CAPTCHA_LEGACY_KEYS = ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempts')
 
+MAX_FILTER_KEYWORD_LENGTH = 64
+MAX_FILTERS_PER_CHAT = 200
+
 
 def _db(section, chat_id):
     return group_db(section, chat_id)
@@ -64,6 +67,23 @@ def validate_named_text(name, body) -> str | None:
         return "Name/keyword is required."
     if not body.strip():
         return "Text is required."
+    return None
+
+
+def normalize_filter_keyword(text) -> str:
+    """Canonical stored keyword: collapsed whitespace, casefolded."""
+    return " ".join((text or "").split()).casefold()
+
+
+def validate_filter_keyword(gid, keyword) -> str | None:
+    keyword = normalize_filter_keyword(keyword)
+    if not keyword:
+        return "Keyword is required."
+    if len(keyword) > MAX_FILTER_KEYWORD_LENGTH:
+        return f"Keyword must be at most {MAX_FILTER_KEYWORD_LENGTH} characters."
+    filters = read_filters(gid)
+    if keyword not in filters and len(filters) >= MAX_FILTERS_PER_CHAT:
+        return f"Maximum of {MAX_FILTERS_PER_CHAT} filters per chat."
     return None
 
 
@@ -136,6 +156,11 @@ def read_filters(gid) -> dict:
 
 
 def add_filter(gid, keyword, body=None, media_type=None, media_id=None, reply=None) -> None:
+    keyword = normalize_filter_keyword(keyword)
+    err = validate_filter_keyword(gid, keyword)
+    if err:
+        # Validation failed; do not store anything.
+        raise ValueError(err)
     db = _db("filters", gid)
     filters = db.get("filters", {})
     if reply is None:
@@ -150,6 +175,7 @@ def add_filter(gid, keyword, body=None, media_type=None, media_id=None, reply=No
 
 
 def delete_filter(gid, keyword) -> None:
+    keyword = normalize_filter_keyword(keyword)
     db = _db("filters", gid)
     filters = db.get("filters", {})
     if keyword in filters:
@@ -223,5 +249,5 @@ __all__ = [
     "read_greetings", "read_module_states", "read_notes", "read_stickers",
     "save_captcha", "save_greeting_messages", "set_captcha_enabled",
     "set_command_enabled", "set_greeting_media", "validate_captcha",
-    "validate_message_template", "validate_named_text",
+    "validate_filter_keyword", "validate_message_template", "validate_named_text",
 ]

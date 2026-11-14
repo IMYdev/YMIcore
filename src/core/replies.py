@@ -18,10 +18,12 @@ def build_reply(msg) -> dict:
 
     if msg.text: reply = {"type": "text", "data": msg.text}
     elif msg.sticker: reply = {"type": "sticker", "data": msg.sticker.file_id}
+    elif msg.animation: reply = {"type": "animation", "data": msg.animation.file_id, "text": caption}
     elif msg.photo: reply = {"type": "photo", "data": msg.photo[-1].file_id, "text": caption}
     elif msg.document: reply = {"type": "document", "data": msg.document.file_id, "text": caption}
     elif msg.video: reply = {"type": "video", "data": msg.video.file_id, "text": caption}
     elif msg.audio: reply = {"type": "audio", "data": msg.audio.file_id, "text": caption}
+    elif msg.voice: reply = {"type": "voice", "data": msg.voice.file_id}
     else: reply = {"type": "unknown", "data": None}
 
     if reply["type"] == "text" and entities:
@@ -45,7 +47,7 @@ async def send_reply(chat_id, reply, *, fallback=None, **kwargs) -> None:
             await bot.send_message(chat_id, markdown_to_html(data or ""), parse_mode="HTML", **kwargs)
     elif reply_type == "sticker":
         await bot.send_sticker(chat_id, data, **kwargs)
-    elif reply_type in ("photo", "document", "video", "audio"):
+    elif reply_type in ("photo", "document", "video", "audio", "animation", "voice"):
         send = getattr(bot, f"send_{reply_type}")
         if caption_entities:
             await send(chat_id, data, caption=caption, caption_entities=caption_entities, **kwargs)

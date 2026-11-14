@@ -654,7 +654,7 @@ async def group_filters(request):
 async def group_filters_add(request):
     gid = await ensure_group_access(request)
     form = request["form"]
-    keyword = form.get("keyword", "").strip().lower()
+    keyword = registry.normalize_filter_keyword(form.get("keyword", ""))
     body = form.get("body", "")
 
     relayed = None
@@ -664,7 +664,9 @@ async def group_filters_add(request):
         relayed, error = await _upload_or_error(
             form, body, "This file cannot be used as a filter.")
         if not relayed:
-            error = error or registry.validate_named_text(keyword, body)
+            if not error and not body.strip():
+                error = "Text is required."
+            error = error or registry.validate_filter_keyword(gid, keyword)
 
     if error:
         return render(
