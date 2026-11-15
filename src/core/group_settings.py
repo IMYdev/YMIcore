@@ -8,8 +8,12 @@ into two different storage formats.
 from core.storage import group_db
 from core.validation import validate_question, validate_template
 from module_manager import (
-    modules as MODULE_MAP, is_command_enabled, module_stats, read_module_states,
-    set_command_enabled,
+    modules as MODULE_MAP, module_events as EVENT_MAP, EVENT_INFO,
+    ALWAYS_ON, UNSWITCHABLE_MODULES,
+    is_command_enabled, is_event_enabled, is_module_enabled,
+    set_command_enabled, set_event_enabled, set_module_enabled,
+    module_stats, read_module_states, read_event_states, read_module_switches,
+    resolve_command, command_flag, event_flag, disabled_reason, gated_event,
 )
 
 CAPTCHA_LEGACY_KEYS = ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempts')
@@ -243,11 +247,16 @@ def delete_sticker(gid, set_name) -> None:
 
 
 __all__ = [
-    "MODULE_MAP", "add_filter", "add_note", "add_sticker", "clear_greeting_media",
-    "delete_filter", "delete_note", "delete_sticker", "drop_legacy_captcha", "get_captcha_questions",
-    "is_command_enabled", "module_stats", "read_captcha_questions", "read_filters",
-    "read_greetings", "read_module_states", "read_notes", "read_stickers",
+    "ALWAYS_ON", "EVENT_INFO", "EVENT_MAP", "MODULE_MAP", "UNSWITCHABLE_MODULES",
+    "add_filter", "add_note", "add_sticker", "clear_greeting_media",
+    "command_flag", "delete_filter", "delete_note", "delete_sticker",
+    "disabled_reason", "drop_legacy_captcha", "event_flag", "gated_event",
+    "get_captcha_questions", "is_command_enabled", "is_event_enabled",
+    "is_module_enabled", "module_stats", "read_captcha_questions", "read_event_states",
+    "read_filters", "read_greetings", "read_module_switches", "read_module_states",
+    "read_notes", "read_stickers", "resolve_command",
     "save_captcha", "save_greeting_messages", "set_captcha_enabled",
-    "set_command_enabled", "set_greeting_media", "validate_captcha",
-    "validate_filter_keyword", "validate_message_template", "validate_named_text",
+    "set_command_enabled", "set_event_enabled", "set_greeting_media",
+    "set_module_enabled", "validate_captcha", "validate_filter_keyword",
+    "validate_message_template", "validate_named_text",
 ]

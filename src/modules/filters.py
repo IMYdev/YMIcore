@@ -9,6 +9,7 @@ from core.group_settings import (
 from core.replies import build_reply, send_reply
 from core.utils import handle_errors, is_privileged, topic_kwargs, log_error
 from core.activity import (log_event, user_label, chat_label)
+from module_manager import gated_event
 from telebot.formatting import hcode
 
 FILTER_COOLDOWN_SECONDS = 8.0
@@ -67,6 +68,7 @@ async def set_filter(m):
 
 
 @handle_errors
+@gated_event('filter_trigger')
 async def reply_to_filter(m):
     if getattr(m.chat, "type", None) == "private":
         return

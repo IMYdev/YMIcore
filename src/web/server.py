@@ -497,19 +497,36 @@ async def broadcast_delete(request):
 async def group_modules(request):
     gid = await ensure_group_access(request)
     states = registry.read_module_states(gid)
-    modules = []
+    event_states = registry.read_event_states(gid)
+    modules_list = []
     for name, cmds in registry.MODULE_MAP.items():
-        cmd_states = {c: states[c] for c in cmds}
-        modules.append({
+        switchable = name not in registry.UNSWITCHABLE_MODULES
+        module_on = registry.is_module_enabled(gid, name)
+        # Pinned commands render checked-and-disabled and are ignored on save.
+        cmd_states = {
+            c: {"on": bool(states[c]), "pinned": c in registry.ALWAYS_ON} for c in cmds
+        }
+        event_states_local = {
+            e: {"on": bool(event_states[e]), "pinned": False}
+            for e in registry.EVENT_MAP.get(name, [])
+        }
+        effective = [c for c, s in cmd_states.items() if s["on"] and module_on]
+        effective += [e for e, s in event_states_local.items() if s["on"] and module_on]
+        modules_list.append({
             "name": name,
+            "switchable": switchable,
+            "module_on": module_on,
             "cmds": cmds,
-            "enabled": any(cmd_states.values()),
-            "states": cmd_states,
+            "cmd_states": cmd_states,
+            "events": registry.EVENT_MAP.get(name, []),
+            "event_states": event_states_local,
+            "event_labels": {e: registry.EVENT_INFO.get(e, (e,))[0] for e in event_states_local},
+            "enabled": bool(effective),
         })
     return render(
         request, "group_modules.html",
         gid=gid, title=group_title(gid), group_tab="modules",
-        modules=modules, saved="saved" in request.query,
+        modules=modules_list, saved="saved" in request.query,
     )
 
 
@@ -522,8 +539,15 @@ async def group_modules_save(request):
     if module not in registry.MODULE_MAP:
         raise web.HTTPBadRequest(text="Unknown module.")
     selected = set(form.getall("cmd", []))
+    selected_events = set(form.getall("event", []))
+    if module not in registry.UNSWITCHABLE_MODULES:
+        registry.set_module_enabled(gid, module, form.get("module_on") == "on")
     for command in registry.MODULE_MAP[module]:
+        if command in registry.ALWAYS_ON:
+            continue  # pinned: never written, checkbox rendered disabled
         registry.set_command_enabled(gid, command, command in selected)
+    for event in registry.EVENT_MAP.get(module, []):
+        registry.set_event_enabled(gid, event, event in selected_events)
     raise web.HTTPFound(saved_url(f"/groups/{gid}/modules"))
 
 

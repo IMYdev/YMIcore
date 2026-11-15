@@ -4,6 +4,7 @@ from core.replies import build_reply, send_reply
 from core.utils import (handle_errors, is_user_owner, get_args, is_privileged, topic_kwargs)
 from core.activity import (log_event, user_label, chat_label)
 from core.groups import set_developer_group
+from module_manager import gated_event
 from telebot.formatting import (format_text, hbold, hitalic, hcode)
 
 
@@ -23,6 +24,7 @@ async def set_note(m):
     await bot.reply_to(m, f"Note saved. ID: {note_id}.")
 
 @handle_errors
+@gated_event('note_fetch')
 async def get_notes(m):
     if not m.text or not m.text.startswith("#") or not m.text[1:].isdigit():
         return

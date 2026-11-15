@@ -5,6 +5,7 @@ from core.group_settings import save_captcha, set_captcha_enabled
 from core.validation import validate_question, validate_template
 from core.utils import (handle_errors, get_media_info, get_args, is_privileged, topic_kwargs)
 from core.activity import (log_event, user_label)
+from module_manager import is_event_enabled
 from telebot.formatting import (hbold, hitalic)
 
 DEFAULT_GREETING = "Hello {firstname}, welcome!"
@@ -77,7 +78,7 @@ async def hello(m):
     if get_session(m.chat.id, new.user.id) is not None:
         return
     db = group_db("greetings", m.chat.id)
-    if db.get('captcha_enabled', False):
+    if db.get('captcha_enabled', False) and is_event_enabled(m.chat.id, 'captcha_verification'):
         questions = get_captcha_questions(db)
         if not questions:
             await send_standard_greeting(m.chat.id, new.user, db)
@@ -107,6 +108,8 @@ async def _send_event_message(chat_id, user, event, db, **extra):
         await bot.send_message(chat_id, personalized, **extra)
 
 async def send_standard_greeting(chat_id, user, db):
+    if not is_event_enabled(chat_id, 'greeting'):
+        return
     await _send_event_message(chat_id, user, "greeting", db)
     log_event(
         "greeting",
@@ -164,13 +167,14 @@ async def bye(m):
         await forget_user(m.chat.id, new.user.id)
         return
 
-    await _send_event_message(m.chat.id, new.user, "goodbye", group_db("greetings", m.chat.id), **topic_kwargs(m))
-    log_event(
-        "farewell",
-        chat_id=m.chat.id,
-        user_id=getattr(new.user, "id", None),
-        user_name=user_label(new.user),
-    )
+    if is_event_enabled(m.chat.id, 'farewell'):
+        await _send_event_message(m.chat.id, new.user, "goodbye", group_db("greetings", m.chat.id), **topic_kwargs(m))
+        log_event(
+            "farewell",
+            chat_id=m.chat.id,
+            user_id=getattr(new.user, "id", None),
+            user_name=user_label(new.user),
+        )
 
 @handle_errors
 async def add_captcha(m):
