@@ -200,4 +200,11 @@
   .lecp-nav--tabs .lecp-nav-item-label {
     display: inline;
   }
+}.toggle-list--dimmed {
+  opacity: 0.55;
+}
+
+.toggle-row--master {
+  font-weight: 600;
+  margin-bottom: var(--lecp-space-2);
 }

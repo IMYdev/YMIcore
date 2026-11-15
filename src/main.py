@@ -9,7 +9,11 @@ from modules.downloader import extract_supported_url, is_download_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
-from module_manager import (create_command_list_keyboard, create_module_list_keyboard, toggle_module_or_command, is_command_enabled)
+from module_manager import (
+    is_event_enabled,
+    resolve_command, module_of_command, disabled_reason,
+    handle_mod_callback,
+)
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block
@@ -35,7 +39,7 @@ async def cmd_handler(m):
         await bot.leave_chat(m.chat.id)
         return
 
-    command = m.text.lstrip('/').split()[0].split('@')[0].lower()
+    command = resolve_command(m.text.lstrip('/').split()[0].split('@')[0].lower())
 
     if command == "leave" and str(m.from_user.id) == str(BOT_OWNER):
         chat_id = m.chat.id
@@ -64,7 +68,11 @@ async def cmd_handler(m):
             if m.text.split('@')[1].split()[0].lower() != bot_username.lower():
                 return
 
-        if not is_command_enabled(m.chat.id, command):
+        reason = disabled_reason(m.chat.id, command)
+        if reason == 'module':
+            await bot.reply_to(m, f"The {module_of_command(command)} module is disabled in this group.")
+            return
+        if reason == 'command':
             await bot.reply_to(m, f"The {command} command is disabled in this group.")
             return
 
@@ -93,11 +101,14 @@ async def reply_message(m):
     await reply_to_filter(m)
     await get_notes(m)
     if is_download_url(m.text):
-        if is_command_enabled(m.chat.id, 'autodl'):
+        if is_event_enabled(m.chat.id, 'link_download'):
             await extract_supported_url(m)
 
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):
+    # Gate before any Telegram API call: a disabled group costs no requests.
+    if getattr(m.chat, 'type', None) != 'private' and not is_event_enabled(m.chat.id, 'sticker_block'):
+        return
     try:
         if not (await bot.get_chat_member(m.chat.id, (await bot.get_me()).id)).can_delete_messages:
             return
@@ -127,23 +138,9 @@ async def help_category_switch(call):
         if "message is not modified" not in str(e):
             raise e
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("toggle_"))
-async def handle_toggle_callback(call):
-    await toggle_module_or_command(call)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("show_commands"))
-async def handle_show_commands_callback(call):
-    data_parts = call.data.split(":")
-    if len(data_parts) < 3: return
-    module_name, group_id = data_parts[1], data_parts[2]
-    keyboard = create_command_list_keyboard(module_name, group_id)
-    await bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=keyboard)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("back_to_modules"))
-async def handle_back_to_modules_callback(call):
-    group_id = call.data.split(":")[1]
-    keyboard = create_module_list_keyboard(group_id)
-    await bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=keyboard)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("mod:"))
+async def mod_callback(call):
+    await handle_mod_callback(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("bc_"))
 async def broadcast_callback(call):

@@ -86,7 +86,7 @@ Each concern has exactly one home. `tests/test_structure.py` enforces this.
 - **Per-group settings**: `core/group_settings.py`. Notes, filters, stickers, greetings and captcha reads/writes all go through it, for both the bot and the web panel.
 - **Stored replies**: `core/replies.py`. `build_reply` saves a replied-to message, `send_reply` sends it (markdown rendered to HTML).
 - **Groups and bans**: `core/groups.py`, including `ban_group_and_leave`.
-- **Module toggles**: `module_manager.py`. `is_command_enabled` / `set_command_enabled` are the only toggle functions; defaults live there too.
+- **Module toggles**: `module_manager.py`. `is_command_enabled` / `is_event_enabled` / `is_module_enabled` Defaults live there too, along with the resolution rule and the read cache.
 - **Permissions**: `core/utils.py`: `is_privileged` for "owner or chat admin", `is_owner_id` for a synchronous instance owner check.
  
 ## Creating Your Own Bot

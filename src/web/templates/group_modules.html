@@ -6,7 +6,7 @@
 
 <section class="lecp-mt-7">
   <div class="lecp-flex lecp-items-center lecp-justify-between">
-    <h2 class="lecp-section-title">Modules &amp; commands</h2>
+    <h2 class="lecp-section-title">Modules, commands &amp; events</h2>
   </div>
   <div class="lecp-grid lecp-mt-5">
     {% for module in modules %}
@@ -18,13 +18,33 @@
       <form method="post" action="/groups/{{ gid }}/modules" data-submitting>
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="module" value="{{ module.name }}">
-        <div class="toggle-list">
+        {% if module.switchable %}
+        <label class="toggle-row toggle-row--master">
+          <input type="checkbox" name="module_on" value="on" {{ 'checked' if module.module_on }}>
+          <span class="toggle-label">Module enabled</span>
+        </label>
+        {% endif %}
+        <div class="toggle-list {{ '' if module.module_on else 'toggle-list--dimmed' }}">
+          {% if module.cmds %}
+          <p class="lecp-eyebrow">Commands</p>
           {% for cmd in module.cmds %}
           <label class="toggle-row">
-            <input type="checkbox" name="cmd" value="{{ cmd }}" {{ 'checked' if module.states[cmd] }}>
-            <span class="toggle-label">{{ cmd }}</span>
+            <input type="checkbox" name="cmd" value="{{ cmd }}"
+                   {{ 'checked' if module.cmd_states[cmd].on }}
+                   {{ 'disabled' if module.cmd_states[cmd].pinned }}>
+            <span class="toggle-label">{{ cmd }}{% if module.cmd_states[cmd].pinned %} (always on){% endif %}</span>
           </label>
           {% endfor %}
+          {% endif %}
+          {% if module.events %}
+          <p class="lecp-eyebrow">Events</p>
+          {% for event in module.events %}
+          <label class="toggle-row">
+            <input type="checkbox" name="event" value="{{ event }}" {{ 'checked' if module.event_states[event].on }}>
+            <span class="toggle-label">{{ module.event_labels[event] }} <small>({{ event }})</small></span>
+          </label>
+          {% endfor %}
+          {% endif %}
         </div>
         <button class="lecp-btn lecp-btn--primary lecp-btn--sm lecp-mt-4" type="submit">Apply</button>
       </form>
