@@ -819,6 +819,50 @@ async def group_stickers_delete(request):
     raise web.HTTPFound(saved_url(f"/groups/{gid}/stickers"))
 
 
+@authed
+async def group_words(request):
+    gid = await ensure_group_access(request)
+    words = registry.read_blocked_words(gid)
+    return render(
+        request, "group_words.html",
+        gid=gid, title=group_title(gid), group_tab="words",
+        words=words, errors={}, saved="saved" in request.query,
+    )
+
+
+@authed
+@csrf
+async def group_words_add(request):
+    gid = await ensure_group_access(request)
+    word = request["form"].get("word", "").strip()
+    if not word:
+        return render(
+            request, "group_words.html",
+            gid=gid, title=group_title(gid), group_tab="words",
+            words=registry.read_blocked_words(gid),
+            errors={"form": "Word or phrase is required."}, saved=False,
+        )
+    try:
+        registry.add_blocked_word(gid, word)
+    except ValueError as e:
+        return render(
+            request, "group_words.html",
+            gid=gid, title=group_title(gid), group_tab="words",
+            words=registry.read_blocked_words(gid),
+            errors={"form": str(e)}, saved=False,
+        )
+    raise web.HTTPFound(saved_url(f"/groups/{gid}/words"))
+
+
+@authed
+@csrf
+async def group_words_delete(request):
+    gid = await ensure_group_access(request)
+    word = request["form"].get("word", "")
+    registry.delete_blocked_word(gid, word)
+    raise web.HTTPFound(saved_url(f"/groups/{gid}/words"))
+
+
 # --------------------------------------------------------------------------
 # App factory
 # --------------------------------------------------------------------------
@@ -860,6 +904,9 @@ def create_app() -> web.Application:
         web.get("/groups/{gid}/stickers", group_stickers),
         web.post("/groups/{gid}/stickers/add", group_stickers_add),
         web.post("/groups/{gid}/stickers/delete", group_stickers_delete),
+        web.get("/groups/{gid}/words", group_words),
+        web.post("/groups/{gid}/words/add", group_words_add),
+        web.post("/groups/{gid}/words/delete", group_words_delete),
     ])
     return app
 

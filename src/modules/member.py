@@ -53,6 +53,9 @@ help_categories = {
     - `/blockset`: Blacklist sticker set.
     - `/blocklist`: List blacklisted sets.
     - `/unblockset`: Remove sticker set from blacklist.
+    - `/blockword <word>`: Add a word/phrase to blocklist.
+    - `/unblockword <word>`: Remove a word/phrase from blocklist.
+    - `/blockwords`: List all blocked words.
     - `/setcaptcha`: Replace captcha question (one question per set).
     - `/addcaptcha`: Add a captcha question.
     - `/delcaptcha <n>`: Remove a captcha question.

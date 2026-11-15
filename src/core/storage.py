@@ -12,6 +12,7 @@ GROUP_FILES = {
     "filters": "runtime/filters/{key}_filters",
     "notes": "runtime/notes/{key}_notes.json",
     "stickers": "runtime/banned/{key}_stickers.json",
+    "words": "runtime/banned/{key}_words.json",
 }
 
 MODULE_CONTROLLER = "runtime/modules/module_controller.json"
@@ -32,6 +33,11 @@ CAPTCHA_FILES = {
 def group_key(chat_id) -> str:
     """Chat id as used in per-group file names (no leading minus)."""
     return str(chat_id).lstrip("-")
+
+
+def group_path(section, chat_id) -> str:
+    """Raw path of a per-group store, for stat-based cache invalidation."""
+    return GROUP_FILES[section].format(key=group_key(chat_id))
 
 
 def group_db(section, chat_id) -> IMYDB:

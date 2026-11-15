@@ -8,7 +8,7 @@ from modules.member import (
     ban, unban, help_command, group_id, spoiler)
 from module_manager import send_module_keyboard
 from modules.greetings import (set_greeting, set_goodbye, captcha_toggle, set_captcha, add_captcha, del_captcha, captcha_list, captcha_tries)
-from modules.blocklist import (block_set, unblock_set, get_blacklist)
+from modules.blocklist import (block_set, unblock_set, get_blacklist, block_word, unblock_word, list_blocked_words)
 from modules.broadcast import (broadcast_command, broadcast_delete, broadcast_list, subscribe, unsubscribe)
 from web.panel import panel_command
 
@@ -40,6 +40,9 @@ COMMANDS = {
     "blockset": block_set,
     "blocklist": get_blacklist,
     "unblockset": unblock_set,
+    "blockword": block_word,
+    "unblockword": unblock_word,
+    "blockwords": list_blocked_words,
     "setcaptcha": set_captcha,
 "captcha": captcha_toggle,
     "captchalist": captcha_list,
