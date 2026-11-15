@@ -17,7 +17,7 @@ modules = {
     'filters': ['filter', 'filist', 'stop'],
     'greetings': ['greeting', 'goodbye'],
     'captcha': ['setcaptcha', 'captcha', 'addcaptcha', 'delcaptcha', 'captchalist', 'captchatries'],
-    'blocklist': ['blockset', 'blocklist', 'unblockset'],
+    'blocklist': ['blockset', 'blocklist', 'unblockset', 'blockword', 'unblockword', 'blockwords'],
     'downloader': [],
     'general': ['start', 'info', 'wallpaper', 'help', 'modules', 'id', 'spoiler'],
 }
@@ -27,7 +27,7 @@ module_events = {
     'notes': ['note_fetch'],
     'greetings': ['greeting', 'farewell'],
     'captcha': ['captcha_verification'],
-    'blocklist': ['sticker_block'],
+    'blocklist': ['sticker_block', 'word_block'],
     'downloader': ['link_download'],
 }
 
@@ -39,6 +39,7 @@ EVENT_INFO = {
     'captcha_verification': ('Captcha verification', 'Require a captcha before new members can chat.'),
     'sticker_block': ('Sticker blocking', 'Delete stickers from blocked sets.'),
     'link_download': ('Link auto-download', 'Fetch media from supported links automatically.'),
+    'word_block': ('Word blocking', 'Delete messages containing a blocked word or phrase.'),
 }
 
 COMMAND_ALIASES = {'nuke': 'purge'}

@@ -20,6 +20,8 @@ CAPTCHA_LEGACY_KEYS = ('captcha_q', 'captcha_opts', 'captcha_ans', 'user_attempt
 
 MAX_FILTER_KEYWORD_LENGTH = 64
 MAX_FILTERS_PER_CHAT = 200
+MAX_BLOCKED_WORD_LENGTH = 64
+MAX_BLOCKED_WORDS_PER_CHAT = 200
 
 
 def _db(section, chat_id):
@@ -246,17 +248,67 @@ def delete_sticker(gid, set_name) -> None:
         db.set("stickers", stickers)
 
 
+# --------------------------------------------------------------------------
+# Word blocklist
+# --------------------------------------------------------------------------
+
+def normalize_blocked_word(text) -> str:
+    """Canonical stored word/phrase: collapsed whitespace, casefolded."""
+    return " ".join((text or "").split()).casefold()
+
+
+def validate_blocked_word(gid, word) -> str | None:
+    word = normalize_blocked_word(word)
+    if not word:
+        return "Word or phrase is required."
+    if len(word) > MAX_BLOCKED_WORD_LENGTH:
+        return f"Word or phrase must be at most {MAX_BLOCKED_WORD_LENGTH} characters."
+    words = read_blocked_words(gid)
+    if word not in words and len(words) >= MAX_BLOCKED_WORDS_PER_CHAT:
+        return f"Maximum of {MAX_BLOCKED_WORDS_PER_CHAT} blocked words per chat."
+    return None
+
+
+def read_blocked_words(gid) -> list:
+    return _db("words", gid).get("words", [])
+
+
+def add_blocked_word(gid, word) -> bool:
+    word = normalize_blocked_word(word)
+    err = validate_blocked_word(gid, word)
+    if err:
+        raise ValueError(err)
+    db = _db("words", gid)
+    words = db.get("words", [])
+    if word in words:
+        return False
+    words.append(word)
+    db.set("words", words)
+    return True
+
+
+def delete_blocked_word(gid, word) -> bool:
+    word = normalize_blocked_word(word)
+    db = _db("words", gid)
+    words = db.get("words", [])
+    if word not in words:
+        return False
+    words.remove(word)
+    db.set("words", words)
+    return True
+
+
 __all__ = [
     "ALWAYS_ON", "EVENT_INFO", "EVENT_MAP", "MODULE_MAP", "UNSWITCHABLE_MODULES",
-    "add_filter", "add_note", "add_sticker", "clear_greeting_media",
-    "command_flag", "delete_filter", "delete_note", "delete_sticker",
+    "add_blocked_word", "add_filter", "add_note", "add_sticker", "clear_greeting_media",
+    "command_flag", "delete_blocked_word", "delete_filter", "delete_note", "delete_sticker",
     "disabled_reason", "drop_legacy_captcha", "event_flag", "gated_event",
     "get_captcha_questions", "is_command_enabled", "is_event_enabled",
-    "is_module_enabled", "module_stats", "read_captcha_questions", "read_event_states",
-    "read_filters", "read_greetings", "read_module_switches", "read_module_states",
-    "read_notes", "read_stickers", "resolve_command",
-    "save_captcha", "save_greeting_messages", "set_captcha_enabled",
-    "set_command_enabled", "set_event_enabled", "set_greeting_media",
-    "set_module_enabled", "validate_captcha", "validate_filter_keyword",
+    "is_module_enabled", "module_stats", "normalize_blocked_word", "read_blocked_words",
+    "read_captcha_questions", "read_event_states", "read_filters", "read_greetings",
+    "read_module_switches", "read_module_states", "read_notes", "read_stickers",
+    "resolve_command", "save_captcha", "save_greeting_messages", "set_captcha_enabled",
+    "set_command_enabled", "set_event_enabled", "set_greeting_media", "set_module_enabled",
+    "validate_blocked_word", "validate_captcha", "validate_filter_keyword",
     "validate_message_template", "validate_named_text",
 ]
