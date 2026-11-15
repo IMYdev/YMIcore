@@ -7,6 +7,9 @@ from info import bot
 from core.storage import module_db, MODULE_CONTROLLER
 from core.utils import (is_privileged, topic_kwargs)
 
+# Pagination configuration
+MODULES_PER_PAGE = 5
+
 modules = {
     'anime': ['animewall', 'sauce'],
     'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge'],
@@ -181,6 +184,18 @@ def set_module_enabled(gid, module, enabled) -> None:
     module_db().set(f'groups.{gid}.module_{module}_enabled', bool(enabled))
 
 
+def clear_module_overrides(gid, module) -> None:
+    """Drop a module's master switch and all component overrides, legacy keys included."""
+    module_db().delete(f'groups.{gid}.module_{module}_enabled')
+    for command in modules.get(module, []):
+        if command not in ALWAYS_ON:
+            module_db().delete(f'groups.{gid}.{command}_enabled')
+    for event in module_events.get(module, []):
+        module_db().delete(f'groups.{gid}.event_{event}_enabled')
+    if module == 'downloader':
+        module_db().delete(f'groups.{gid}.autodl_enabled')
+
+
 def disabled_reason(gid, command):
     """'module' | 'command' | None for an incoming command name."""
     command = resolve_command(command)
@@ -218,6 +233,130 @@ def read_module_switches(gid) -> dict:
         module: is_module_enabled(gid, module)
         for module in modules if module not in UNSWITCHABLE_MODULES
     }
+def module_counts(gid, module):
+    """Return (effective, toggleable_total) for UI display; a paused module shows zero."""
+    cmds = [c for c in modules.get(module, []) if c not in ALWAYS_ON]
+    evs = module_events.get(module, [])
+    raw_on = sum(1 for c in cmds if command_flag(gid, c)) + sum(
+        1 for e in evs if event_flag(gid, e)
+    )
+    return (raw_on if is_module_enabled(gid, module) else 0), len(cmds) + len(evs)
+
+
+def module_status_label(gid, module):
+    """Button label for a module row in the overview."""
+    effective, total = module_counts(gid, module)
+    # Skip icon for paused or always-on modules
+    if module in UNSWITCHABLE_MODULES:
+        return f'✅ {module} · always on'
+    if not is_module_enabled(gid, module):
+        return f'⛔ {module} · paused'
+    icon = '✅' if effective == total else '⚠️'
+    return f'{icon} {module} · {effective}/{total}'
+
+
+
+def overview_view(group_id, page=1):
+    """Return (text, keyboard) for the paginated module list."""
+    all_modules = list(modules.keys())
+    total_pages = max(1, -(-len(all_modules) // MODULES_PER_PAGE))
+    page = max(1, min(page, total_pages))
+    start, end = (page - 1) * MODULES_PER_PAGE, page * MODULES_PER_PAGE
+
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    for module in all_modules[start:end]:
+        keyboard.add(InlineKeyboardButton(
+            module_status_label(group_id, module),
+            callback_data=f'mod:open:{page}:{module}'))
+    nav_row = []
+    if page > 1:
+        nav_row.append(InlineKeyboardButton('◀ Prev', callback_data=f'mod:list:{page-1}'))
+    if page < total_pages:
+        nav_row.append(InlineKeyboardButton('Next ▶', callback_data=f'mod:list:{page+1}'))
+    if nav_row:
+        keyboard.add(*nav_row)
+
+    enabled, total = module_stats(group_id)
+    return (f"Modules - page {page} of {total_pages}\n"
+            f"{enabled} of {total} features active"), keyboard
+
+
+def detail_view(group_id, module_name, page=1):
+    """(text, keyboard) for a module: master toggle, bulk actions, component rows, nav."""
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    module_on = is_module_enabled(group_id, module_name)
+    effective, total = module_counts(group_id, module_name)
+
+    # Master toggle (skip for unswitchable)
+    if module_name not in UNSWITCHABLE_MODULES:
+        keyboard.add(InlineKeyboardButton(
+            'Turn module off' if module_on else 'Turn module on',
+            callback_data=f'mod:master:{page}:{module_name}'))
+    # Bulk actions
+    keyboard.add(
+        InlineKeyboardButton('Enable all', callback_data=f'mod:all:{page}:{module_name}'),
+        InlineKeyboardButton('Reset', callback_data=f'mod:reset:{page}:{module_name}')
+    )
+    # Commands (paired two per row)
+    commands = modules.get(module_name, [])
+    for i in range(0, len(commands), 2):
+        row = []
+        for c in commands[i:i+2]:
+            pinned = c in ALWAYS_ON
+            on = True if pinned else command_flag(group_id, c)
+            label = c
+            if pinned:
+                label = f'🔒 {label}'
+            icon = '✅' if on else ('⏸' if not module_on else '⛔')
+            row.append(InlineKeyboardButton(
+                f'{icon} {label}',
+                callback_data=f'mod:cmd:{page}:{module_name}:{c}'))
+        keyboard.add(*row)
+    # Events (one per row)
+    for evt in module_events.get(module_name, []):
+        on = event_flag(group_id, evt)
+        icon = '✅' if on else ('⏸' if not module_on else '⛔')
+        label = f'Event · {EVENT_INFO.get(evt, (evt,))[0]}'
+        keyboard.add(InlineKeyboardButton(
+            f'{icon} {label}',
+            callback_data=f'mod:evt:{page}:{module_name}:{evt}'))
+    # Navigation
+    all_modules = list(modules.keys())
+    idx = all_modules.index(module_name)
+    nav_row = []
+    if idx > 0:
+        nav_row.append(InlineKeyboardButton('◀ Prev', callback_data=f'mod:open:{page}:{all_modules[idx - 1]}'))
+    if idx < len(all_modules) - 1:
+        nav_row.append(InlineKeyboardButton('Next ▶', callback_data=f'mod:open:{page}:{all_modules[idx + 1]}'))
+    nav_row.append(InlineKeyboardButton('Modules', callback_data=f'mod:back:{page}'))
+    keyboard.add(*nav_row)
+
+    master_status = 'Always on' if module_name in UNSWITCHABLE_MODULES else ('ON' if module_on else 'OFF')
+    lines = [f'{module_name} · {master_status}']
+    if module_name not in UNSWITCHABLE_MODULES:
+        lines.append(f'module {idx+1} of {len(all_modules)} · {effective}/{total} features active')
+    lines.append('Tap a command or event to toggle it.')
+    return '\n'.join(lines), keyboard
+
+
+async def _render(call, text, keyboard):
+    """Render a callback response with text first (correct pyTelegramBotAPI order)."""
+    try:
+        await bot.edit_message_text(
+            text,
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            reply_markup=keyboard,
+        )
+    except Exception as e:
+        if "message is not modified" not in str(e):
+            # Fall back to sending a new message
+            await bot.send_message(
+                call.message.chat.id,
+                text,
+                reply_markup=keyboard,
+                message_thread_id=getattr(call.message, 'message_thread_id', None),
+            )
 
 
 def module_stats(gid):
@@ -251,181 +390,86 @@ def gated_event(event):
 # Bot keyboards and callbacks
 # --------------------------------------------------------------------------
 
-def _row_text(gid, kind, component, module_on):
-    pinned = kind == 'command' and component in ALWAYS_ON
-    raw = command_flag(gid, component) if kind == 'command' else event_flag(gid, component)
-    label = component if kind == 'command' else EVENT_INFO.get(component, (component,))[0]
-    text = f"{label} ({'On' if raw else 'Off'})"
-    if pinned:
-        text += ' (always on)'
-    elif not module_on:
-        text += ' (module off)'
-    return text, pinned
-
-
-def create_module_list_keyboard(group_id):
-    keyboard = InlineKeyboardMarkup(row_width=2)
-    for module in modules:
-        if module in UNSWITCHABLE_MODULES:
-            continue
-        enabled = is_module_enabled(group_id, module)
-        keyboard.add(
-            InlineKeyboardButton(module.capitalize(), callback_data=f"show_commands:{module}:{group_id}"),
-            InlineKeyboardButton('On' if enabled else 'Off', callback_data=f"toggle_module:{module}:{group_id}"),
-        )
-    return keyboard
-
-
-def create_command_list_keyboard(module_name, group_id):
-    keyboard = InlineKeyboardMarkup(row_width=2)
-    commands = modules.get(module_name, [])
-    events = module_events.get(module_name, [])
-    switchable = module_name not in UNSWITCHABLE_MODULES
-    module_on = is_module_enabled(group_id, module_name)
-
-    # all([]) is True; an empty module (downloader) must not offer Deselect All.
-    toggleable_commands = [c for c in commands if c not in ALWAYS_ON]
-    all_on = bool(toggleable_commands or events) and (
-        all(command_flag(group_id, c) for c in toggleable_commands)
-        and all(event_flag(group_id, e) for e in events)
-    )
-    keyboard.add(InlineKeyboardButton(
-        'Deselect All' if all_on else 'Select All',
-        callback_data=f'toggle_all_components:{module_name}:{group_id}',
-    ))
-    if switchable:
-        keyboard.add(InlineKeyboardButton(
-            f'Module: {"On" if module_on else "Off"}',
-            callback_data=f'toggle_module:{module_name}:{group_id}',
-        ))
-
-    for command in commands:
-        text, pinned = _row_text(group_id, 'command', command, module_on)
-        keyboard.add(InlineKeyboardButton(
-            text, callback_data=f'toggle_command:{command}:{group_id}'))
-    for event in events:
-        text, pinned = _row_text(group_id, 'event', event, module_on)
-        keyboard.add(InlineKeyboardButton(
-            text, callback_data=f'toggle_event:{event}:{group_id}'))
-    keyboard.add(InlineKeyboardButton(
-        text='Back to Modules', callback_data=f'back_to_modules:{group_id}'))
-    return keyboard
-
-
 async def send_module_keyboard(m):
     if not await is_privileged(m.chat.id, m.from_user.id):
         await bot.reply_to(m, "Admins only.")
         return
     group_id = str(m.chat.id)
-    keyboard = create_module_list_keyboard(group_id)
-    await bot.send_message(m.chat.id, "Select a module to manage:", reply_markup=keyboard, **topic_kwargs(m))
+    text, keyboard = overview_view(group_id, 1)
+    await bot.send_message(m.chat.id, text, reply_markup=keyboard, **topic_kwargs(m))
 
 
-async def _edit_markup(call, keyboard):
-    await bot.edit_message_reply_markup(
-        call.message.chat.id, call.message.message_id, reply_markup=keyboard)
+async def _flip(call, module, page, current, toggle, label):
+    """Flip a flag to its inverse, acknowledge, and swap to the detail view."""
+    gid = str(call.message.chat.id)
+    toggle(not current)
+    await _answered(call, f'{label} {"enabled" if not current else "disabled"}',
+                    detail_view(gid, module, page))
 
 
-async def _refresh(call, module_name):
-    await _edit_markup(call, create_command_list_keyboard(module_name, str(call.message.chat.id)))
+async def _answered(call, note, view):
+    """Acknowledge with a note, then swap the message to the new view."""
+    await bot.answer_callback_query(call.id, note)
+    await _render(call, *view)
 
 
-async def show_commands(call):
-    """Old keyboards still send show_commands; the gid in the data is not trusted."""
+async def handle_mod_callback(call):
+    """Route mod:<action>:<page>:<module>[:<component>] callbacks."""
     if not await is_privileged(call.message.chat.id, call.from_user.id):
+        await bot.answer_callback_query(call.id, "Admins only.")
         return
     parts = call.data.split(':')
-    module_name = parts[1] if len(parts) > 1 else ''
-    if module_name not in modules:
+    action = parts[1] if len(parts) > 1 else ''
+    group_id = str(call.message.chat.id)
+    try:
+        page = max(1, int(parts[2]))
+    except (ValueError, IndexError):
+        page = 1
+    module = parts[3] if len(parts) > 3 else ''
+    component = parts[4] if len(parts) > 4 else ''
+
+    if action in ('list', 'back'):
+        await _render(call, *overview_view(group_id, page))
+        return
+    if module not in modules:
         await bot.answer_callback_query(call.id, 'Unknown module.', show_alert=True)
         return
-    await _refresh(call, module_name)
 
-
-async def back_to_modules(call):
-    if not await is_privileged(call.message.chat.id, call.from_user.id):
-        return
-    keyboard = create_module_list_keyboard(str(call.message.chat.id))
-    await _edit_markup(call, keyboard)
-
-
-async def toggle_module_or_command(call):
-    if not await is_privileged(call.message.chat.id, call.from_user.id):
-        return
-
-    parts = call.data.split(':')
-    action = parts[0] if parts else ''
-    item = parts[1] if len(parts) > 1 else ''
-    group_id = str(call.message.chat.id)
-
-    if action == 'toggle_command':
-        command = resolve_command(item)
-        if command in ALWAYS_ON:
-            await bot.answer_callback_query(call.id, f'{command} is always on.', show_alert=True)
-            return
-        current = command_flag(group_id, command)
-        set_command_enabled(group_id, command, not current)
-        await bot.answer_callback_query(call.id, f'{command} command {"enabled" if not current else "disabled"}')
-        await _refresh(call, module_of_command(command) or item)
-
-    elif action == 'toggle_event':
-        if item not in _EVENT_MODULE:
-            await bot.answer_callback_query(call.id, 'Unknown event.', show_alert=True)
-            return
-        current = event_flag(group_id, item)
-        set_event_enabled(group_id, item, not current)
-        await bot.answer_callback_query(call.id, f'{item} event {"enabled" if not current else "disabled"}')
-        await _refresh(call, module_of_event(item) or item)
-
-    elif action == 'toggle_module':
-        if item in UNSWITCHABLE_MODULES:
+    if action == 'open':
+        await _render(call, *detail_view(group_id, module, page))
+    elif action == 'master':
+        if module in UNSWITCHABLE_MODULES:
             await bot.answer_callback_query(call.id, 'This module cannot be disabled.', show_alert=True)
             return
-        current = is_module_enabled(group_id, item)
-        set_module_enabled(group_id, item, not current)
-        await bot.answer_callback_query(call.id, f'{item} module {"enabled" if not current else "disabled"}')
-        # The list and the module screen both carry this button; tell them apart by the markup.
-        markup = getattr(call.message, 'reply_markup', None)
-        is_list = any(
-            (btn.callback_data or '').startswith('show_commands')
-            for row in getattr(markup, 'keyboard', []) for btn in row
-        )
-        if is_list:
-            await _edit_markup(call, create_module_list_keyboard(group_id))
-        elif item in modules:
-            await _refresh(call, item)
-        else:
-            await _edit_markup(call, create_module_list_keyboard(group_id))
-
-    elif action == 'toggle_all_commands':
-        # Legacy keyboard path: commands only, never events.
-        if item not in modules:
-            await bot.answer_callback_query(call.id, 'Unknown module.', show_alert=True)
+        await _flip(call, module, page, is_module_enabled(group_id, module),
+                    lambda v: set_module_enabled(group_id, module, v), f'{module} module')
+    elif action == 'all':
+        set_module_enabled(group_id, module, True)
+        for command in modules.get(module, []):
+            if command not in ALWAYS_ON:
+                set_command_enabled(group_id, command, True)
+        for event in module_events.get(module, []):
+            set_event_enabled(group_id, event, True)
+        await _answered(call, f'All components in {module} enabled',
+                        detail_view(group_id, module, page))
+    elif action == 'reset':
+        clear_module_overrides(group_id, module)
+        await _answered(call, f'Defaults restored for {module}',
+                        detail_view(group_id, module, page))
+    elif action == 'cmd':
+        if component not in _COMMAND_MODULE:
+            await bot.answer_callback_query(call.id, 'Unknown command.', show_alert=True)
             return
-        targets = [c for c in modules[item] if c not in ALWAYS_ON]
-        if not targets:
-            await bot.answer_callback_query(call.id, 'Nothing to toggle.')
+        if component in ALWAYS_ON:
+            await bot.answer_callback_query(call.id, f'{component} is always on.', show_alert=True)
             return
-        all_on = all(command_flag(group_id, c) for c in targets)
-        for command in targets:
-            set_command_enabled(group_id, command, not all_on)
-        await bot.answer_callback_query(call.id, f"All commands in {item} {'deselected' if all_on else 'selected'}")
-        await _refresh(call, item)
-
-    elif action == 'toggle_all_components':
-        if item not in modules:
-            await bot.answer_callback_query(call.id, 'Unknown module.', show_alert=True)
+        await _flip(call, module, page, command_flag(group_id, component),
+                    lambda v: set_command_enabled(group_id, component, v), f'{component} command')
+    elif action == 'evt':
+        if component not in _EVENT_MODULE:
+            await bot.answer_callback_query(call.id, 'Unknown event.', show_alert=True)
             return
-        commands = [c for c in modules[item] if c not in ALWAYS_ON]
-        events = module_events.get(item, [])
-        if not commands and not events:
-            await bot.answer_callback_query(call.id, 'Nothing to toggle.')
-            return
-        all_on = all(command_flag(group_id, c) for c in commands) and all(event_flag(group_id, e) for e in events)
-        for command in commands:
-            set_command_enabled(group_id, command, not all_on)
-        for event in events:
-            set_event_enabled(group_id, event, not all_on)
-        await bot.answer_callback_query(
-            call.id, f"All components in {item} {'deselected' if all_on else 'selected'}")
-        await _refresh(call, item)
+        await _flip(call, module, page, event_flag(group_id, component),
+                    lambda v: set_event_enabled(group_id, component, v), f'{component} event')
+    else:
+        await bot.answer_callback_query(call.id, "Invalid action.", show_alert=True)

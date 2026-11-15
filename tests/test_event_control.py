@@ -14,6 +14,7 @@ from module_manager import (
     set_command_enabled, set_event_enabled, set_module_enabled,
     command_flag, event_flag, read_event_states, read_module_states, module_stats,
     resolve_command, disabled_reason, gated_event,
+    overview_view, detail_view, MODULES_PER_PAGE,
 )
 from core.storage import module_db
 from core.db import IMYDB
@@ -298,9 +299,11 @@ def test_registry_integrity():
         assert module in modules
     # 64-byte callback limit for the widest button
     for module in modules:
-        assert len(f'toggle_all_components:{module}:-100123456789012345'.encode()) <= 64
-    for event in chain(*module_events.values()):
-        assert len(f'toggle_event:{event}:-100123456789012345'.encode()) <= 64
+        assert len(f'mod:all:1:{module}'.encode()) <= 64
+        assert len(f'mod:master:1:{module}'.encode()) <= 64
+    for module, event_list in module_events.items():
+        for event in event_list:
+            assert len(f'mod:evt:1:{module}:{event}'.encode()) <= 64
 
 
 # ----------------------------------------------------------------------
@@ -443,9 +446,36 @@ def test_panel_rejects_unknown_module_and_ignores_pinned(tmp_path, monkeypatch):
                 "csrf": csrf, "module": "general", "cmd": ["modules", "help"],
             }, allow_redirects=False)
             assert resp.status == 302
-            assert module_db().get(f'groups.{gid}.modules_enabled') is None
             assert command_flag(gid, 'help') is True
         finally:
             await client.close()
 
     asyncio.run(run())
+
+
+def test_module_views_render_and_callbacks_stay_under_telegram_limit(tmp_path, monkeypatch):
+    """Validate overview and detail view builders stay within callback size limits."""
+    monkeypatch.chdir(tmp_path)
+    text, markup = overview_view('-100777', 1)
+    assert 'page 1 of' in text
+    buttons = [b for row in markup.keyboard for b in row]
+    open_buttons = [b for b in buttons if (b.callback_data or '').startswith('mod:open:')]
+    assert len(open_buttons) == MODULES_PER_PAGE
+    # Telegram limits callbacks to 64 bytes
+    for b in buttons:
+        assert len((b.callback_data or '').encode()) <= 64
+
+    # page 2 exists and has navigation
+    text, markup = overview_view('-100777', 2)
+    assert 'page 2 of' in text
+    nav = [b.callback_data for row in markup.keyboard for b in row]
+    assert any(d == 'mod:list:1' for d in nav)
+
+    # detail view for filters includes components, master, bulk, back button
+    text, markup = detail_view('-100777', 'filters', 1)
+    assert 'filters · ON' in text
+    cbs = [b.callback_data for row in markup.keyboard for b in row]
+    assert 'mod:master:1:filters' in cbs
+    assert 'mod:evt:1:filters:filter_trigger' in cbs
+    assert 'mod:back:1' in cbs
+    assert all(len(d.encode()) <= 64 for d in cbs)

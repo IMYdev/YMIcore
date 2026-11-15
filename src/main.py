@@ -10,8 +10,9 @@ from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
 from module_manager import (
-    toggle_module_or_command, is_event_enabled,
-    resolve_command, module_of_command, disabled_reason, show_commands, back_to_modules,
+    is_event_enabled,
+    resolve_command, module_of_command, disabled_reason,
+    handle_mod_callback,
 )
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
@@ -137,17 +138,9 @@ async def help_category_switch(call):
         if "message is not modified" not in str(e):
             raise e
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("toggle_"))
-async def handle_toggle_callback(call):
-    await toggle_module_or_command(call)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("show_commands"))
-async def handle_show_commands_callback(call):
-    await show_commands(call)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("back_to_modules"))
-async def handle_back_to_modules_callback(call):
-    await back_to_modules(call)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("mod:"))
+async def mod_callback(call):
+    await handle_mod_callback(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("bc_"))
 async def broadcast_callback(call):
