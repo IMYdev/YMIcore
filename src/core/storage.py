@@ -5,6 +5,8 @@ place is what stops a second implementation of "where do group notes live"
 from appearing next to the first.
 """
 
+import time
+
 from core.db import IMYDB
 
 GROUP_FILES = {
@@ -13,6 +15,7 @@ GROUP_FILES = {
     "notes": "runtime/notes/{key}_notes.json",
     "stickers": "runtime/banned/{key}_stickers.json",
     "words": "runtime/banned/{key}_words.json",
+    "warns": "runtime/warns/{key}_warns.json",
 }
 
 MODULE_CONTROLLER = "runtime/modules/module_controller.json"
@@ -29,7 +32,6 @@ CAPTCHA_FILES = {
     "kicks": "runtime/captcha/kicks.json",
 }
 
-
 def group_key(chat_id) -> str:
     """Chat id as used in per-group file names (no leading minus)."""
     return str(chat_id).lstrip("-")
@@ -42,6 +44,72 @@ def group_path(section, chat_id) -> str:
 
 def group_db(section, chat_id) -> IMYDB:
     return IMYDB(GROUP_FILES[section].format(key=group_key(chat_id)))
+
+
+def warn_db(chat_id) -> IMYDB:
+    return IMYDB(GROUP_FILES["warns"].format(key=group_key(chat_id)))
+
+
+def warn_counts(chat_id) -> dict:
+    """Per-user warn counts and latest warn for a chat."""
+    db = warn_db(chat_id)
+    data = db.get('warns') or {}
+    result = {}
+    for uid_str, entries in (data or {}).items():
+        recent = entries[-5:] if len(entries) > 5 else entries
+        latest = recent[-1] if recent else None
+        result[uid_str] = {
+            "count": len(recent),
+            "latest": {
+                "reason": latest.get("reason", "") if latest else "",
+                "by": latest.get("by", None) if latest else None,
+                "ts": latest.get("ts", 0) if latest else 0,
+            } if latest else None,
+        }
+    return result
+
+
+def add_warn(chat_id, user_id, reason, by_user_id) -> dict:
+    """Append a warn and return the updated per-user state."""
+    db = warn_db(chat_id)
+    data = db.get('warns') or {}
+
+    key = str(user_id)
+    entry = {"reason": reason, "by": by_user_id, "ts": int(time.time())}
+
+    if key in data:
+        data[key].append(entry)
+        if len(data[key]) > 5:
+            data[key] = data[key][-5:]
+    else:
+        data[key] = [entry]
+
+    db.set('warns', data)
+    return warn_counts(chat_id)
+
+
+def clear_warns(chat_id, user_id=None) -> dict:
+    """Remove all warns for a user, or all warns in the chat if user_id is None."""
+    db = warn_db(chat_id)
+    data = db.get('warns') or {}
+
+    if user_id is not None:
+        key = str(user_id)
+        if key in data:
+            del data[key]
+    else:
+        data.clear()
+
+    # If data becomes empty, delete the file to avoid stale empty JSON
+    if not data:
+        try:
+            db.delete('warns')
+        except Exception:
+            pass
+        return {}
+
+    db.set('warns', data)
+    return warn_counts(chat_id)
 
 
 def module_db() -> IMYDB:
