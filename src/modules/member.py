@@ -93,11 +93,10 @@ async def promote(m):
     if not target_user:
         return await bot.reply_to(m, "Reply to a user or provide their ID to promote.")
     
+    if not await is_moderatable(m.chat.id, target_user.id):
+        return await bot.reply_to(m, f"Cannot promote {target_user.first_name} - they are an admin/creator or instance owner.")
+    
     try:
-        reply_status = await bot.get_chat_member(m.chat.id, target_user.id)
-        if reply_status.status in ['administrator', 'creator']:
-            return await bot.reply_to(m, f"{target_user.first_name} is already an admin.")
-        
         await bot.promote_chat_member(m.chat.id, target_user.id, **promoting_params)
         
         args = m.text.split(None, 1)
@@ -121,11 +120,10 @@ async def demote(m):
     if not target_user:
         return await bot.reply_to(m, "Reply to a user or provide their ID to demote.")
     
+    if not await is_moderatable(m.chat.id, target_user.id, require_admin=True):
+        return await bot.reply_to(m, f"Cannot demote {target_user.first_name} - they are a regular member, creator, or instance owner.")
+    
     try:
-        reply_status = await bot.get_chat_member(m.chat.id, target_user.id)
-        if reply_status.status not in ['administrator', 'creator']:
-            return await bot.reply_to(m, f"{target_user.first_name} is already a regular member.")
-        
         await bot.promote_chat_member(m.chat.id, target_user.id, **demoting_params)
         await bot.reply_to(m, f"Demoted {target_user.first_name} to regular member.")
     except Exception as e:
@@ -145,6 +143,9 @@ async def ban(m):
     target_user = await get_target_user(m)
     if not target_user:
         return await bot.reply_to(m, "Reply to a user or provide their ID to ban.")
+    
+    if not await is_moderatable(m.chat.id, target_user.id):
+        return await bot.reply_to(m, f"Cannot ban {target_user.first_name} - they are an admin/creator or instance owner.")
     
     await bot.ban_chat_member(m.chat.id, target_user.id)
     await bot.reply_to(m, f"Banned {target_user.first_name} from the chat.")
@@ -240,6 +241,9 @@ async def warn(m):
     target_user = await get_target_user(m)
     if not target_user:
         return await bot.reply_to(m, "Reply to a user or provide their ID to warn.")
+    
+    if not await is_moderatable(m.chat.id, target_user.id):
+        return await bot.reply_to(m, f"Cannot warn {target_user.first_name} - they are an admin/creator or instance owner.")
     
     reason = m.text.split(None, 1)[1] if len(m.text.split(None, 1)) > 1 else "No reason provided"
     if len(reason) > 500:
@@ -349,13 +353,8 @@ async def mute(m):
     if not target_user:
         return await bot.reply_to(m, "Reply to a user or provide their ID to mute.")
     
-    # Check if user is admin/creator
-    try:
-        member = await bot.get_chat_member(m.chat.id, target_user.id)
-        if member.status in ['administrator', 'creator']:
-            return await bot.reply_to(m, f"Cannot mute {target_user.first_name} - they are an admin/creator.")
-    except:
-        pass
+    if not await is_moderatable(m.chat.id, target_user.id):
+        return await bot.reply_to(m, f"Cannot mute {target_user.first_name} - they are an admin/creator or instance owner.")
     
     if duration_seconds is None:
         # Indefinite mute
@@ -387,6 +386,7 @@ async def unmute(m):
     if not target_user:
         return await bot.reply_to(m, "Reply to a user or provide their ID to unmute.")
     
+    # unmute is safe on anyone (even admins), so no permission guard needed
     try:
         await bot.restrict_chat_member(m.chat.id, target_user.id, permissions=open_permissions())
     except Exception as e:
@@ -405,13 +405,8 @@ async def kick(m):
     if not target_user:
         return await bot.reply_to(m, "Reply to a user or provide their ID to kick.")
     
-    # Check if user is admin/creator - don't kick admins
-    try:
-        member = await bot.get_chat_member(m.chat.id, target_user.id)
-        if member.status in ['administrator', 'creator']:
-            return await bot.reply_to(m, f"Cannot kick {target_user.first_name} - they are an admin/creator.")
-    except:
-        pass
+    if not await is_moderatable(m.chat.id, target_user.id):
+        return await bot.reply_to(m, f"Cannot kick {target_user.first_name} - they are an admin/creator or instance owner.")
     
     # Use the captcha kick mechanism: ban + immediate unban, reset kick count
     from modules.captcha import increment_kicks, reset_kicks

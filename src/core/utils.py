@@ -77,6 +77,26 @@ def handle_errors(func):
     return wrapper
 
 
+async def is_moderatable(chat_id, user_id, *, require_admin=False) -> bool:
+    """Whether a user can be moderated (warned/muted/kicked/banned).
+
+    Parameters
+    ----------
+    require_admin=False
+        If True, only normal members are eligible for modification.
+        If False, exclude admins, creators, and the instance owner.
+    """
+    if is_owner_id(user_id):
+        return False
+    try:
+        member = await bot.get_chat_member(chat_id, user_id)
+        status = member.status
+    except Exception:
+        return False
+    if require_admin:
+        return status == 'administrator'
+    return status not in ('administrator', 'creator')
+
 async def is_user_admin(chat_id, user_id):
     """Check if a user is an admin or creator in a chat."""
     try:
