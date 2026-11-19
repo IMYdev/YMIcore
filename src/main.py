@@ -55,10 +55,11 @@ async def cmd_handler(m):
         return
 
     if m.chat.type == 'private':
-        restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter', 
+        restricted_in_pm = ['ban', 'unban', 'promote', 'demote', 'filter',
                             'filist', 'stop', 'remove', 'notes', 'add',
                             'goodbye', 'greeting', 'pin', 'modules', 'blockset',
-                            'blocklist', 'unblockset', 'blockword', 'unblockword', 'blockwords', 'devgroup']
+                            'blocklist', 'unblockset', 'blockword', 'unblockword', 'blockwords', 'devgroup',
+                            'warn', 'warnings', 'unwarn', 'mute', 'unmute', 'kick']
         if command in restricted_in_pm:
             await bot.reply_to(m, "This command is not available in private chats.")
             return

@@ -1,7 +1,7 @@
 import functools
 import traceback
 from telebot.formatting import (hbold, hcode, format_text, escape_html)
-from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup)
+from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions)
 from datetime import datetime
 from info import (Logs, ERROR_LOG_CHAT_ID, bot, BOT_OWNER)
 
@@ -76,6 +76,26 @@ def handle_errors(func):
                 pass
     return wrapper
 
+
+async def is_moderatable(chat_id, user_id, *, require_admin=False) -> bool:
+    """Whether a user can be moderated (warned/muted/kicked/banned).
+
+    Parameters
+    ----------
+    require_admin=False
+        If True, only normal members are eligible for modification.
+        If False, exclude admins, creators, and the instance owner.
+    """
+    if is_owner_id(user_id):
+        return False
+    try:
+        member = await bot.get_chat_member(chat_id, user_id)
+        status = member.status
+    except Exception:
+        return False
+    if require_admin:
+        return status == 'administrator'
+    return status not in ('administrator', 'creator')
 
 async def is_user_admin(chat_id, user_id):
     """Check if a user is an admin or creator in a chat."""
@@ -182,3 +202,25 @@ def link_markup(button, row_width=1):
     markup = InlineKeyboardMarkup(row_width=row_width)
     markup.add(InlineKeyboardButton(button["text"], url=button["url"]))
     return markup
+
+
+def mute_permissions() -> ChatPermissions:
+    """Permissions for a muted member (no messaging, media, polls, previews)."""
+    return ChatPermissions(
+        can_send_messages=False, can_send_media_messages=False,
+        can_send_polls=False, can_send_other_messages=False,
+        can_add_web_page_previews=False, can_send_audios=False,
+        can_send_documents=False, can_send_photos=False, can_send_videos=False,
+        can_send_video_notes=False, can_send_voice_notes=False,
+    )
+
+
+def open_permissions() -> ChatPermissions:
+    """Full permissions (normal chat member)."""
+    return ChatPermissions(
+        can_send_messages=True, can_send_media_messages=True,
+        can_send_polls=True, can_send_other_messages=True,
+        can_add_web_page_previews=True, can_send_audios=True,
+        can_send_documents=True, can_send_photos=True, can_send_videos=True,
+        can_send_video_notes=True, can_send_voice_notes=True,
+    )

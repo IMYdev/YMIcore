@@ -18,6 +18,11 @@ EVENT_LABELS = {
     "captcha_timeout": "Captcha timeouts",
     "panel_action": "Panel actions",
     "broadcast": "Broadcasts",
+    "warn": "Warns",
+    "unwarn": "Unwarns",
+    "mute": "Mutes",
+    "unmute": "Unmutes",
+    "kick": "Kicks",
 }
 
 # One source for both the validation tuple and the statistics labels.
