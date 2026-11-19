@@ -12,7 +12,7 @@ MODULES_PER_PAGE = 5
 
 modules = {
     'anime': ['animewall', 'sauce'],
-    'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge'],
+    'admin': ['ban', 'unban', 'promote', 'demote', 'pin', 'purge', 'warn', 'warnings', 'unwarn', 'mute', 'unmute', 'kick'],
     'notes': ['notes', 'add', 'remove'],
     'filters': ['filter', 'filist', 'stop'],
     'greetings': ['greeting', 'goodbye'],

@@ -5,7 +5,8 @@ from modules.filters import (set_filter, get_filters, remove_filter)
 from modules.notes import (set_note, notes_list, remove_note, devgroup_command)
 from modules.member import (
     user_info, start, promote, demote, pin,
-    ban, unban, help_command, group_id, spoiler)
+    ban, unban, warn, warnings, unwarn, mute, unmute, kick,
+    help_command, group_id, spoiler)
 from module_manager import send_module_keyboard
 from modules.greetings import (set_greeting, set_goodbye, captcha_toggle, set_captcha, add_captcha, del_captcha, captcha_list, captcha_tries)
 from modules.blocklist import (block_set, unblock_set, get_blacklist, block_word, unblock_word, list_blocked_words)
@@ -34,6 +35,12 @@ COMMANDS = {
     "pin": pin,
     "ban": ban,
     "unban": unban,
+    "warn": warn,
+    "warnings": warnings,
+    "unwarn": unwarn,
+    "mute": mute,
+    "unmute": unmute,
+    "kick": kick,
     "help": help_command,
     "modules": send_module_keyboard,
     "spoiler": spoiler,
