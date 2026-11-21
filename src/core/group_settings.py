@@ -298,17 +298,34 @@ def delete_blocked_word(gid, word) -> bool:
     return True
 
 
+def read_word_mute_count(gid, user_id) -> int:
+    """Return how many times user_id has triggered a word-block mute in this chat."""
+    db = _db("word_mutes", gid)
+    data = db.get("counts") or {}
+    return data.get(str(user_id), 0)
+
+
+def increment_word_mute_count(gid, user_id) -> int:
+    """Increment and return the new offense count for user_id in this chat."""
+    db = _db("word_mutes", gid)
+    data = db.get("counts") or {}
+    key = str(user_id)
+    data[key] = data.get(key, 0) + 1
+    db.set("counts", data)
+    return data[key]
+
+
 __all__ = [
     "ALWAYS_ON", "EVENT_INFO", "EVENT_MAP", "MODULE_MAP", "UNSWITCHABLE_MODULES",
     "add_blocked_word", "add_filter", "add_note", "add_sticker", "clear_greeting_media",
     "command_flag", "delete_blocked_word", "delete_filter", "delete_note", "delete_sticker",
     "disabled_reason", "drop_legacy_captcha", "event_flag", "gated_event",
-    "get_captcha_questions", "is_command_enabled", "is_event_enabled",
+    "get_captcha_questions", "increment_word_mute_count", "is_command_enabled", "is_event_enabled",
     "is_module_enabled", "module_stats", "normalize_blocked_word", "read_blocked_words",
     "read_captcha_questions", "read_event_states", "read_filters", "read_greetings",
     "read_module_switches", "read_module_states", "read_notes", "read_stickers",
-    "resolve_command", "save_captcha", "save_greeting_messages", "set_captcha_enabled",
-    "set_command_enabled", "set_event_enabled", "set_greeting_media", "set_module_enabled",
-    "validate_blocked_word", "validate_captcha", "validate_filter_keyword",
+    "read_word_mute_count", "resolve_command", "save_captcha", "save_greeting_messages",
+    "set_captcha_enabled", "set_command_enabled", "set_event_enabled", "set_greeting_media",
+    "set_module_enabled", "validate_blocked_word", "validate_captcha", "validate_filter_keyword",
     "validate_message_template", "validate_named_text",
 ]

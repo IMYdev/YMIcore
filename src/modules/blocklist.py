@@ -2,16 +2,19 @@ import asyncio
 import os
 import re
 import time
+from datetime import datetime, timedelta
 
 from info import bot
 from telebot.formatting import hcode
 from core.group_settings import (
     add_sticker, delete_sticker, read_stickers,
     add_blocked_word, delete_blocked_word, read_blocked_words,
+    increment_word_mute_count, read_word_mute_count,
     normalize_blocked_word, validate_blocked_word,
 )
 from core.storage import group_path
-from core.utils import (chunk_list, get_args, handle_errors, is_privileged, topic_kwargs)
+from core.utils import (chunk_list, get_args, handle_errors, is_moderatable, is_privileged,
+                        mute_permissions, topic_kwargs)
 from module_manager import gated_event
 
 # Cached compiled word patterns per chat, invalidated on file change
@@ -19,6 +22,14 @@ _word_pattern_cache = {}  # chat_id -> (stamp, pattern or None)
 _MAX_QUEUE = 100
 _SWEEP_INTERVAL = 0.25
 _word_queue = {}  # chat_id -> list of message ids
+
+MAX_MUTE_SECONDS = 366 * 86400
+
+
+def mute_duration_for(count: int) -> int:
+    """Doubling mute ladder: 1m, 2m, 4m, 8m ... capped at Telegram's max."""
+    seconds = 60 * (2 ** (count - 1))
+    return min(seconds, MAX_MUTE_SECONDS)
 
 
 def build_word_pattern(words):
@@ -92,7 +103,28 @@ async def block_words(m) -> bool:
     if not pattern.search(text.casefold()):
         return False
     _enqueue(m.chat.id, m.message_id)
+
+    user = getattr(m, "from_user", None)
+    if user is not None:
+        await _maybe_mute(m.chat.id, user.id)
     return True
+
+
+async def _maybe_mute(chat_id: int, user_id: int) -> None:
+    """Mute the user with an escalating duration; escalation only counts on success."""
+    if not await is_moderatable(chat_id, user_id):
+        return  # admins, creators, and the bot owner are never muted
+    count = read_word_mute_count(chat_id, user_id) + 1
+    seconds = mute_duration_for(count)
+    try:
+        await bot.restrict_chat_member(
+            chat_id, user_id,
+            permissions=mute_permissions(),
+            until_date=datetime.now() + timedelta(seconds=seconds),
+        )
+    except Exception:
+        return  # missing rights or transient failure: don't escalate a mute that didn't happen
+    increment_word_mute_count(chat_id, user_id)
 
 
 # --------------------------------------------------------------------------

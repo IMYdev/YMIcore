@@ -15,6 +15,7 @@ GROUP_FILES = {
     "notes": "runtime/notes/{key}_notes.json",
     "stickers": "runtime/banned/{key}_stickers.json",
     "words": "runtime/banned/{key}_words.json",
+    "word_mutes": "runtime/banned/{key}_word_mutes.json",
     "warns": "runtime/warns/{key}_warns.json",
 }
 

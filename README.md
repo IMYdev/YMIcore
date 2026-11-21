@@ -24,7 +24,7 @@ It's also a ready-to-use general group management bot.
 - Ability to add spoilers to media and text.
 - Block sticker sets that are unwanted in the group chat.
 - Send an update or news broadcast to everyone who has interacted with the bot, from Telegram (`/broadcast`) or the web panel. (Must be owner of bot instance)
-- Block words or phrases that trigger silent deletion (whole-word, case-insensitive).
+- Block specific words or phrases in the group.
 
 ## Quick Start
 

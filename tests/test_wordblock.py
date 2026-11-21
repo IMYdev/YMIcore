@@ -233,3 +233,69 @@ def test_list_blocked_words(monkeypatch):
     assert captured
     assert any("cat" in msg for msg in captured)
     assert any("dog" in msg for msg in captured)
+
+
+def test_mute_duration_for():
+    from modules import blocklist as bl
+
+    assert bl.mute_duration_for(1) == 60
+    assert bl.mute_duration_for(2) == 120
+    assert bl.mute_duration_for(3) == 240
+    assert bl.mute_duration_for(4) == 480
+    assert bl.mute_duration_for(100) == bl.MAX_MUTE_SECONDS
+
+
+def test_block_word_mute_escalates(monkeypatch):
+    from datetime import datetime
+
+    restricted = []
+
+    async def fake_restrict(chat_id, user_id, permissions=None, until_date=None):
+        restricted.append(until_date)
+
+    monkeypatch.setattr(bot, "restrict_chat_member", fake_restrict)
+    monkeypatch.setattr("modules.blocklist.is_moderatable", _allow)
+
+    from modules import blocklist as bl
+    from core.group_settings import add_blocked_word, read_word_mute_count
+
+    add_blocked_word("200", "hello")
+
+    def make_user_msg(user_id):
+        msg = make_msg("hello", 200)
+        msg.from_user = type("User", (), {"id": user_id})()
+        return msg
+
+    now = datetime.now()
+    for i in range(3):
+        asyncio.run(bl.block_words(make_user_msg(555)))
+        assert len(restricted) == i + 1
+
+    deltas = [(t - now).total_seconds() for t in restricted]
+    for got, want in zip(deltas, (60, 120, 240)):
+        assert want - 5 <= got <= want + 5
+    assert read_word_mute_count("200", 555) == 3
+
+
+def test_no_mute_for_admin(monkeypatch):
+    calls = []
+
+    async def fake_restrict(*args, **kwargs):
+        calls.append(1)
+
+    monkeypatch.setattr(bot, "restrict_chat_member", fake_restrict)
+
+    async def deny(*args, **kwargs):
+        return False
+
+    monkeypatch.setattr("modules.blocklist.is_moderatable", deny)
+
+    from modules import blocklist as bl
+    from core.group_settings import add_blocked_word
+
+    add_blocked_word("200", "hello")
+    msg = make_msg("hello", 200)
+    msg.from_user = type("User", (), {"id": 555})()
+
+    asyncio.run(bl.block_words(msg))
+    assert calls == []
