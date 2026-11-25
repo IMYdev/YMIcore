@@ -57,9 +57,7 @@ There's a browser panel for tweaking everything without typing commands. See the
 One rule: every `runtime/...` path lives in `core/storage.py`, and per-group settings go through `core/group_settings.py`. `tests/test_structure.py` will yell at you otherwise. Tests run with `pytest`. Benchmarks run with `pytest -m perf -s`.
 
 ## Upgrading
-Your data keeps working in both directions. Users now live in `runtime/users/shard_NN.json`. The old `registry.json` gets merged in on start and is never deleted.
-
-> Rolling back to an older version? Run `python ../tools/unshard_users.py` from `src/` first, so the old version knows about users who showed up after the upgrade.
+Just pull and restart, your data carries over. Users now live in `runtime/users/shard_NN.json`. The old `registry.json` gets moved in on first start and renamed to `registry.json.migrated`. (keep it as a backup, or delete it, your call.)
 
 ## Why YMI Bot Core?
 - The code is dead simple, written by a simple guy, for people that like simplicity.

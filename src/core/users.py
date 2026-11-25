@@ -5,8 +5,7 @@ import time
 from info import BOT_OWNER
 from core.groups import banned_ids, registry_groups
 from core.storage import (
-    USERS_MERGE_MARKER, USERS_REGISTRY as PATH,
-    iter_user_shards, user_shard_db, user_shard_index, users_merge_marker_db,
+    USERS_REGISTRY as PATH, iter_user_shards, user_shard_db, user_shard_index,
 )
 
 # A shard is rewritten as a whole on every save, so an already known user is
@@ -17,61 +16,30 @@ SEGMENTS = ("both", "users", "groups")
 
 GROUP_TYPES = ("group", "supergroup", "channel")
 
+MIGRATED_SUFFIX = ".migrated"
+
 
 # --------------------------------------------------------------------------
-# Legacy registry.json -> shards
+# One-time upgrade: registry.json -> shards
 #
-# Older versions kept every user in one registry.json. It is merged into the
-# shards whenever it changed since the last merge (first upgrade, or after a
-# rollback ran the old code), and it is never renamed or deleted, so rolling
-# back still finds the users it knew. The marker is written only after every
-# shard is saved, so an interrupted merge simply runs again.
+# Older versions kept every user in one registry.json. On first use it is
+# split into the shards and then renamed to registry.json.migrated. The rename
+# happens only after every shard is saved, so an interrupted upgrade simply
+# runs again; users already in a shard are kept as they are.
 # --------------------------------------------------------------------------
 
 _merge_checked = set()
 
 
-def _legacy_stamp():
-    try:
-        st = os.stat(PATH)
-    except OSError:
-        return None
-    return [st.st_ino, st.st_mtime_ns, st.st_size]
-
-
-def _merged_stamp():
-    try:
-        with open(USERS_MERGE_MARKER, encoding="utf-8") as f:
-            return json.load(f).get("stamp")
-    except (OSError, ValueError, AttributeError):
-        return None
-
-
-def _merge_record(current, incoming):
-    """Newer last_seen wins. On a tie, keep the shard copy but never lose an
-    opt-out or a dead flag recorded by either side."""
-    if current is None:
-        return incoming
-    if (incoming.get("last_seen") or 0) > (current.get("last_seen") or 0):
-        merged = dict(incoming)
-    else:
-        merged = dict(current)
-        if (incoming.get("last_seen") or 0) == (current.get("last_seen") or 0):
-            merged["opted_out"] = bool(current.get("opted_out") or incoming.get("opted_out"))
-    merged["dead"] = bool(current.get("dead") or incoming.get("dead"))
-    return merged
-
-
 def migrate_users_registry() -> int:
-    """Merge registry.json into the shards if it changed. Returns users merged."""
-    stamp = _legacy_stamp()
-    if stamp is None or stamp == _merged_stamp():
+    """Move registry.json into the shards. Returns how many users were read."""
+    if not os.path.exists(PATH):
         return 0
     try:
         with open(PATH, encoding="utf-8") as f:
             legacy = (json.load(f) or {}).get("users") or {}
     except (OSError, ValueError, AttributeError) as exc:
-        print(f"[!] users: could not read {PATH} for merging ({exc}); left untouched.")
+        print(f"[!] users: could not read {PATH} for migration ({exc}); left untouched.")
         return 0
     if not isinstance(legacy, dict):
         legacy = {}
@@ -83,18 +51,13 @@ def migrate_users_registry() -> int:
     for records in by_shard.values():
         db = user_shard_db(next(iter(records)))
         users = dict(db.get("users", {}) or {})
-        changed = False
-        for uid, record in records.items():
-            merged = _merge_record(users.get(uid), record)
-            if merged != users.get(uid):
-                users[uid] = merged
-                changed = True
-        if changed:
+        missing = {uid: rec for uid, rec in records.items() if uid not in users}
+        if missing:
+            users.update(missing)
             db.set("users", users)
 
-    if _legacy_stamp() == stamp:  # unchanged while we merged
-        users_merge_marker_db().set("stamp", stamp)
-    print(f"[+] users: merged {len(legacy)} users from {PATH} into shards.")
+    os.replace(PATH, PATH + MIGRATED_SUFFIX)
+    print(f"[+] users: moved {len(legacy)} users from {PATH} into shards.")
     return len(legacy)
 
 

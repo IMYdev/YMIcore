@@ -25,12 +25,10 @@ MODULE_CONTROLLER = "runtime/modules/module_controller.json"
 GROUPS_REGISTRY = "runtime/groups/registry.json"
 BANNED_GROUPS = "runtime/banned/groups.json"
 # Users live in USER_SHARDS small files (see core.users). The single
-# registry.json of older versions is still read, merged into the shards, and
-# left in place so a rollback keeps working; tools/unshard_users.py rebuilds it.
+# registry.json of older versions is moved into them once, on first use.
 USERS_REGISTRY = "runtime/users/registry.json"
 USER_SHARDS = 64
 USER_SHARD_FILE = "runtime/users/shard_{n:02d}.json"
-USERS_MERGE_MARKER = "runtime/users/registry.merged.json"
 BROADCAST_REGISTRY = "runtime/broadcasts/registry.json"
 BROADCAST_PENDING = "runtime/broadcasts/pending.json"
 WEB_TOKENS = "runtime/web/tokens.json"
@@ -137,7 +135,7 @@ def banned_db() -> IMYDB:
 
 
 def users_db() -> IMYDB:
-    """The legacy single-file users registry (read by the shard merge only)."""
+    """The pre-shard single-file users registry (read by the upgrade only)."""
     return IMYDB(USERS_REGISTRY)
 
 
@@ -162,10 +160,6 @@ def iter_user_shards():
         path = user_shard_path(n)
         if os.path.exists(path):
             yield IMYDB(path, indent=None)
-
-
-def users_merge_marker_db() -> IMYDB:
-    return IMYDB(USERS_MERGE_MARKER)
 
 
 def broadcast_db(kind="registry") -> IMYDB:

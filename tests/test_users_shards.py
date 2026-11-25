@@ -1,9 +1,7 @@
-"""Users sharding: legacy registry merge, rollback safety, unchanged results."""
+"""Users sharding: one-time upgrade from registry.json, unchanged results."""
 
 import json
 import os
-import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -12,7 +10,6 @@ import pytest
 from core import storage, users
 from core.db import IMYDB
 
-TOOL = Path(__file__).resolve().parents[1] / "tools" / "unshard_users.py"
 LEGACY = "runtime/users/registry.json"
 
 
@@ -53,19 +50,17 @@ def test_existing_registry_is_merged_and_results_match_old_code():
     assert users.audience_counts("users")["users"] == len(_old_user_ids(data))
     assert {u["uid"] for u in users.list_users()} == set(data)
     assert users.get_user(1003)["name"] == "U3"
-    assert os.path.exists(LEGACY)  # left in place for rollbacks
+    assert not os.path.exists(LEGACY)
+    assert os.path.exists(LEGACY + users.MIGRATED_SUFFIX)
     assert len(list(storage.iter_user_shards())) == storage.USER_SHARDS
 
 
-def test_merge_is_idempotent_and_skipped_when_unchanged(monkeypatch):
+def test_migration_runs_once():
     _legacy()
     assert users.migrate_users_registry() == 300
     assert users.migrate_users_registry() == 0
     _restart()
-    calls = []
-    monkeypatch.setattr(users, "user_shard_db", lambda uid: calls.append(uid))
-    users.migrate_users_registry()
-    assert calls == []
+    assert users.migrate_users_registry() == 0
 
 
 def test_interrupted_merge_is_completed_on_next_start(monkeypatch):
@@ -83,49 +78,10 @@ def test_interrupted_merge_is_completed_on_next_start(monkeypatch):
         mp.setattr(IMYDB, "set", crash_after_ten)
         with pytest.raises(KeyboardInterrupt):
             users.migrate_users_registry()
-    assert not os.path.exists(storage.USERS_MERGE_MARKER)
+    assert os.path.exists(LEGACY)  # not renamed until every shard is saved
     _restart()
     assert users.user_ids() == _old_user_ids(data)
-    assert os.path.exists(storage.USERS_MERGE_MARKER)
-
-
-def test_rollback_changes_are_merged_on_reupgrade():
-    _legacy(n=20)
-    users.record_user(5555, "New", "new")  # first seen after the upgrade
-    assert "5555" in users.user_ids()
-
-    # Old code runs: it rewrites registry.json, adds a user, and unsubscribes one.
-    with open(LEGACY) as f:
-        legacy = json.load(f)
-    legacy["users"]["7777"] = {"name": "Rollback", "username": "rb", "first_seen": time.time(),
-                               "last_seen": time.time(), "opted_out": False, "dead": False}
-    legacy["users"]["1001"]["opted_out"] = True
-    tmp = LEGACY + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(legacy, f, indent=4)
-    os.replace(tmp, LEGACY)
-
-    _restart()
-    ids = users.user_ids()
-    assert "7777" in ids        # added during the rollback
-    assert "5555" in ids        # added before the rollback, kept
-    assert "1001" not in ids    # opt-out made during the rollback survives
-    assert users.is_opted_out(1001)
-
-
-def test_newer_shard_record_wins_over_stale_legacy():
-    _legacy(n=5)
-    users.migrate_users_registry()
-    users.record_user(1002, "Renamed", "u2")
-    # Legacy changes for an unrelated reason; its copy of 1002 is older.
-    with open(LEGACY) as f:
-        legacy = json.load(f)
-    legacy["users"]["9999"] = {"name": "X", "first_seen": 1, "last_seen": 1}
-    with open(LEGACY, "w") as f:
-        json.dump(legacy, f)
-    _restart()
-    assert users.get_user(1002)["name"] == "Renamed"
-    assert users.get_user(9999)["name"] == "X"
+    assert not os.path.exists(LEGACY)
 
 
 def test_unreadable_legacy_registry_left_alone():
@@ -154,18 +110,3 @@ def test_record_user_writes_one_small_compact_shard():
     changed = [p for p in after if after[p] != before.get(p)]
     assert [p.name for p in changed] == [f"shard_{123456 % 64:02d}.json"]
     assert "\n    " not in changed[0].read_text()
-
-
-def test_unshard_tool_round_trip(tmp_path):
-    data = _legacy(n=50)
-    users.record_user(5555, "New", "new")
-    result = subprocess.run([sys.executable, "-I", str(TOOL), "--runtime", "runtime"],
-                            capture_output=True, text=True)
-    assert result.returncode == 0, result.stderr
-    with open(LEGACY) as f:
-        rebuilt = json.load(f)["users"]
-    assert set(rebuilt) == set(data) | {"5555"}
-    assert os.path.exists(LEGACY + ".before-unshard")
-    # The new version recognises the rebuilt file: no needless merge.
-    _restart()
-    assert users.migrate_users_registry() == 0
