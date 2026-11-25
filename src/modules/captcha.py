@@ -156,17 +156,18 @@ def _get_lock(key):
         LOCKS[key] = asyncio.Lock()
     return LOCKS[key]
 
-_BOT_USERNAME = None
+def _release_lock(key):
+    """Forget an idle lock so LOCKS does not grow with every join ever seen."""
+    lock = LOCKS.get(key)
+    if lock is not None and not lock.locked() and not getattr(lock, "_waiters", None):
+        del LOCKS[key]
 
 async def _bot_username():
-    global _BOT_USERNAME
-    if _BOT_USERNAME is None:
-        try:
-            me = await bot.get_me()
-            _BOT_USERNAME = me.username
-        except Exception:
-            _BOT_USERNAME = "bot"
-    return _BOT_USERNAME
+    from core.utils import bot_me
+    try:
+        return (await bot_me()).username or "bot"
+    except Exception:
+        return "bot"  # not cached: the next join retries
 
 async def handle_join_service_message(m):
     members = m.new_chat_members or []
@@ -298,8 +299,13 @@ async def handle_captcha_callback(call):
     if call.message.chat.type != "private":
         return await bot.answer_callback_query(call.id, "Verify in PM.", show_alert=True)
     key = session_key(chat_id, call.from_user.id)
-    lock = _get_lock(key)
-    async with lock:
+    try:
+        return await _answer_locked(call, key, chat_id, q_index, opt_index)
+    finally:
+        _release_lock(key)
+
+async def _answer_locked(call, key, chat_id, q_index, opt_index):
+    async with _get_lock(key):
         session = get_session(chat_id, call.from_user.id)
         if session is None:
             try:
@@ -399,9 +405,11 @@ async def finish_success(session, user):
 async def punish(session, reason):
     """Entry point for callers that do not hold the lock."""
     key = session_key(session.get("chat_id"), session.get("user_id"))
-    lock = _get_lock(key)
-    async with lock:
-        await punish_locked(session, reason)
+    try:
+        async with _get_lock(key):
+            await punish_locked(session, reason)
+    finally:
+        _release_lock(key)
 
 async def punish_locked(session, reason):
     """Caller MUST already hold the session lock; asyncio.Lock is not re-entrant."""
@@ -494,6 +502,7 @@ async def captcha_sweeper():
 
 async def forget_user(chat_id, user_id):
     delete_session(chat_id, user_id)
+    _release_lock(session_key(chat_id, user_id))
     try:
         # group message cleanup not mandatory since session deleted; skip to avoid extra DB
         pass

@@ -190,6 +190,20 @@ def is_owner(user_id) -> bool:
 
 
 _admin_cache: dict = {}
+ADMIN_CACHE_TTL = 60
+ADMIN_CACHE_MAX = 1000
+
+
+def _prune_admin_cache(now) -> None:
+    if len(_admin_cache) <= ADMIN_CACHE_MAX:
+        return
+    for key, (expires, _) in list(_admin_cache.items()):
+        if expires <= now:
+            del _admin_cache[key]
+    # Still full of live entries: drop the oldest-expiring ones.
+    if len(_admin_cache) > ADMIN_CACHE_MAX:
+        for key in sorted(_admin_cache, key=lambda k: _admin_cache[k][0])[:len(_admin_cache) - ADMIN_CACHE_MAX]:
+            del _admin_cache[key]
 
 
 async def can_manage_group(user_id, group_id) -> bool:
@@ -206,7 +220,8 @@ async def can_manage_group(user_id, group_id) -> bool:
         result = await is_user_admin(chat_id, uid)
     except Exception:
         result = False
-    _admin_cache[key] = (now + 60, result)
+    _admin_cache[key] = (now + ADMIN_CACHE_TTL, result)
+    _prune_admin_cache(now)
     return result
 
 

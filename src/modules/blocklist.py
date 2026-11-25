@@ -131,6 +131,15 @@ async def _maybe_mute(chat_id: int, user_id: int) -> None:
 # Sticker blocklist
 # --------------------------------------------------------------------------
 
+def is_blocked_sticker(m) -> bool:
+    """Whether the message's sticker set is blocked here. No API calls, and
+    no empty store is created for chats that never blocked a set."""
+    set_name = getattr(getattr(m, "sticker", None), "set_name", None)
+    if not set_name or not os.path.exists(group_path("stickers", m.chat.id)):
+        return False
+    return set_name in read_stickers(m.chat.id)
+
+
 @handle_errors
 async def sticker_block(m):
     if not m.sticker or not m.sticker.set_name:

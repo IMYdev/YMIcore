@@ -73,6 +73,7 @@ async def refresh_permissions(gid: int, *, force: bool = False) -> None:
     but marked already-expired so the next call retries immediately.
     """
     from info import bot
+    from core.utils import bot_me
 
     gid = int(gid)
     async with _lock_for(gid):
@@ -81,7 +82,7 @@ async def refresh_permissions(gid: int, *, force: bool = False) -> None:
         if not force and stamp is not None and (now - stamp) < TTL_SECONDS * 1000:
             return
         try:
-            member = await bot.get_chat_member(gid, (await bot.get_me()).id)
+            member = await bot.get_chat_member(gid, (await bot_me()).id)
         except Exception as e:
             print(f"[!] permissions: could not fetch rights for {gid}: {e}")
             if gid not in _SNAPSHOTS:

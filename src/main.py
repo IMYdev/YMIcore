@@ -17,7 +17,7 @@ from module_manager import (
 )
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
-from modules.blocklist import sticker_block, block_words, word_block_sweeper
+from modules.blocklist import sticker_block, is_blocked_sticker, block_words, word_block_sweeper
 from modules.broadcast import handle_broadcast_callback
 from core.groups import ban_group_and_leave, is_banned, record_group
 from web.server import start_web_server
@@ -133,8 +133,11 @@ async def reply_message(m):
 
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):
-    # Gate before any Telegram API call: a disabled group costs no requests.
     if getattr(m.chat, 'type', None) != 'private':
+        # Most stickers are not from a blocked set: answer that from disk
+        # first, so they cost no Telegram request at all.
+        if not is_blocked_sticker(m):
+            return
         await refresh_permissions(m.chat.id)
         if not is_event_enabled(m.chat.id, 'sticker_block'):
             return
