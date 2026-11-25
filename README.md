@@ -1,128 +1,76 @@
 # YMI Bot Core
 
-A modular, extensible core for building Telegram bots in Python.
-It's also a ready-to-use general group management bot.
+A modular core for building Telegram bots in Python. It's also a ready-to-use group management bot, so you get both. (definitely an original concept.)
 
-## Features (developers)
-- Modular architecture: add or remove features as modules.
-- Async support (uses `pyTelegramBotAPI` async interface.)
-- Uses [IMY'sDB](https://github.com/IMYdev/IMY-sDB/) for file-based JSON storage (or MongoDB,) check the project repo for more details.
-- Easy to extend and maintain/
+## What it does
+- **Group management.** Ban, kick, mute, warn, promote, demote, pin, purge.
+- **Greetings.** Welcome and goodbye messages, with pics or videos if you want.
+- **Captcha.** New members prove they're human in PM before they can talk.
+- **Notes and filters.** Save stuff, or auto-reply when someone says a keyword.
+- **Blocklists.** Block sticker sets, words or phrases.
+- **Broadcasts.** Send news to everyone who used the bot. (owner only.)
+- **Extras.** User info, wallpapers, anime sauce, spoilers.
+- **Modules.** Turn any of the above on or off per group. The bot also notices which admin rights it has and hides what it can't do.
 
-## Features (end users)
-- Show info about users or yourself anytime.
-- Custom greetings and farewell messages when a member joins or leaves (can attach pics or videos.)
-- Grab and send wallpapers from various sources, including anime-themed ones.
-- Reverse search anime pictures to identify the anime.
-- Save, list, and remove notes inside the chat.
-- Set up automatic keyword triggers that reply with custom messages.
-- Manage chat admins. Promote, demote, ban, or unban users.
-- Pin important messages.
-- Clean up chats by deleting batches of messages at once.
-- Toggle and control various bot modules for extra features or disabling unwanted ones.
-- Ability to add spoilers to media and text.
-- Block sticker sets that are unwanted in the group chat.
-- Send an update or news broadcast to everyone who has interacted with the bot, from Telegram (`/broadcast`) or the web panel. (Must be owner of bot instance)
-- Block specific words or phrases in the group.
+Storage is plain JSON files through [IMY'sDB](https://github.com/IMYdev/IMY-sDB/). No database server, no setup.
 
-## Quick Start
-
-### 1. Clone the repository
+## Quick start
 ```zsh
 git clone https://github.com/IMYdev/YMIcore
-cd "YMIcore"
-git submodule update --init   # pulls IMY-sDB and the LECP-CSS stylesheet
-```
-
-### 2. Install dependencies
-```zsh
-python3 -m venv venv
-source venv/bin/activate
+cd YMIcore
+git submodule update --init
+python3 -m venv venv && source venv/bin/activate
 cd src/
 pip install -r requirements.txt
 ```
 
-### 3. Set up your environment
-Create a `.env` file or set the following environment variables:
+Make a `.env`:
 ```
 BOT_TOKEN=your_telegram_bot_token
 LOG_ID=logs_channel_id_without_the_minus
 OWNER=your_telegram_id
 ```
-Optional web panel settings:
+
+Optional, for the web panel:
 ```
-WEB_BIND=127.0.0.1   # panel bind address
-WEB_PORT=8080        # panel port
-WEB_URL=https://your.host  # public panel URL (used in /panel login links)
-WEB_SECRET=random_secret   # optional; a fresh random secret is generated per boot if unset
+WEB_BIND=127.0.0.1
+WEB_PORT=8080
+WEB_URL=https://your.host
+WEB_SECRET=random_secret   # a random one is made per boot if unset
 ```
 
-### 4. Run the bot
-If self-hosting:
+Then:
 ```zsh
 python main.py
 ```
 
-## Settings Web Panel
+That's it.
 
-YMIcore ships with a browser-based control panel for customizing the bot.
+## Web panel
+There's a browser panel for tweaking everything without typing commands. See the [panel manual](src/web/README.md).
 
-[YMIcore Control Panel Instruction Manual](src/web/README.md)
+## Making it yours
+- **Add a feature:** drop a file in `modules/`, hook it up in `botcommands.py`, and allow the command in `main.py`.
+- **Remove a feature:** comment out its handler in `botcommands.py`.
+- **Examples:** `modules/filters.py` and `modules/notes.py`.
 
-## Project Structure
-```
-core/            # Core framework logic (database, utils.)
-modules/         # All feature modules (filters, notes, etc.)
-web/             # Settings web panel (aiohttp server, auth, templates).
-botcommands.py   # Command router.
-main.py          # Entry point (bot + web panel).
-requirements.txt # Project dependencies.
-```
+One rule: every `runtime/...` path lives in `core/storage.py`, and per-group settings go through `core/group_settings.py`. `tests/test_structure.py` will yell at you otherwise. Tests run with `pytest`. Benchmarks run with `pytest -m perf -s`.
 
-### Where things live
-Each concern has exactly one home. `tests/test_structure.py` enforces this.
+## Upgrading
+Your data keeps working in both directions. Users now live in `runtime/users/shard_NN.json`. The old `registry.json` gets merged in on start and is never deleted.
 
-- **Storage paths**: `core/storage.py`. Ask it for an `IMYDB` (`group_db`, `module_db`, `groups_db`, ...); never build a `runtime/...` path anywhere else.
-- **Per-group settings**: `core/group_settings.py`. Notes, filters, stickers, greetings and captcha reads/writes all go through it, for both the bot and the web panel.
-- **Stored replies**: `core/replies.py`. `build_reply` saves a replied-to message, `send_reply` sends it (markdown rendered to HTML).
-- **Groups and bans**: `core/groups.py`, including `ban_group_and_leave`.
-- **Read cache**: `core/db.py`. Every `IMYDB` shares a parsed copy of each file, revalidated by `stat` on every read, so edits from the bot, the web panel or another process are seen right away. Never mutate a value returned by `get()` without saving it.
-- **Module toggles**: `module_manager.py`. `is_command_enabled` / `is_event_enabled` / `is_module_enabled` Defaults live there too, along with the resolution rule.
-- **Users (broadcast audience)**: `core/users.py`, stored in 64 shards under `runtime/users/`. See [Upgrading and rolling back](#upgrading-and-rolling-back).
-- **User permissions**: `core/utils.py`: `is_privileged` for "owner or chat admin", `is_owner_id` for a synchronous instance owner check.
-- **Bot permissions**: `core/permissions.py`: which rights each command/event needs, the per-chat rights snapshot, and the refresh/gating helpers. `main.py` refreshes on bot-added/rights-changed updates and lazily on first group activity; features needing a missing right are blocked without rewriting saved toggles.
- 
-## Upgrading and rolling back
-
-Data on disk stays compatible in both directions, with one note about users.
-
-- Users are now kept in `runtime/users/shard_NN.json`. On start, the bot merges the old `runtime/users/registry.json` into the shards. It does this whenever the file changed since the last merge. The old file is never moved or deleted.
-- **Rolling back to an older version:** run `python ../tools/unshard_users.py` from `src/` first (or pass `--runtime path/to/runtime`). This rebuilds `registry.json` with every user, including those first seen after the upgrade. If you skip it, the older version still works but only knows the users it had before the upgrade. Upgrading again merges anything the older version recorded.
-- The group registry, user shards, broadcast and captcha stores are written as compact JSON. Every version reads both formats.
-- `/purge` deletes at most the latest 1000 messages per run.
-
-## Creating Your Own Bot
-1. **Add needed environment variables to `.env` or your environment.**
-
-2. **Enable/disable features:**
-   - To add a feature, drop a new Python file in `modules/` then add a handler call in `botcommands.py`, and don't forget to allow the new command in the commands filter in `main.py`.
-   - To remove a feature, remove or comment out the relevant handler in `botcommands.py` or the module file.
-3. **Write your own modules:**
-   - See `modules/filters.py` or `modules/notes.py` for examples.
-
+> Rolling back to an older version? Run `python ../tools/unshard_users.py` from `src/` first, so the old version knows about users who showed up after the upgrade.
 
 ## Why YMI Bot Core?
 - The code is dead simple, written by a simple guy, for people that like simplicity.
-- It's fast, trust.
-- Does what you need it to do and doesn't get in your way. (hopefully)
+- It's fast. (trust me.)
+- Does what you need and stays out of your way. (hopefully.)
 
-
-## Demo instances
-- **[YMI](https://t.me/youmnairisbot)** for self-hosted.
-
+## Demo
+- **[YMI](https://t.me/youmnairisbot)**, self-hosted.
 
 ## License
-This code is licensed under GPLv3 copyleft.
+GPLv3.
 
 ---
 Made with ❤️ by IMYdev.
