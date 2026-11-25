@@ -465,3 +465,49 @@ def test_module_views_render_and_callbacks_stay_under_telegram_limit(tmp_path, m
     assert 'mod:evt:1:filters:filter_trigger' in cbs
     assert 'mod:back:1' in cbs
     assert all(len(d.encode()) <= 64 for d in cbs)
+
+
+# ----------------------------------------------------------------------
+# Commands addressed with @: only the command token decides
+# ----------------------------------------------------------------------
+def _fake_me(monkeypatch, calls=None):
+    async def fake_get_me():
+        if calls is not None:
+            calls.append(1)
+        return type("Me", (), {"id": 1, "username": "YMIbot"})()
+    monkeypatch.setattr(bot, "get_me", fake_get_me)
+
+
+def test_at_in_arguments_does_not_drop_command(monkeypatch):
+    from main import addressed_to_us
+    _fake_me(monkeypatch)
+    assert asyncio.run(addressed_to_us("/blockword @spammer"))
+    assert asyncio.run(addressed_to_us("/filter a@b.com"))
+    assert asyncio.run(addressed_to_us("/ban"))
+
+
+def test_command_for_other_bot_is_ignored(monkeypatch):
+    from main import addressed_to_us
+    _fake_me(monkeypatch)
+    assert not asyncio.run(addressed_to_us("/ban@OtherBot"))
+    assert not asyncio.run(addressed_to_us("/ban@OtherBot @YMIbot"))
+    assert asyncio.run(addressed_to_us("/ban@ymibot some reason"))
+
+
+def test_group_command_with_at_argument_reaches_handler(tmp_path, monkeypatch):
+    import main
+    monkeypatch.chdir(tmp_path)
+    _fake_me(monkeypatch)
+    handled = []
+
+    async def fake_handle_command(m):
+        handled.append(m.text)
+
+    async def no_refresh(*a, **k):
+        return None
+
+    monkeypatch.setattr(main, "handle_command", fake_handle_command)
+    monkeypatch.setattr(main, "refresh_permissions", no_refresh)
+    asyncio.run(main.cmd_handler(make_group_msg("/blockword @spammer", -100777)))
+    asyncio.run(main.cmd_handler(make_group_msg("/blockword@OtherBot x", -100777)))
+    assert handled == ["/blockword @spammer"]

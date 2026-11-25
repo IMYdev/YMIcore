@@ -2,9 +2,9 @@ import asyncio
 from telebot import types
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from info import (bot, BOT_OWNER)
-from core.utils import handle_errors
+from core.utils import handle_errors, log_error, bot_me
 from core.activity import (log_event, user_label, chat_label)
-from core.users import record_user
+from core.users import migrate_users_registry, record_user
 from core.permissions import (apply_chat_member_update, missing_rights,
                               refresh_permissions, right_label)
 from modules.filters import reply_to_filter
@@ -17,9 +17,9 @@ from module_manager import (
 )
 from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
-from modules.blocklist import sticker_block, block_words, word_block_sweeper
+from modules.blocklist import sticker_block, is_blocked_sticker, block_words, word_block_sweeper
 from modules.broadcast import handle_broadcast_callback
-from core.groups import ban_group_and_leave, banned_groups, record_group
+from core.groups import ban_group_and_leave, is_banned, record_group
 from web.server import start_web_server
 
 
@@ -31,12 +31,23 @@ def track_sender(m):
         record_user(getattr(m.from_user, "id", None),
                     user_label(m.from_user), getattr(m.from_user, "username", None))
 
+async def addressed_to_us(text) -> bool:
+    """False for /cmd@OtherBot. Only the command token is checked, so an @ in
+    the arguments (/blockword @spammer, /filter a@b.com) is fine."""
+    first = (text or "").split(maxsplit=1)[0] if (text or "").strip() else ""
+    if '@' not in first:
+        return True
+    target = first.split('@', 1)[1].lower()
+    username = (await bot_me()).username or ""
+    return target == username.lower()
+
+
 @bot.message_handler(commands=list(COMMANDS.keys()))
 @handle_errors
 async def cmd_handler(m):
     track_sender(m)
 
-    if str(m.chat.id) in {entry["gid"] for entry in banned_groups()}:
+    if is_banned(m.chat.id):
         await bot.leave_chat(m.chat.id)
         return
 
@@ -65,10 +76,8 @@ async def cmd_handler(m):
             await bot.reply_to(m, "This command is not available in private chats.")
             return
     else:
-        if '@' in m.text:
-            bot_username = (await bot.get_me()).username
-            if m.text.split('@')[1].split()[0].lower() != bot_username.lower():
-                return
+        if not await addressed_to_us(m.text):
+            return
 
         await refresh_permissions(m.chat.id)
         reason = disabled_reason(m.chat.id, command)
@@ -93,10 +102,14 @@ async def cmd_handler(m):
 
 @bot.chat_member_handler()
 async def chat_m(m: types.ChatMemberUpdated):
-    if m.chat.type != 'private':
-        await refresh_permissions(m.chat.id)
-    await hello(m)
-    await bye(m)
+    # A ChatMemberUpdated has nothing to reply to, so errors are only logged.
+    try:
+        if m.chat.type != 'private':
+            await refresh_permissions(m.chat.id)
+        await hello(m)
+        await bye(m)
+    except Exception as e:
+        await log_error(bot, e, m)
 
 @bot.my_chat_member_handler()
 async def my_chat_m(m: types.ChatMemberUpdated):
@@ -120,8 +133,11 @@ async def reply_message(m):
 
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):
-    # Gate before any Telegram API call: a disabled group costs no requests.
     if getattr(m.chat, 'type', None) != 'private':
+        # Most stickers are not from a blocked set: answer that from disk
+        # first, so they cost no Telegram request at all.
+        if not is_blocked_sticker(m):
+            return
         await refresh_permissions(m.chat.id)
         if not is_event_enabled(m.chat.id, 'sticker_block'):
             return
@@ -165,6 +181,7 @@ async def verify_captcha(call):
 
 async def main():
     print("Bot started...")
+    migrate_users_registry()
     from modules.captcha import captcha_sweeper
     await asyncio.gather(
         _run_polling(), start_web_server(), captcha_sweeper(), word_block_sweeper(),

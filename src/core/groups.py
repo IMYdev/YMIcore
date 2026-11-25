@@ -18,10 +18,17 @@ def registry_groups() -> dict:
 def record_group(chat_id, title, chat_type=None) -> None:
     db = _db()
     gid = str(chat_id)
-    if db.get(f"groups.{gid}.title") != title:
-        db.set(f"groups.{gid}.title", title or f"Group {gid.lstrip('-')}")
-    if chat_type and db.get(f"groups.{gid}.type") != chat_type:
-        db.set(f"groups.{gid}.type", chat_type)
+    current = db.get(f"groups.{gid}")
+    current = current if isinstance(current, dict) else {}
+    changes = {}
+    title = title or f"Group {gid.lstrip('-')}"
+    if current.get("title") != title:
+        changes["title"] = title
+    if chat_type and current.get("type") != chat_type:
+        changes["type"] = chat_type
+    if changes:
+        # One rewrite of the registry, even for a brand-new group.
+        db.set(f"groups.{gid}", {**current, **changes})
 
 
 def group_title(gid) -> str:
@@ -44,6 +51,15 @@ def banned_groups() -> list:
     result = [{"gid": gid, "title": group_title(gid)} for gid in banned]
     result.sort(key=lambda g: g["gid"])
     return result
+
+
+def banned_ids() -> set:
+    """Banned chat ids as strings. Reads only the banned list (no titles)."""
+    return {str(gid) for gid in _banned_db().get("groups.group_ids", []) or []}
+
+
+def is_banned(gid) -> bool:
+    return str(gid) in banned_ids()
 
 
 def ban_group(gid) -> bool:
@@ -93,6 +109,6 @@ def set_developer_group(gid, enabled: bool) -> None:
 
 __all__ = [
     "ban_group", "ban_group_and_leave",
-    "banned_groups", "group_title", "is_developer_group", "list_groups",
+    "banned_groups", "banned_ids", "is_banned", "group_title", "is_developer_group", "list_groups",
     "record_group", "registry_groups", "set_developer_group", "unban_group",
 ]

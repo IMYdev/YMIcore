@@ -62,8 +62,15 @@ async def log_error(bot, error, context_msg=None):
         traceback.print_exc()
 
 
+GENERIC_ERROR_REPLY = "Something went wrong. The error has been logged."
+
+
 def handle_errors(func):
-    """Decorator to handle errors and log them."""
+    """Decorator to handle errors and log them.
+
+    The chat only gets a generic reply; the exception and traceback go to the
+    error log chat, so internals never leak into groups.
+    """
     @functools.wraps(func)
     async def wrapper(m, *args, **kwargs):
         try:
@@ -71,10 +78,27 @@ def handle_errors(func):
         except Exception as e:
             await log_error(bot, e, m)
             try:
-                await bot.reply_to(m, f"Error: {e}")
-            except:
+                await bot.reply_to(m, GENERIC_ERROR_REPLY)
+            except Exception:
                 pass
     return wrapper
+
+
+_BOT_ME = None
+
+
+async def bot_me():
+    """The bot's own User, fetched once. A failed fetch is not cached."""
+    global _BOT_ME
+    if _BOT_ME is None:
+        _BOT_ME = await bot.get_me()
+    return _BOT_ME
+
+
+def reset_bot_me() -> None:
+    """Forget the cached bot identity (tests, or after a BotFather rename)."""
+    global _BOT_ME
+    _BOT_ME = None
 
 
 async def is_moderatable(chat_id, user_id, *, require_admin=False) -> bool:

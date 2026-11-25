@@ -1,3 +1,4 @@
+import os
 import re
 import time
 
@@ -7,6 +8,7 @@ from core.group_settings import (
     normalize_filter_keyword, validate_filter_keyword,
 )
 from core.replies import build_reply, send_reply
+from core.storage import group_path
 from core.utils import handle_errors, is_privileged, topic_kwargs, log_error
 from core.activity import (log_event, user_label, chat_label)
 from module_manager import gated_event
@@ -16,11 +18,35 @@ FILTER_COOLDOWN_SECONDS = 8.0
 MAX_MESSAGE_CHARS = 4000
 # (chat_id, keyword) -> monotonic time of last attempt. In-memory only.
 _recent_triggers = {}
+# chat_id -> (file stamp, filters dict, [(keyword, compiled pattern, reply)]).
+# Reused only while the file stamp is unchanged and read_filters() still hands
+# back the same (cached) dict, so edits from the bot, the web panel or another
+# process are picked up on the next message.
+_compiled_filters = {}
 
 
 def _filter_pattern(keyword):
     """Boundary match so punctuation and multi-word keywords still hit."""
     return re.compile(r"(?<!\w)" + re.escape(keyword) + r"(?!\w)", re.IGNORECASE)
+
+
+def _compiled(chat_id):
+    filters = read_filters(chat_id)
+    try:
+        st = os.stat(group_path("filters", chat_id))
+        stamp = (st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size)
+    except OSError:
+        stamp = None
+    cached = _compiled_filters.get(chat_id)
+    if cached is not None and cached[1] is filters and cached[0] == stamp:
+        return cached[2]
+    entries = [
+        (keyword, _filter_pattern(keyword), reply_with)
+        for keyword, reply_with in filters.items()
+        if reply_with.get("type") != "unknown"  # legacy broken entry; never respond
+    ]
+    _compiled_filters[chat_id] = (stamp, filters, entries)
+    return entries
 
 
 def _on_cooldown(chat_id, keyword):
@@ -75,16 +101,14 @@ async def reply_to_filter(m):
     if not m.text:
         return
 
-    filters = read_filters(m.chat.id)
-    if not filters:
+    entries = _compiled(m.chat.id)
+    if not entries:
         return
 
     text = m.text.casefold()
     matches = []
-    for keyword, reply_with in filters.items():
-        if reply_with.get("type") == "unknown":
-            continue  # legacy broken entry; never respond
-        match = _filter_pattern(keyword).search(text)
+    for keyword, pattern, reply_with in entries:
+        match = pattern.search(text)
         if match:
             matches.append((match.start(), -len(keyword), keyword, reply_with))
 

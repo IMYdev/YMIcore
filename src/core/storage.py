@@ -5,7 +5,9 @@ place is what stops a second implementation of "where do group notes live"
 from appearing next to the first.
 """
 
+import os
 import time
+import zlib
 
 from core.db import IMYDB
 
@@ -22,7 +24,11 @@ GROUP_FILES = {
 MODULE_CONTROLLER = "runtime/modules/module_controller.json"
 GROUPS_REGISTRY = "runtime/groups/registry.json"
 BANNED_GROUPS = "runtime/banned/groups.json"
+# Users live in USER_SHARDS small files (see core.users). The single
+# registry.json of older versions is moved into them once, on first use.
 USERS_REGISTRY = "runtime/users/registry.json"
+USER_SHARDS = 64
+USER_SHARD_FILE = "runtime/users/shard_{n:02d}.json"
 BROADCAST_REGISTRY = "runtime/broadcasts/registry.json"
 BROADCAST_PENDING = "runtime/broadcasts/pending.json"
 WEB_TOKENS = "runtime/web/tokens.json"
@@ -117,8 +123,11 @@ def module_db() -> IMYDB:
     return IMYDB(MODULE_CONTROLLER)
 
 
+# Large, machine-written stores are saved as compact JSON (indent=None). Any
+# IMYDB version reads both formats; per-group files stay indented for editing.
+
 def groups_db() -> IMYDB:
-    return IMYDB(GROUPS_REGISTRY)
+    return IMYDB(GROUPS_REGISTRY, indent=None)
 
 
 def banned_db() -> IMYDB:
@@ -126,11 +135,35 @@ def banned_db() -> IMYDB:
 
 
 def users_db() -> IMYDB:
+    """The pre-shard single-file users registry (read by the upgrade only)."""
     return IMYDB(USERS_REGISTRY)
 
 
+def user_shard_index(uid) -> int:
+    try:
+        return int(uid) % USER_SHARDS
+    except (TypeError, ValueError):
+        return zlib.crc32(str(uid).encode()) % USER_SHARDS
+
+
+def user_shard_path(n) -> str:
+    return USER_SHARD_FILE.format(n=n)
+
+
+def user_shard_db(uid) -> IMYDB:
+    return IMYDB(user_shard_path(user_shard_index(uid)), indent=None)
+
+
+def iter_user_shards():
+    """Every existing users shard, without creating missing ones."""
+    for n in range(USER_SHARDS):
+        path = user_shard_path(n)
+        if os.path.exists(path):
+            yield IMYDB(path, indent=None)
+
+
 def broadcast_db(kind="registry") -> IMYDB:
-    return IMYDB(BROADCAST_REGISTRY if kind == "registry" else BROADCAST_PENDING)
+    return IMYDB(BROADCAST_REGISTRY if kind == "registry" else BROADCAST_PENDING, indent=None)
 
 
 def web_db() -> IMYDB:
@@ -138,4 +171,4 @@ def web_db() -> IMYDB:
 
 
 def captcha_db(kind) -> IMYDB:
-    return IMYDB(CAPTCHA_FILES[kind])
+    return IMYDB(CAPTCHA_FILES[kind], indent=None)

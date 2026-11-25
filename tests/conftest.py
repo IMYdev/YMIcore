@@ -33,3 +33,13 @@ def _full_bot_rights(monkeypatch):
     import module_manager as _mm
 
     monkeypatch.setattr(_mm, "missing_rights", lambda *a, **k: frozenset())
+
+
+@pytest.fixture(autouse=True)
+def _reset_bot_identity():
+    """core.utils caches get_me(); each test mocks its own bot identity."""
+    from core import utils as _utils
+
+    _utils.reset_bot_me()
+    yield
+    _utils.reset_bot_me()

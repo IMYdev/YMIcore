@@ -1,20 +1,97 @@
+import json
+import os
 import time
 
 from info import BOT_OWNER
-from core.groups import banned_groups, registry_groups
-from core.storage import USERS_REGISTRY as PATH, users_db
+from core.groups import banned_ids, registry_groups
+from core.storage import (
+    USERS_REGISTRY as PATH, iter_user_shards, user_shard_db, user_shard_index,
+)
 
-# The registry is rewritten as a whole on every save, so an already known user
-# is only written back when their name, username or last seen date changed.
+# A shard is rewritten as a whole on every save, so an already known user is
+# only written back when their name, username or last seen date changed.
 SEEN_REFRESH = 86400
 
 SEGMENTS = ("both", "users", "groups")
 
 GROUP_TYPES = ("group", "supergroup", "channel")
 
+MIGRATED_SUFFIX = ".migrated"
 
-def _db():
-    return users_db()
+
+# --------------------------------------------------------------------------
+# One-time upgrade: registry.json -> shards
+#
+# Older versions kept every user in one registry.json. On first use it is
+# split into the shards and then renamed to registry.json.migrated. The rename
+# happens only after every shard is saved, so an interrupted upgrade simply
+# runs again; users already in a shard are kept as they are.
+# --------------------------------------------------------------------------
+
+_merge_checked = set()
+
+
+def migrate_users_registry() -> int:
+    """Move registry.json into the shards. Returns how many users were read."""
+    if not os.path.exists(PATH):
+        return 0
+    try:
+        with open(PATH, encoding="utf-8") as f:
+            legacy = (json.load(f) or {}).get("users") or {}
+    except (OSError, ValueError, AttributeError) as exc:
+        print(f"[!] users: could not read {PATH} for migration ({exc}); left untouched.")
+        return 0
+    if not isinstance(legacy, dict):
+        legacy = {}
+
+    by_shard = {}
+    for uid, record in legacy.items():
+        if isinstance(record, dict):
+            by_shard.setdefault(user_shard_index(uid), {})[str(uid)] = record
+    for records in by_shard.values():
+        db = user_shard_db(next(iter(records)))
+        users = dict(db.get("users", {}) or {})
+        missing = {uid: rec for uid, rec in records.items() if uid not in users}
+        if missing:
+            users.update(missing)
+            db.set("users", users)
+
+    os.replace(PATH, PATH + MIGRATED_SUFFIX)
+    print(f"[+] users: moved {len(legacy)} users from {PATH} into shards.")
+    return len(legacy)
+
+
+def _ensure_merged() -> None:
+    key = os.path.abspath(PATH)
+    if key in _merge_checked:
+        return
+    migrate_users_registry()
+    _merge_checked.add(key)
+
+
+def _db(user_id):
+    _ensure_merged()
+    return user_shard_db(user_id)
+
+
+def _all_users() -> dict:
+    _ensure_merged()
+    merged = {}
+    for shard in iter_user_shards():
+        merged.update(shard.get("users", {}) or {})
+    return merged
+
+
+def _by_first_seen(users: dict) -> list:
+    """Users in the order the single registry kept them (first seen first)."""
+    def key(item):
+        uid, info = item
+        try:
+            num = int(uid)
+        except ValueError:
+            num = 0
+        return (info.get("first_seen") or 0, num, uid)
+    return sorted(users.items(), key=key)
 
 
 def record_user(user_id, name=None, username=None) -> None:
@@ -22,7 +99,7 @@ def record_user(user_id, name=None, username=None) -> None:
     if user_id is None:
         return
 
-    db = _db()
+    db = _db(user_id)
     users = db.get("users", {})
     uid = str(user_id)
     record = users.get(uid)
@@ -50,7 +127,7 @@ def record_user(user_id, name=None, username=None) -> None:
 
 
 def list_users() -> list:
-    users = _db().get("users", {})
+    users = _all_users()
     result = [
         {
             "uid": uid,
@@ -69,7 +146,7 @@ def list_users() -> list:
 def get_user(user_id):
     if user_id is None:
         return None
-    return _db().get(f"users.{user_id}")
+    return _db(user_id).get(f"users.{user_id}")
 
 
 def is_opted_out(user_id) -> bool:
@@ -79,7 +156,7 @@ def is_opted_out(user_id) -> bool:
 
 def set_opt_out(user_id, value) -> bool:
     """Subscribe or unsubscribe a user. Returns True when the flag changed."""
-    db = _db()
+    db = _db(user_id)
     users = db.get("users", {})
     uid = str(user_id)
     if uid not in users:
@@ -93,7 +170,7 @@ def set_opt_out(user_id, value) -> bool:
 
 def mark_dead(user_id) -> None:
     """Flag a user who blocked the bot or was deleted, so sends stop retrying."""
-    db = _db()
+    db = _db(user_id)
     users = db.get("users", {})
     uid = str(user_id)
     if uid not in users or users[uid].get("dead"):
@@ -108,9 +185,8 @@ def normalise_segment(segment) -> str:
 
 
 def user_ids() -> list:
-    users = _db().get("users", {})
     return [
-        uid for uid, info in users.items()
+        uid for uid, info in _by_first_seen(_all_users())
         if not info.get("opted_out") and not info.get("dead")
     ]
 
@@ -118,7 +194,7 @@ def user_ids() -> list:
 def group_ids() -> list:
     """Chats the bot manages, skipping banned ones and any private chat that
     was picked up by the group registry before chat types were recorded."""
-    banned = {str(entry["gid"]) for entry in banned_groups()}
+    banned = banned_ids()
     registry = registry_groups()
     result = []
     for gid, info in registry.items():
@@ -166,6 +242,7 @@ def audience_counts(segment="both") -> dict:
 
 __all__ = [
     "PATH", "SEGMENTS", "audience_counts", "broadcast_targets", "get_user",
-    "group_ids", "is_opted_out", "list_users", "mark_dead", "normalise_segment",
+    "group_ids", "is_opted_out", "list_users", "mark_dead", "migrate_users_registry",
+    "normalise_segment",
     "record_user", "set_opt_out", "user_ids",
 ]
