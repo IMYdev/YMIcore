@@ -11,6 +11,7 @@ from module_manager import send_module_keyboard
 from modules.greetings import (set_greeting, set_goodbye, captcha_toggle, set_captcha, add_captcha, del_captcha, captcha_list, captcha_tries)
 from modules.blocklist import (block_set, unblock_set, get_blacklist, block_word, unblock_word, list_blocked_words)
 from modules.broadcast import (broadcast_command, broadcast_delete, broadcast_list, subscribe, unsubscribe)
+from modules.migrate import (import_command, import_undo)
 from web.panel import panel_command
 
 COMMANDS = {
@@ -63,6 +64,8 @@ COMMANDS = {
     "bcast_delete": broadcast_delete,
     "sub": subscribe,
     "unsub": unsubscribe,
+    "import": import_command,
+    "importundo": import_undo,
 }
 
 async def handle_command(message):

@@ -19,6 +19,7 @@ from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block, is_blocked_sticker, block_words, word_block_sweeper
 from modules.broadcast import handle_broadcast_callback
+from modules.migrate import handle_import_callback
 from core.groups import ban_group_and_leave, is_banned, record_group
 from web.server import start_web_server
 
@@ -172,6 +173,10 @@ async def mod_callback(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("bc_"))
 async def broadcast_callback(call):
     await handle_broadcast_callback(call)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("imp:"))
+async def import_callback(call):
+    await handle_import_callback(call)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("v_cap:"))
 async def verify_captcha(call):

@@ -33,6 +33,9 @@ BROADCAST_REGISTRY = "runtime/broadcasts/registry.json"
 BROADCAST_PENDING = "runtime/broadcasts/pending.json"
 WEB_TOKENS = "runtime/web/tokens.json"
 
+# Pre-import copies of a group's files, kept so /importundo can restore them.
+IMPORT_SNAPSHOT_DIR = "runtime/imports/{key}"
+
 CAPTCHA_FILES = {
     "pending": "runtime/captcha/pending.json",
     "join_msgs": "runtime/captcha/join_msgs.json",
@@ -47,6 +50,10 @@ def group_key(chat_id) -> str:
 def group_path(section, chat_id) -> str:
     """Raw path of a per-group store, for stat-based cache invalidation."""
     return GROUP_FILES[section].format(key=group_key(chat_id))
+
+
+def import_snapshot_dir(chat_id) -> str:
+    return IMPORT_SNAPSHOT_DIR.format(key=group_key(chat_id))
 
 
 def group_db(section, chat_id) -> IMYDB:

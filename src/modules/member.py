@@ -73,6 +73,8 @@ help_categories = {
     - `/captchalist`: List captcha questions and settings.
     - `/captchatries <n>`: Set max wrong attempts.
     - `/captcha`: Toggle captcha feature.
+    - `/import`: Reply to a Rose or AstrakoBot export to import it.
+    - `/importundo`: Undo the last import (within 24 hours).
     - `/panel`: Open the settings web panel.
     - `/devgroup`: Developer group commands.
     - `/broadcast [users|groups] <message>`: Send an update to everyone (owner).
