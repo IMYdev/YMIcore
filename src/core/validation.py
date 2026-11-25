@@ -8,7 +8,15 @@ TEMPLATE_FIELDS = {"firstname", "lastname", "username"}
 def validate_template(template) -> bool:
     """True when a greeting/farewell only uses supported placeholders."""
     found = set(re.findall(r"{(.*?)}", template))
-    return found.issubset(TEMPLATE_FIELDS)
+    if not found.issubset(TEMPLATE_FIELDS):
+        return False
+    # Unbalanced braces ("Hi {firstname", "Hi }") pass the regex but make
+    # str.format raise when the greeting is sent.
+    try:
+        template.format(**{field: "" for field in TEMPLATE_FIELDS})
+    except (ValueError, KeyError, IndexError, AttributeError):
+        return False
+    return True
 
 
 def validate_question(q, opts, ans):

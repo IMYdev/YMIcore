@@ -3,7 +3,7 @@ from modules.captcha import (add_question, remove_question, get_captcha_question
 from core.storage import group_db
 from core.group_settings import save_captcha, set_captcha_enabled
 from core.validation import validate_question, validate_template
-from core.utils import (handle_errors, get_media_info, get_args, is_privileged, topic_kwargs)
+from core.utils import (handle_errors, get_media_info, get_args, is_privileged, topic_kwargs, log_error)
 from core.activity import (log_event, user_label)
 from module_manager import is_event_enabled
 from telebot.formatting import (hbold, hitalic)
@@ -90,12 +90,19 @@ async def hello(m):
 
 async def _send_event_message(chat_id, user, event, db, **extra):
     """Send one greeting/farewell template with its optional media."""
-    template = db.data.get(event, DEFAULT_GREETING if event == "greeting" else DEFAULT_GOODBYE)
-    personalized = template.format(
+    default = DEFAULT_GREETING if event == "greeting" else DEFAULT_GOODBYE
+    template = db.data.get(event, default)
+    fields = dict(
         username=f"@{user.username}" if user.username else 'there',
         firstname=user.first_name,
         lastname=user.last_name or ''
     )
+    try:
+        personalized = str(template).format(**fields)
+    except (ValueError, KeyError, IndexError, AttributeError) as e:
+        # A template saved before validation caught stray braces.
+        await log_error(bot, e)
+        personalized = default.format(**fields)
     m_type, m_id = db.data.get(f'{event}_media_type'), db.data.get(f'{event}_media_id')
     if m_type and m_id:
         if m_type == 'sticker':
@@ -130,6 +137,9 @@ async def _set_event_msg(m, event_type):
     if not msg_text and not m.reply_to_message:
         return await bot.reply_to(m, f"Give me a {event_type} message or reply to media!")
 
+    if msg_text and not validate_template(msg_text):
+        return await bot.reply_to(m, "Only {firstname}, {lastname}, and {username} are allowed.")
+
     if m.reply_to_message:
         m_type, m_id = get_media_info(m.reply_to_message)
         if not m_type:
@@ -139,9 +149,6 @@ async def _set_event_msg(m, event_type):
     else:
         db.set(f'{event_type}_media_type', None)
         db.set(f'{event_type}_media_id', None)
-
-    if msg_text and not validate_template(msg_text):
-        return await bot.reply_to(m, "Only {firstname}, {lastname}, and {username} are allowed.")
 
     db.set(event_type, msg_text)
     await bot.reply_to(m, f"{event_type.capitalize()} message updated!")

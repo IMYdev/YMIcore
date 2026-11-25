@@ -2,7 +2,7 @@ import asyncio
 from telebot import types
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
 from info import (bot, BOT_OWNER)
-from core.utils import handle_errors
+from core.utils import handle_errors, log_error, bot_me
 from core.activity import (log_event, user_label, chat_label)
 from core.users import record_user
 from core.permissions import (apply_chat_member_update, missing_rights,
@@ -30,6 +30,17 @@ def track_sender(m):
     if getattr(m.chat, "type", None) == 'private':
         record_user(getattr(m.from_user, "id", None),
                     user_label(m.from_user), getattr(m.from_user, "username", None))
+
+async def addressed_to_us(text) -> bool:
+    """False for /cmd@OtherBot. Only the command token is checked, so an @ in
+    the arguments (/blockword @spammer, /filter a@b.com) is fine."""
+    first = (text or "").split(maxsplit=1)[0] if (text or "").strip() else ""
+    if '@' not in first:
+        return True
+    target = first.split('@', 1)[1].lower()
+    username = (await bot_me()).username or ""
+    return target == username.lower()
+
 
 @bot.message_handler(commands=list(COMMANDS.keys()))
 @handle_errors
@@ -65,10 +76,8 @@ async def cmd_handler(m):
             await bot.reply_to(m, "This command is not available in private chats.")
             return
     else:
-        if '@' in m.text:
-            bot_username = (await bot.get_me()).username
-            if m.text.split('@')[1].split()[0].lower() != bot_username.lower():
-                return
+        if not await addressed_to_us(m.text):
+            return
 
         await refresh_permissions(m.chat.id)
         reason = disabled_reason(m.chat.id, command)
@@ -93,10 +102,14 @@ async def cmd_handler(m):
 
 @bot.chat_member_handler()
 async def chat_m(m: types.ChatMemberUpdated):
-    if m.chat.type != 'private':
-        await refresh_permissions(m.chat.id)
-    await hello(m)
-    await bye(m)
+    # A ChatMemberUpdated has nothing to reply to, so errors are only logged.
+    try:
+        if m.chat.type != 'private':
+            await refresh_permissions(m.chat.id)
+        await hello(m)
+        await bye(m)
+    except Exception as e:
+        await log_error(bot, e, m)
 
 @bot.my_chat_member_handler()
 async def my_chat_m(m: types.ChatMemberUpdated):

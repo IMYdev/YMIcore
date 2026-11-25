@@ -156,9 +156,9 @@ async def block_set(m):
         return await bot.reply_to(m, "This sticker doesn't belong to a set.")
 
     if add_sticker(m.chat.id, set_name):
-        await bot.reply_to(m, f"Sticker set `{set_name}` added to blacklist.")
+        await bot.reply_to(m, f"Sticker set {hcode(set_name)} added to blacklist.", parse_mode="HTML")
     else:
-        await bot.reply_to(m, f"Sticker set `{set_name}` is already blacklisted.")
+        await bot.reply_to(m, f"Sticker set {hcode(set_name)} is already blacklisted.", parse_mode="HTML")
 
 
 @handle_errors
@@ -166,8 +166,8 @@ async def get_blacklist(m):
     stickers = read_stickers(m.chat.id)
 
     if stickers:
-        output = '\n'.join([f"`{name}`" for name in stickers])
-        await bot.send_message(m.chat.id, f"Banned sticker sets:\n{output}", parse_mode="Markdown", **topic_kwargs(m))
+        output = '\n'.join(hcode(name) for name in stickers)
+        await bot.send_message(m.chat.id, f"Banned sticker sets:\n{output}", parse_mode="HTML", **topic_kwargs(m))
     else:
         await bot.send_message(m.chat.id, "No sticker sets are currently banned.", **topic_kwargs(m))
 
@@ -185,9 +185,9 @@ async def unblock_set(m):
 
     if set_name in read_stickers(m.chat.id):
         delete_sticker(m.chat.id, set_name)
-        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` unblocked.", **topic_kwargs(m))
+        await bot.send_message(m.chat.id, f"Sticker set {hcode(set_name)} unblocked.", parse_mode="HTML", **topic_kwargs(m))
     else:
-        await bot.send_message(m.chat.id, f"Sticker set `{set_name}` is not blocked.", **topic_kwargs(m))
+        await bot.send_message(m.chat.id, f"Sticker set {hcode(set_name)} is not blocked.", parse_mode="HTML", **topic_kwargs(m))
 
 
 # --------------------------------------------------------------------------
@@ -207,9 +207,9 @@ async def block_word(m):
     except ValueError as e:
         return await bot.reply_to(m, str(e))
     if added:
-        await bot.reply_to(m, f"Word `{word}` added to blocklist.", parse_mode="Markdown", **topic_kwargs(m))
+        await bot.reply_to(m, f"Word {hcode(word)} added to blocklist.", parse_mode="HTML", **topic_kwargs(m))
     else:
-        await bot.reply_to(m, f"Word `{word}` is already blocked.", parse_mode="Markdown", **topic_kwargs(m))
+        await bot.reply_to(m, f"Word {hcode(word)} is already blocked.", parse_mode="HTML", **topic_kwargs(m))
 
 
 @handle_errors
@@ -221,9 +221,9 @@ async def unblock_word(m):
         return await bot.reply_to(m, "Please specify a word or phrase to unblock.")
     word = " ".join(args)
     if delete_blocked_word(m.chat.id, word):
-        await bot.reply_to(m, f"Word `{word}` removed from blocklist.", parse_mode="Markdown", **topic_kwargs(m))
+        await bot.reply_to(m, f"Word {hcode(word)} removed from blocklist.", parse_mode="HTML", **topic_kwargs(m))
     else:
-        await bot.reply_to(m, f"Word `{word}` was not blocked.", parse_mode="Markdown", **topic_kwargs(m))
+        await bot.reply_to(m, f"Word {hcode(word)} was not blocked.", parse_mode="HTML", **topic_kwargs(m))
 
 
 @handle_errors
@@ -245,5 +245,5 @@ async def list_blocked_words(m):
         chunks.append("\n".join(lines))
 
     for i, chunk in enumerate(chunks):
-        header = "Blocked words:" if i == 0 else ""
+        header = "Blocked words:\n" if i == 0 else ""
         await bot.send_message(m.chat.id, header + chunk, parse_mode="HTML", **topic_kwargs(m))

@@ -299,3 +299,20 @@ def test_no_mute_for_admin(monkeypatch):
 
     asyncio.run(bl.block_words(msg))
     assert calls == []
+
+
+def test_block_word_reply_survives_markup_characters(monkeypatch):
+    replied = []
+
+    async def fake_reply_to(m, text, **kw):
+        replied.append((text, kw.get("parse_mode")))
+
+    monkeypatch.setattr(bot, "reply_to", fake_reply_to)
+    monkeypatch.setattr("modules.blocklist.is_privileged", _allow)
+
+    asyncio.run(block_word(make_msg("/blockword snake_case*<b>", 200)))
+    text, mode = replied[-1]
+    assert mode == "HTML"
+    assert "added" in text
+    assert "<code>snake_case*&lt;b&gt;</code>" in text
+    assert "went wrong" not in text
