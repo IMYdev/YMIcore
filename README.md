@@ -87,7 +87,8 @@ Each concern has exactly one home. `tests/test_structure.py` enforces this.
 - **Stored replies**: `core/replies.py`. `build_reply` saves a replied-to message, `send_reply` sends it (markdown rendered to HTML).
 - **Groups and bans**: `core/groups.py`, including `ban_group_and_leave`.
 - **Module toggles**: `module_manager.py`. `is_command_enabled` / `is_event_enabled` / `is_module_enabled` Defaults live there too, along with the resolution rule and the read cache.
-- **Permissions**: `core/utils.py`: `is_privileged` for "owner or chat admin", `is_owner_id` for a synchronous instance owner check.
+- **User permissions**: `core/utils.py`: `is_privileged` for "owner or chat admin", `is_owner_id` for a synchronous instance owner check.
+- **Bot permissions**: `core/permissions.py`: which rights each command/event needs, the per-chat rights snapshot, and the refresh/gating helpers. `main.py` refreshes on bot-added/rights-changed updates and lazily on first group activity; features needing a missing right are blocked without rewriting saved toggles.
  
 ## Creating Your Own Bot
 1. **Add needed environment variables to `.env` or your environment.**
