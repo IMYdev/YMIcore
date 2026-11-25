@@ -5,6 +5,8 @@ from info import (bot, BOT_OWNER)
 from core.utils import handle_errors
 from core.activity import (log_event, user_label, chat_label)
 from core.users import record_user
+from core.permissions import (apply_chat_member_update, missing_rights,
+                              refresh_permissions, right_label)
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
@@ -68,12 +70,17 @@ async def cmd_handler(m):
             if m.text.split('@')[1].split()[0].lower() != bot_username.lower():
                 return
 
+        await refresh_permissions(m.chat.id)
         reason = disabled_reason(m.chat.id, command)
         if reason == 'module':
             await bot.reply_to(m, f"The {module_of_command(command)} module is disabled in this group.")
             return
         if reason == 'command':
             await bot.reply_to(m, f"The {command} command is disabled in this group.")
+            return
+        if reason == 'permission':
+            missing = missing_rights(m.chat.id, 'command', command)
+            await bot.reply_to(m, f"I can't use /{command} here — I need permission to {right_label(missing)}.")
             return
 
     log_event(
@@ -86,8 +93,14 @@ async def cmd_handler(m):
 
 @bot.chat_member_handler()
 async def chat_m(m: types.ChatMemberUpdated):
+    if m.chat.type != 'private':
+        await refresh_permissions(m.chat.id)
     await hello(m)
     await bye(m)
+
+@bot.my_chat_member_handler()
+async def my_chat_m(m: types.ChatMemberUpdated):
+    await apply_chat_member_update(m)
 
 @bot.message_handler(content_types=['new_chat_members'])
 @handle_errors
@@ -98,6 +111,8 @@ async def join_service_message(m):
 @bot.message_handler()
 async def reply_message(m):
     track_sender(m)
+    if m.chat.type != 'private':
+        await refresh_permissions(m.chat.id)
     if await block_words(m):
         return
     await reply_to_filter(m)
@@ -106,13 +121,10 @@ async def reply_message(m):
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):
     # Gate before any Telegram API call: a disabled group costs no requests.
-    if getattr(m.chat, 'type', None) != 'private' and not is_event_enabled(m.chat.id, 'sticker_block'):
-        return
-    try:
-        if not (await bot.get_chat_member(m.chat.id, (await bot.get_me()).id)).can_delete_messages:
+    if getattr(m.chat, 'type', None) != 'private':
+        await refresh_permissions(m.chat.id)
+        if not is_event_enabled(m.chat.id, 'sticker_block'):
             return
-    except:
-        return
     await sticker_block(m)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("help_"))
@@ -162,7 +174,7 @@ async def main():
 async def _run_polling():
     try:
         await bot.infinity_polling(
-            allowed_updates=['message', 'chat_member', 'callback_query'],
+            allowed_updates=['message', 'chat_member', 'my_chat_member', 'callback_query'],
             skip_pending=True,
         )
     except Exception as exc:

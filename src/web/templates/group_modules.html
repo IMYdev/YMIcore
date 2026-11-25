@@ -32,7 +32,7 @@
             <input type="checkbox" name="cmd" value="{{ cmd }}"
                    {{ 'checked' if module.cmd_states[cmd].on }}
                    {{ 'disabled' if module.cmd_states[cmd].pinned }}>
-            <span class="toggle-label">{{ cmd }}{% if module.cmd_states[cmd].pinned %} (always on){% endif %}</span>
+            <span class="toggle-label">{{ cmd }}{% if module.cmd_states[cmd].pinned %} (always on){% endif %}{% if module.cmd_states[cmd].missing %} <small>(needs {{ module.cmd_states[cmd].missing }})</small>{% endif %}</span>
           </label>
           {% endfor %}
           {% endif %}
@@ -41,7 +41,7 @@
           {% for event in module.events %}
           <label class="toggle-row">
             <input type="checkbox" name="event" value="{{ event }}" {{ 'checked' if module.event_states[event].on }}>
-            <span class="toggle-label">{{ module.event_labels[event] }} <small>({{ event }})</small></span>
+            <span class="toggle-label">{{ module.event_labels[event] }} <small>({{ event }}){% if module.event_states[event].missing %} — needs {{ module.event_states[event].missing }}{% endif %}</small></span>
           </label>
           {% endfor %}
           {% endif %}

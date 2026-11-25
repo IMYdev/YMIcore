@@ -6,6 +6,7 @@ from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from info import bot
 from core.storage import module_db, MODULE_CONTROLLER
 from core.utils import (is_privileged, topic_kwargs)
+from core.permissions import (missing_rights, right_label)
 
 # Pagination configuration
 MODULES_PER_PAGE = 5
@@ -142,12 +143,18 @@ def is_command_enabled(gid, command) -> bool:
     module = module_of_command(command)
     if module and not is_module_enabled(gid, module):
         return False
+    missing = missing_rights(gid, 'command', command)
+    if missing:
+        return False
     return command_flag(gid, command)
 
 
 def is_event_enabled(gid, event) -> bool:
     module = module_of_event(event)
     if module and not is_module_enabled(gid, module):
+        return False
+    missing = missing_rights(gid, 'event', event)
+    if missing:
         return False
     return event_flag(gid, event)
 
@@ -180,13 +187,16 @@ def clear_module_overrides(gid, module) -> None:
 
 
 def disabled_reason(gid, command):
-    """'module' | 'command' | None for an incoming command name."""
+    """'module' | 'command' | 'permission' | None for an incoming command name."""
     command = resolve_command(command)
     if command in ALWAYS_ON:
         return None
     module = module_of_command(command)
     if module and not is_module_enabled(gid, module):
         return 'module'
+    missing = missing_rights(gid, 'command', command)
+    if missing:
+        return 'permission'
     return None if command_flag(gid, command) else 'command'
 
 
@@ -229,7 +239,11 @@ def module_status_label(gid, module):
     if not is_module_enabled(gid, module):
         return f'⛔ {module} · paused'
     icon = '✅' if effective == total else '⚠️'
-    return f'{icon} {module} · {effective}/{total}'
+    locked = any(
+        missing_rights(gid, 'command', c) for c in modules.get(module, [])
+    ) or any(missing_rights(gid, 'event', e) for e in module_events.get(module, []))
+    label = f'{icon} {module} · {effective}/{total}'
+    return f'{label} 🔒' if locked else label
 
 
 
@@ -282,7 +296,7 @@ def detail_view(group_id, module_name, page=1):
             pinned = c in ALWAYS_ON
             on = True if pinned else command_flag(group_id, c)
             label = c
-            if pinned:
+            if pinned or missing_rights(group_id, 'command', c):
                 label = f'🔒 {label}'
             icon = '✅' if on else ('⏸' if not module_on else '⛔')
             row.append(InlineKeyboardButton(
@@ -294,6 +308,8 @@ def detail_view(group_id, module_name, page=1):
         on = event_flag(group_id, evt)
         icon = '✅' if on else ('⏸' if not module_on else '⛔')
         label = f'Event · {EVENT_INFO.get(evt, (evt,))[0]}'
+        if missing_rights(group_id, 'event', evt):
+            label = f'🔒 {label}'
         keyboard.add(InlineKeyboardButton(
             f'{icon} {label}',
             callback_data=f'mod:evt:{page}:{module_name}:{evt}'))
@@ -312,6 +328,13 @@ def detail_view(group_id, module_name, page=1):
     lines = [f'{module_name} · {master_status}']
     if module_name not in UNSWITCHABLE_MODULES:
         lines.append(f'module {idx+1} of {len(all_modules)} · {effective}/{total} features active')
+    missing = frozenset()
+    for c in commands:
+        missing |= missing_rights(group_id, 'command', c)
+    for evt in module_events.get(module_name, []):
+        missing |= missing_rights(group_id, 'event', evt)
+    if missing:
+        lines.append(f'🔒 Missing rights: {right_label(missing)}')
     lines.append('Tap a command or event to toggle it.')
     return '\n'.join(lines), keyboard
 

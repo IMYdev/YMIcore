@@ -20,3 +20,16 @@ def _reset_filter_cooldown():
     _filters._recent_triggers.clear()
     yield
     _filters._recent_triggers.clear()
+
+
+@pytest.fixture(autouse=True)
+def _full_bot_rights(monkeypatch):
+    """Permission gating is off by default in tests.
+
+    Real gating needs a Telegram API round-trip; test_permissions.py exercises
+    it explicitly against core.permissions.  These tests rely on the old
+    "all commands available" behaviour.
+    """
+    import module_manager as _mm
+
+    monkeypatch.setattr(_mm, "missing_rights", lambda *a, **k: frozenset())

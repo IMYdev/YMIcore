@@ -12,6 +12,7 @@ from info import (
     TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
 )
 from core.utils import is_user_owner
+from core.permissions import missing_rights, right_label, refresh_permissions
 from web.auth import (
     COOKIE_NAME, SESSION_TTL,
     activate_token, can_manage_group, delete_token,
@@ -495,6 +496,7 @@ async def broadcast_delete(request):
 @authed
 async def group_modules(request):
     gid = await ensure_group_access(request)
+    await refresh_permissions(gid)
     states = registry.read_module_states(gid)
     event_states = registry.read_event_states(gid)
     modules_list = []
@@ -503,14 +505,22 @@ async def group_modules(request):
         module_on = registry.is_module_enabled(gid, name)
         # Pinned commands render checked-and-disabled and are ignored on save.
         cmd_states = {
-            c: {"on": bool(states[c]), "pinned": c in registry.ALWAYS_ON} for c in cmds
+            c: {
+                "on": bool(states[c]),
+                "pinned": c in registry.ALWAYS_ON,
+                "missing": right_label(missing_rights(gid, 'command', c)),
+            } for c in cmds
         }
         event_states_local = {
-            e: {"on": bool(event_states[e]), "pinned": False}
+            e: {
+                "on": bool(event_states[e]),
+                "pinned": False,
+                "missing": right_label(missing_rights(gid, 'event', e)),
+            }
             for e in registry.EVENT_MAP.get(name, [])
         }
-        effective = [c for c, s in cmd_states.items() if s["on"] and module_on]
-        effective += [e for e, s in event_states_local.items() if s["on"] and module_on]
+        effective = [c for c, s in cmd_states.items() if s["on"] and not s["missing"] and module_on]
+        effective += [e for e, s in event_states_local.items() if s["on"] and not s["missing"] and module_on]
         modules_list.append({
             "name": name,
             "switchable": switchable,
