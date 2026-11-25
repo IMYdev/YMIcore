@@ -18,7 +18,6 @@ modules = {
     'greetings': ['greeting', 'goodbye'],
     'captcha': ['setcaptcha', 'captcha', 'addcaptcha', 'delcaptcha', 'captchalist', 'captchatries'],
     'blocklist': ['blockset', 'blocklist', 'unblockset', 'blockword', 'unblockword', 'blockwords'],
-    'downloader': [],
     'general': ['start', 'info', 'wallpaper', 'help', 'modules', 'id', 'spoiler'],
 }
 
@@ -28,7 +27,6 @@ module_events = {
     'greetings': ['greeting', 'farewell'],
     'captcha': ['captcha_verification'],
     'blocklist': ['sticker_block', 'word_block'],
-    'downloader': ['link_download'],
 }
 
 EVENT_INFO = {
@@ -38,12 +36,10 @@ EVENT_INFO = {
     'farewell': ('Farewells', 'Say goodbye when a member leaves.'),
     'captcha_verification': ('Captcha verification', 'Require a captcha before new members can chat.'),
     'sticker_block': ('Sticker blocking', 'Delete stickers from blocked sets.'),
-    'link_download': ('Link auto-download', 'Fetch media from supported links automatically.'),
     'word_block': ('Word blocking', 'Delete messages containing a blocked word or phrase.'),
 }
 
 COMMAND_ALIASES = {'nuke': 'purge'}
-LEGACY_EVENT_COMMANDS = {'autodl': 'link_download'}
 ALWAYS_ON = {'modules'}
 UNSWITCHABLE_MODULES = {'general'}
 UNMANAGED_COMMANDS = {'panel', 'devgroup', 'broadcast', 'bcast_list', 'bcast_delete', 'sub', 'unsub'}
@@ -115,23 +111,18 @@ def resolve_command(command):
 # --------------------------------------------------------------------------
 
 def command_flag(gid, command) -> bool:
-    """RAW command state; 'autodl' reads the legacy event key."""
+    """RAW command state."""
     command = resolve_command(command)
-    legacy = LEGACY_EVENT_COMMANDS.get(command)
-    if legacy:
-        return event_flag(gid, legacy)
     saved = _saved(gid)
     return bool(saved.get(f'{command}_enabled', default_disabled.get(command, True)))
 
 
 def event_flag(gid, event) -> bool:
-    """RAW event state; falls back to the pre-event autodl_enabled key."""
+    """RAW event state."""
     saved = _saved(gid)
     key = f'event_{event}_enabled'
     if key in saved:
         return bool(saved[key])
-    if event == 'link_download' and 'autodl_enabled' in saved:
-        return bool(saved['autodl_enabled'])
     return bool(event_default_disabled.get(event, True))
 
 
@@ -148,9 +139,6 @@ def is_command_enabled(gid, command) -> bool:
     command = resolve_command(command)
     if command in ALWAYS_ON:
         return True
-    legacy = LEGACY_EVENT_COMMANDS.get(command)
-    if legacy:
-        return is_event_enabled(gid, legacy)
     module = module_of_command(command)
     if module and not is_module_enabled(gid, module):
         return False
@@ -167,10 +155,6 @@ def is_event_enabled(gid, event) -> bool:
 def set_command_enabled(gid, command, enabled) -> None:
     command = resolve_command(command)
     if command in ALWAYS_ON:
-        return
-    legacy = LEGACY_EVENT_COMMANDS.get(command)
-    if legacy:
-        set_event_enabled(gid, legacy, enabled)
         return
     module_db().set(f'groups.{gid}.{command}_enabled', bool(enabled))
 
@@ -193,8 +177,6 @@ def clear_module_overrides(gid, module) -> None:
             module_db().delete(f'groups.{gid}.{command}_enabled')
     for event in module_events.get(module, []):
         module_db().delete(f'groups.{gid}.event_{event}_enabled')
-    if module == 'downloader':
-        module_db().delete(f'groups.{gid}.autodl_enabled')
 
 
 def disabled_reason(gid, command):
@@ -202,12 +184,6 @@ def disabled_reason(gid, command):
     command = resolve_command(command)
     if command in ALWAYS_ON:
         return None
-    legacy = LEGACY_EVENT_COMMANDS.get(command)
-    if legacy:
-        module = module_of_event(legacy)
-        if module and not is_module_enabled(gid, module):
-            return 'module'
-        return None if event_flag(gid, legacy) else 'command'
     module = module_of_command(command)
     if module and not is_module_enabled(gid, module):
         return 'module'

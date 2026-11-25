@@ -108,21 +108,7 @@ def test_stats_counts_components(tmp_path, monkeypatch):
 
 
 # ----------------------------------------------------------------------
-# 3. Legacy autodl_enabled backfall, new key wins afterwards
-# ----------------------------------------------------------------------
-def test_legacy_autodl_backfall(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    gid = '-100780'
-    IMYDB("runtime/modules/module_controller.json").set(f"groups.{gid}.autodl_enabled", False)
-    assert is_event_enabled(gid, 'link_download') is False
-    assert is_command_enabled(gid, 'autodl') is False
-    set_event_enabled(gid, 'link_download', True)
-    assert is_event_enabled(gid, 'link_download') is True
-    assert is_command_enabled(gid, 'autodl') is True
-
-
-# ----------------------------------------------------------------------
-# 4. Pinning
+# 3. Pinning
 # ----------------------------------------------------------------------
 def test_pinned_modules_command_never_disabled(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)

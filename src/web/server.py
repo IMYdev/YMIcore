@@ -8,7 +8,7 @@ from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
 from info import (
-    BOT_OWNER, Downloader, ERROR_LOG_CHAT_ID, Logs, bot,
+    BOT_OWNER, ERROR_LOG_CHAT_ID, Logs, bot,
     TOKEN, WEB_BIND, WEB_PORT, WEB_URL,
 )
 from core.utils import is_user_owner
@@ -288,7 +288,6 @@ async def global_settings(request):
         ("LOG_ID", (ERROR_LOG_CHAT_ID) if ERROR_LOG_CHAT_ID else "(missing)", "Error report channel."),
         ("OWNER", (BOT_OWNER) if BOT_OWNER else "(missing)", "Owner Telegram ID."),
         ("Logs", Logs, "Error reporting enabled."),
-        ("Downloader", Downloader, "Media downloader enabled."),
         ("WEB_BIND", WEB_BIND, "Panel bind address."),
         ("WEB_PORT", WEB_PORT, "Panel port."),
         ("WEB_URL", WEB_URL or "(unset - localhost)", "Public panel URL."),

@@ -5,7 +5,6 @@ from info import (bot, BOT_OWNER)
 from core.utils import handle_errors
 from core.activity import (log_event, user_label, chat_label)
 from core.users import record_user
-from modules.downloader import extract_supported_url, is_download_url
 from modules.filters import reply_to_filter
 from modules.notes import get_notes
 from modules.member import help_categories
@@ -103,9 +102,6 @@ async def reply_message(m):
         return
     await reply_to_filter(m)
     await get_notes(m)
-    if is_download_url(m.text):
-        if is_event_enabled(m.chat.id, 'link_download'):
-            await extract_supported_url(m)
 
 @bot.message_handler(content_types=['sticker'])
 async def sticker_handler(m):

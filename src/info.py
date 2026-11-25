@@ -14,7 +14,6 @@ AWAN_LLM_KEY = os.getenv("AWAN_LLM")
 BOT_OWNER= os.getenv("OWNER")
 
 Logs = True
-Downloader = True
 
 WEB_BIND = os.getenv("WEB_BIND", "127.0.0.1")
 try:
