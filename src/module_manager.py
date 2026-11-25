@@ -42,7 +42,7 @@ EVENT_INFO = {
 COMMAND_ALIASES = {'nuke': 'purge'}
 ALWAYS_ON = {'modules'}
 UNSWITCHABLE_MODULES = {'general'}
-UNMANAGED_COMMANDS = {'panel', 'devgroup', 'broadcast', 'bcast_list', 'bcast_delete', 'sub', 'unsub'}
+UNMANAGED_COMMANDS = {'panel', 'devgroup', 'broadcast', 'bcast_list', 'bcast_delete', 'sub', 'unsub', 'import', 'importundo'}
 
 default_disabled = {}
 event_default_disabled = {}

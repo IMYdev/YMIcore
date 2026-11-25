@@ -213,6 +213,17 @@ def add_note(gid, name, body=None, media_type=None, media_id=None, reply=None) -
     return str(next_id)
 
 
+def update_note(gid, note_id, name, reply) -> bool:
+    """Replace a note's content in place, keeping its ID."""
+    db = _db("notes", gid)
+    notes = db.get("notes", {})
+    if note_id not in notes:
+        return False
+    notes[note_id] = {"name": name, "reply": reply}
+    db.set("notes", notes)
+    return True
+
+
 def delete_note(gid, note_id) -> None:
     db = _db("notes", gid)
     notes = db.get("notes", {})
@@ -326,6 +337,6 @@ __all__ = [
     "read_module_switches", "read_module_states", "read_notes", "read_stickers",
     "read_word_mute_count", "resolve_command", "save_captcha", "save_greeting_messages",
     "set_captcha_enabled", "set_command_enabled", "set_event_enabled", "set_greeting_media",
-    "set_module_enabled", "validate_blocked_word", "validate_captcha", "validate_filter_keyword",
+    "set_module_enabled", "update_note", "validate_blocked_word", "validate_captcha", "validate_filter_keyword",
     "validate_message_template", "validate_named_text",
 ]
