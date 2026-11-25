@@ -4,7 +4,7 @@ from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermi
 from info import (bot, BOT_OWNER)
 from core.utils import handle_errors, log_error, bot_me
 from core.activity import (log_event, user_label, chat_label)
-from core.users import record_user
+from core.users import migrate_users_registry, record_user
 from core.permissions import (apply_chat_member_update, missing_rights,
                               refresh_permissions, right_label)
 from modules.filters import reply_to_filter
@@ -181,6 +181,7 @@ async def verify_captcha(call):
 
 async def main():
     print("Bot started...")
+    migrate_users_registry()
     from modules.captcha import captcha_sweeper
     await asyncio.gather(
         _run_polling(), start_web_server(), captcha_sweeper(), word_block_sweeper(),

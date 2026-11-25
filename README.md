@@ -86,10 +86,21 @@ Each concern has exactly one home. `tests/test_structure.py` enforces this.
 - **Per-group settings**: `core/group_settings.py`. Notes, filters, stickers, greetings and captcha reads/writes all go through it, for both the bot and the web panel.
 - **Stored replies**: `core/replies.py`. `build_reply` saves a replied-to message, `send_reply` sends it (markdown rendered to HTML).
 - **Groups and bans**: `core/groups.py`, including `ban_group_and_leave`.
-- **Module toggles**: `module_manager.py`. `is_command_enabled` / `is_event_enabled` / `is_module_enabled` Defaults live there too, along with the resolution rule and the read cache.
+- **Read cache**: `core/db.py`. Every `IMYDB` shares a parsed copy of each file, revalidated by `stat` on every read, so edits from the bot, the web panel or another process are seen right away. Never mutate a value returned by `get()` without saving it.
+- **Module toggles**: `module_manager.py`. `is_command_enabled` / `is_event_enabled` / `is_module_enabled` Defaults live there too, along with the resolution rule.
+- **Users (broadcast audience)**: `core/users.py`, stored in 64 shards under `runtime/users/`. See [Upgrading and rolling back](#upgrading-and-rolling-back).
 - **User permissions**: `core/utils.py`: `is_privileged` for "owner or chat admin", `is_owner_id` for a synchronous instance owner check.
 - **Bot permissions**: `core/permissions.py`: which rights each command/event needs, the per-chat rights snapshot, and the refresh/gating helpers. `main.py` refreshes on bot-added/rights-changed updates and lazily on first group activity; features needing a missing right are blocked without rewriting saved toggles.
  
+## Upgrading and rolling back
+
+Data on disk stays compatible in both directions, with one note about users.
+
+- Users are now kept in `runtime/users/shard_NN.json`. On start, the bot merges the old `runtime/users/registry.json` into the shards. It does this whenever the file changed since the last merge. The old file is never moved or deleted.
+- **Rolling back to an older version:** run `python ../tools/unshard_users.py` from `src/` first (or pass `--runtime path/to/runtime`). This rebuilds `registry.json` with every user, including those first seen after the upgrade. If you skip it, the older version still works but only knows the users it had before the upgrade. Upgrading again merges anything the older version recorded.
+- The group registry, user shards, broadcast and captcha stores are written as compact JSON. Every version reads both formats.
+- `/purge` deletes at most the latest 1000 messages per run.
+
 ## Creating Your Own Bot
 1. **Add needed environment variables to `.env` or your environment.**
 

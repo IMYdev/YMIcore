@@ -109,11 +109,18 @@ def test_hot_path(tmp_path, monkeypatch):
     def banned_check():
         _is_banned(CHAT_ID)
 
+    titles = iter(range(10**9))
+
+    def title_change():
+        from core.groups import record_group
+        record_group(CHAT_ID, f"Renamed {next(titles)}", "supergroup")
+
     rows = [
         (f"Plain group message, {GROUPS // 1000}k groups", _time(group_message)),
         (f"Private message, known user, {USERS // 1000}k users", _time(known_private)),
         (f"Private message, new user, {USERS // 1000}k users", _time(new_private, max_runs=20)),
         (f"Banned check per command, {BANNED} banned", _time(banned_check)),
+        (f"Group title change, {GROUPS // 1000}k groups", _time(title_change, max_runs=50)),
     ]
     loop.close()
 

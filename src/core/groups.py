@@ -18,10 +18,17 @@ def registry_groups() -> dict:
 def record_group(chat_id, title, chat_type=None) -> None:
     db = _db()
     gid = str(chat_id)
-    if db.get(f"groups.{gid}.title") != title:
-        db.set(f"groups.{gid}.title", title or f"Group {gid.lstrip('-')}")
-    if chat_type and db.get(f"groups.{gid}.type") != chat_type:
-        db.set(f"groups.{gid}.type", chat_type)
+    current = db.get(f"groups.{gid}")
+    current = current if isinstance(current, dict) else {}
+    changes = {}
+    title = title or f"Group {gid.lstrip('-')}"
+    if current.get("title") != title:
+        changes["title"] = title
+    if chat_type and current.get("type") != chat_type:
+        changes["type"] = chat_type
+    if changes:
+        # One rewrite of the registry, even for a brand-new group.
+        db.set(f"groups.{gid}", {**current, **changes})
 
 
 def group_title(gid) -> str:
