@@ -1,7 +1,7 @@
 import time
 
 from info import BOT_OWNER
-from core.groups import banned_groups, registry_groups
+from core.groups import banned_ids, registry_groups
 from core.storage import USERS_REGISTRY as PATH, users_db
 
 # The registry is rewritten as a whole on every save, so an already known user
@@ -118,7 +118,7 @@ def user_ids() -> list:
 def group_ids() -> list:
     """Chats the bot manages, skipping banned ones and any private chat that
     was picked up by the group registry before chat types were recorded."""
-    banned = {str(entry["gid"]) for entry in banned_groups()}
+    banned = banned_ids()
     registry = registry_groups()
     result = []
     for gid, info in registry.items():

@@ -1,10 +1,9 @@
 import functools
-import os
 from itertools import chain
 
 from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from info import bot
-from core.storage import module_db, MODULE_CONTROLLER
+from core.storage import module_db
 from core.utils import (is_privileged, topic_kwargs)
 from core.permissions import (missing_rights, right_label)
 
@@ -60,37 +59,23 @@ for _module, _events in module_events.items():
 
 
 # --------------------------------------------------------------------------
-# Storage (stat-validated read cache).
-# IMYDB reloads the whole file on construction; on a busy group a per-message
-# gate would otherwise pay that full parse every message. The stamp changes on
-# every atomic replace, so every writer (bot, web panel, tests) is seen.
+# Storage. core.db caches the parsed file and revalidates it by stat, so a
+# per-message gate costs a stat, not a parse; every writer is still seen.
 # --------------------------------------------------------------------------
 
-_groups_cache = {}
+_last_good = {}
 
 
 def _saved(gid):
     try:
-        st = os.stat(MODULE_CONTROLLER)
-    except OSError:
-        st = None
-    if st is None:
         data = module_db().get('groups', {}) or {}
-    else:
-        stamp = (st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size)
-        cached = _groups_cache.get(MODULE_CONTROLLER)
-        if cached and cached[0] == stamp:
-            data = cached[1]
-        else:
-            try:
-                data = module_db().get('groups', {}) or {}
-            except Exception:
-                if cached:
-                    print(f"[!] module_controller.json unreadable; serving cached state")
-                    data = cached[1]
-                else:
-                    raise
-            _groups_cache[MODULE_CONTROLLER] = (stamp, data)
+        _last_good['groups'] = data
+    except Exception:
+        # e.g. a permission error: keep gating with the last state we read.
+        if 'groups' not in _last_good:
+            raise
+        print("[!] module_controller.json unreadable; serving cached state")
+        data = _last_good['groups']
     saved = data.get(str(gid), {})
     return saved if isinstance(saved, dict) else {}
 

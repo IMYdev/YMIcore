@@ -45,6 +45,11 @@ def _seed(groups=GROUPS, users=USERS):
     _write(f"runtime/filters/{str(CHAT_ID).lstrip('-')}_filters", {"filters": {
         f"keyword{i}": {"type": "text", "data": f"reply {i}"} for i in range(FILTERS)
     }})
+    # A live deployment's registries were not written a moment ago.
+    past = now - 60
+    for root, _, files in os.walk("runtime"):
+        for name in files:
+            os.utime(os.path.join(root, name), (past, past))
 
 
 def _chat(chat_id, chat_type, title="Group 1"):

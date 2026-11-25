@@ -46,6 +46,15 @@ def banned_groups() -> list:
     return result
 
 
+def banned_ids() -> set:
+    """Banned chat ids as strings. Reads only the banned list (no titles)."""
+    return {str(gid) for gid in _banned_db().get("groups.group_ids", []) or []}
+
+
+def is_banned(gid) -> bool:
+    return str(gid) in banned_ids()
+
+
 def ban_group(gid) -> bool:
     db = _banned_db()
     banned = db.get("groups.group_ids", [])
@@ -93,6 +102,6 @@ def set_developer_group(gid, enabled: bool) -> None:
 
 __all__ = [
     "ban_group", "ban_group_and_leave",
-    "banned_groups", "group_title", "is_developer_group", "list_groups",
+    "banned_groups", "banned_ids", "is_banned", "group_title", "is_developer_group", "list_groups",
     "record_group", "registry_groups", "set_developer_group", "unban_group",
 ]

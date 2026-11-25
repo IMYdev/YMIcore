@@ -19,7 +19,7 @@ from modules.greetings import (hello, bye, send_standard_greeting)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block, block_words, word_block_sweeper
 from modules.broadcast import handle_broadcast_callback
-from core.groups import ban_group_and_leave, banned_groups, record_group
+from core.groups import ban_group_and_leave, is_banned, record_group
 from web.server import start_web_server
 
 
@@ -47,7 +47,7 @@ async def addressed_to_us(text) -> bool:
 async def cmd_handler(m):
     track_sender(m)
 
-    if str(m.chat.id) in {entry["gid"] for entry in banned_groups()}:
+    if is_banned(m.chat.id):
         await bot.leave_chat(m.chat.id)
         return
 
