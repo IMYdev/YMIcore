@@ -41,7 +41,7 @@
           {% for event in module.events %}
           <label class="toggle-row">
             <input type="checkbox" name="event" value="{{ event }}" {{ 'checked' if module.event_states[event].on }}>
-            <span class="toggle-label">{{ module.event_labels[event] }} <small>({{ event }}){% if module.event_states[event].missing %} — needs {{ module.event_states[event].missing }}{% endif %}</small></span>
+            <span class="toggle-label">{{ module.event_labels[event] }} <small>{% if module.event_states[event].missing %} — needs {{ module.event_states[event].missing }}{% endif %}</small></span>
           </label>
           {% endfor %}
           {% endif %}
