@@ -3,6 +3,7 @@ import datetime
 import functools
 import re
 from pathlib import Path
+from typing import Any
 
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
@@ -80,7 +81,7 @@ def authed(fn):
     return wrapper
 
 
-_panel_user_name_cache: dict = {}
+_panel_user_name_cache: dict[str, str | None] = {}
 
 
 async def panel_user_name(uid) -> str:
@@ -134,7 +135,7 @@ async def ensure_group_access(request) -> str:
     return gid
 
 
-async def accessible_groups(user_payload) -> list:
+async def accessible_groups(user_payload) -> list[dict[str, Any]]:
     user_id = user_payload["uid"]
     groups = list_groups()
     checks = await asyncio.gather(*(can_manage_group(user_id, g["gid"]) for g in groups))
@@ -367,7 +368,7 @@ async def unban_group_route(request):
 # Broadcasts (owner)
 # --------------------------------------------------------------------------
 
-def _broadcast_context(**overrides) -> dict:
+def _broadcast_context(**overrides) -> dict[str, Any]:
     ctx = {
         "active": "broadcast",
         "pending": None,
@@ -493,10 +494,14 @@ async def broadcast_delete(request):
 # Group pages
 # --------------------------------------------------------------------------
 
+async def group_index(request: web.Request) -> web.StreamResponse:
+    raise web.HTTPFound(f"/groups/{request.match_info['gid']}/modules")
+
+
 @authed
 async def group_modules(request):
     gid = await ensure_group_access(request)
-    await refresh_permissions(gid)
+    await refresh_permissions(int(gid))
     states = registry.read_module_states(gid)
     event_states = registry.read_event_states(gid)
     modules_list = []
@@ -508,14 +513,14 @@ async def group_modules(request):
             c: {
                 "on": bool(states[c]),
                 "pinned": c in registry.ALWAYS_ON,
-                "missing": right_label(missing_rights(gid, 'command', c)),
+                "missing": right_label(missing_rights(int(gid), 'command', c)),
             } for c in cmds
         }
         event_states_local = {
             e: {
                 "on": bool(event_states[e]),
                 "pinned": False,
-                "missing": right_label(missing_rights(gid, 'event', e)),
+                "missing": right_label(missing_rights(int(gid), 'event', e)),
             }
             for e in registry.EVENT_MAP.get(name, [])
         }
@@ -898,7 +903,7 @@ def create_app() -> web.Application:
         web.post("/broadcast/send", broadcast_send),
         web.post("/broadcast/cancel", broadcast_cancel),
         web.post("/broadcast/delete", broadcast_delete),
-        web.get("/groups/{gid}", lambda r: web.HTTPFound(f"/groups/{r.match_info['gid']}/modules")),
+        web.get("/groups/{gid}", group_index),
         web.get("/groups/{gid}/modules", group_modules),
         web.post("/groups/{gid}/modules", group_modules_save),
         web.get("/groups/{gid}/greetings", group_greetings),

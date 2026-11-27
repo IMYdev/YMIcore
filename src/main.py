@@ -1,6 +1,6 @@
 import asyncio
 from telebot import types
-from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions)
+from telebot.types import (InlineKeyboardMarkup, InlineKeyboardButton)
 from info import (bot, BOT_OWNER)
 from core.utils import handle_errors, log_error, bot_me
 from core.activity import (log_event, user_label, chat_label)
@@ -15,7 +15,7 @@ from module_manager import (
     resolve_command, module_of_command, disabled_reason,
     handle_mod_callback,
 )
-from modules.greetings import (hello, bye, send_standard_greeting)
+from modules.greetings import (hello, bye)
 from botcommands import (handle_command, COMMANDS)
 from modules.blocklist import sticker_block, is_blocked_sticker, block_words, word_block_sweeper
 from modules.broadcast import handle_broadcast_callback

@@ -88,7 +88,7 @@ def module_of_event(event):
     return _EVENT_MODULE.get(event)
 
 
-def resolve_command(command):
+def resolve_command(command: str) -> str:
     return COMMAND_ALIASES.get(command, command)
 
 
@@ -185,7 +185,7 @@ def disabled_reason(gid, command):
     return None if command_flag(gid, command) else 'command'
 
 
-def read_module_states(gid) -> dict:
+def read_module_states(gid) -> dict[str, bool]:
     """RAW command flags, one entry per registered command (unchanged shape)."""
     saved = _saved(gid)
     return {
@@ -196,11 +196,11 @@ def read_module_states(gid) -> dict:
     }
 
 
-def read_event_states(gid) -> dict:
+def read_event_states(gid) -> dict[str, bool]:
     return {event: event_flag(gid, event) for event in chain(*module_events.values())}
 
 
-def read_module_switches(gid) -> dict:
+def read_module_switches(gid) -> dict[str, bool]:
     return {
         module: is_module_enabled(gid, module)
         for module in modules if module not in UNSWITCHABLE_MODULES
